@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YeY – hrubý odhad zakázek</title>
+<title>YeY – Kancelář pro řemeslníky</title>
 <meta name="description" content="Nabídky, faktury, protokoly a katalog materiálu pro řemeslníky. Běží v prohlížeči, bez registrace.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📏</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -322,8 +322,8 @@
   .swatch{width:30px;height:30px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
   .swatch.on{box-shadow:0 0 0 2px var(--gold),0 0 0 4px rgba(0,0,0,.06)}
   .field select{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:14px;background:#fff}
-  input.hl-obj{border:2px solid var(--gold);background:#fdf7ea;box-shadow:0 0 0 3px rgba(176,137,78,.16)}
-  input.hl-obj:focus{border-color:var(--gold-ink);box-shadow:0 0 0 3px rgba(176,137,78,.30)}
+  .hl-obj{border:2px solid var(--gold);background:#fdf7ea;box-shadow:0 0 0 3px rgba(176,137,78,.16)}
+  .hl-obj:focus{border-color:var(--gold-ink);box-shadow:0 0 0 3px rgba(176,137,78,.30)}
   table.doc-items tr.cat td{color:#8a6a2f;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:1px;padding:10px 8px 4px;border-bottom:1px solid #15233c;background:transparent}
   table.doc-items tr.sub td{font-weight:700;color:#15233c;border-top:1px solid #d9d3c6;border-bottom:2px solid #cfc7b5}
   @media(max-width:640px){
@@ -423,7 +423,7 @@ tbody tr:hover{background:#F8F9F6}
 .field input:focus,.field select:focus,.field textarea:focus,.items input:focus,table.nstab input:focus{outline:none;border-color:var(--inkoust);box-shadow:0 0 0 3px rgba(29,39,47,.15)}
 table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
 .pick:hover{border-color:var(--inkoust);background:#F8F9F6}
-input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rgba(242,183,5,.2)}
+.field .hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rgba(242,183,5,.2)}
 
 /* čipy */
 .chip{border-color:var(--line);border-radius:999px;font-weight:600;font-size:.9rem;color:var(--inkoust);padding:.35rem .85rem}
@@ -474,7 +474,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
       <div class="sub">Hrubý odhad zakázek · orientační ceny</div>
     </div>
     <div class="head-spacer"></div>
-    <a class="yey-ucet" id="odkazLicence" href="uvod.html#cenik" title="Koupit licenci – QR platba, klíč přijde hned po zaplacení">🔑 Licence</a>
+    <a class="yey-ucet" id="odkazLicence" href="https://yey.cz/#cenik" title="Koupit licenci – QR platba, klíč přijde hned po zaplacení">🔑 Licence</a>
   </div>
   <div class="metr-pruh" aria-hidden="true"></div>
   <div class="storebar">
@@ -486,7 +486,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
     <button class="btn ghost sm" id="btnBackup">Stáhnout zálohu</button>
     <button class="btn ghost sm" id="btnRestore">Obnovit ze zálohy</button>
   </div>
-  <div class="licbar" id="licBar" style="display:none">🔒 <b>Neregistrovaná verze</b> — doklady jsou označené jako ukázka. <a href="uvod.html#cenik" style="color:inherit;font-weight:700">Koupit licenci</a> nebo vložte klíč v Nastavení → Licence.</div>
+  <div class="licbar" id="licBar" style="display:none">🔒 <b>Neregistrovaná verze</b> — doklady jsou označené jako ukázka. <a href="https://yey.cz/#cenik" style="color:inherit;font-weight:700">Koupit licenci</a> nebo vložte klíč v Nastavení → Licence.</div>
 </header>
 <nav class="tabs" aria-label="Sekce">
   <button data-tab="kontakty" class="active">Kontakty</button>
@@ -693,7 +693,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
       <div class="card" style="padding:18px">
         <div class="grid">
           <div class="field"><label class="req">Odběratel</label><select id="faKontakt"></select></div>
-          <div class="field"><label>Režim DPH</label><select id="faRezim">
+          <div class="field"><label>Režim DPH</label><select id="faRezim" class="hl-obj">
             <option value="pdp">Přenesená daň. povinnost (§92e)</option>
             <option value="bezna">Běžný režim s DPH</option>
             <option value="neplatce">Neplátce / bez DPH</option></select></div>
@@ -701,14 +701,14 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
           <div class="field"><label>Variabilní symbol</label><input id="faVs"></div>
           <div class="field"><label>Objednávka č.</label><input id="faObj" class="hl-obj"></div>
           <div class="field"><label>Konstantní symbol</label><input id="faKs"></div>
-          <div class="field"><label>Datum vystavení</label><input id="faVyst" type="date"></div>
-          <div class="field"><label>DUZP</label><input id="faDuzp" type="date"></div>
+          <div class="field"><label>Datum vystavení</label><input id="faVyst" type="date" class="hl-obj"></div>
+          <div class="field"><label>DUZP</label><input id="faDuzp" type="date" class="hl-obj"></div>
           <div class="field"><label>Datum splatnosti</label><input id="faSplat" type="date"></div>
           <div class="field"><label>Forma úhrady</label><input id="faForma" value="Převodem"></div>
           <div class="field"><label>Stav</label><select id="faStav"><option>Vystavená</option><option>Zaplacená</option><option>Po splatnosti</option></select></div>
-          <div class="field full"><label>Předmět / akce</label><input id="faAkce" placeholder="např. Rekonstrukce vodovodu – SVJ Nad Vodovodem 12"></div>
+          <div class="field full"><label>Předmět / akce</label><input id="faAkce" class="hl-obj" placeholder="např. Rekonstrukce vodovodu – SVJ Nad Vodovodem 12"></div>
           <div class="field full" id="faPdpWrap"><label>Text přenesené daňové povinnosti</label><input id="faPdpText"></div>
-          <div class="field full"><label>Poznámka</label><textarea id="faPozn"></textarea></div>
+          <div class="field full"><label>Poznámka</label><textarea id="faPozn" class="hl-obj"></textarea></div>
         </div>
       </div>
       <div class="card" style="margin-top:16px;padding:18px">
@@ -792,7 +792,7 @@ input.hl-obj{border-color:var(--metr);background:#FDF8E6;box-shadow:0 0 0 3px rg
     <div class="panel-head"><h2>Nastavení</h2><div class="head-spacer"></div><button class="btn gold" id="btnNsSave">Uložit nastavení</button></div>
       <div class="card" style="margin-bottom:16px;padding:18px">
         <b style="color:var(--navy);font-size:16px">Licence</b>
-        <div class="small muted" style="margin:2px 0 12px">Licenci koupíte na <a href="uvod.html#cenik" target="_blank" rel="noopener">stránce YeY Odhad</a> (QR platba, klíč přijde hned po zaplacení). Vložte licenční klíč, který jste obdrželi po zaplacení. Po aktivaci se doplní a uzamkne IČO. Ostatní údaje firmy (název, adresa, DIČ, číslo účtu, IBAN, telefon, logo…) si vyplníte sami v polích níže.</div>
+        <div class="small muted" style="margin:2px 0 12px">Licenci koupíte na <a href="https://yey.cz/#cenik" target="_blank" rel="noopener">stránce yey.cz</a> (QR platba, klíč přijde hned po zaplacení). Vložte licenční klíč, který jste obdrželi po zaplacení. Po aktivaci se doplní a uzamkne IČO. Ostatní údaje firmy (název, adresa, DIČ, číslo účtu, IBAN, telefon, logo…) si vyplníte sami v polích níže.</div>
         <div id="licStatus" style="font-weight:600;margin-bottom:10px"></div>
         <div class="field full"><label>Licenční klíč</label><textarea id="ns_licence" rows="3" style="width:100%;font-family:monospace;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical" placeholder="Sem vložte licenční klíč…"></textarea></div>
         <div id="licMsg" class="small" style="margin:6px 0"></div>
@@ -7625,7 +7625,7 @@ document.getElementById('btnNbKalk').onclick=()=>{
 };
 TIPS.push({i:'📐', t:'Kalkulačky materiálu', x:'Zadej stěny nebo místnosti a kalkulačka spočítá materiál i práci. Zboží vybere z katalogu podle ceny – ceny jsou orientační, pro hrubý odhad. Jedním tlačítkem vše vložíš do nabídky.'});
 
-/* Aktivace jedním klikem: uvod.html odkazuje na yey.html#licence=KLÍČ */
+/* Aktivace jedním klikem: yey.cz odkazuje na app.yey.cz/#licence=KLÍČ */
 (function licenceZOdkazu(){
   const m=(location.hash||'').match(/^#licence=(.+)$/); if(!m) return;
   const klic=decodeURIComponent(m[1]);

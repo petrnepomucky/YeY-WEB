@@ -1,0 +1,3123 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YeY – Kancelář pro řemeslníky</title>
+<meta name="description" content="Kalkulace materiálu, nabídky, předávací protokoly a faktury s QR platbou. Kancelář pro řemeslníky v prohlížeči – bez registrace, data zůstávají u vás.">
+<meta name="theme-color" content="#1D272F">
+<meta property="og:title" content="YeY – Kancelář pro řemeslníky">
+<meta property="og:description" content="Od zaměření k faktuře za pár minut. 10 kalkulaček, katalog 130 000 položek, nabídky a faktury s QR platbou.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23F2B705'/><path d='M18 14l14 20 14-20' fill='none' stroke='%231D272F' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/><path d='M32 34v16' stroke='%231D272F' stroke-width='7' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap&subset=latin-ext" rel="stylesheet">
+<style>
+:root{
+  --papir:#F4F5F2; --karta:#FFFFFF; --inkoust:#1D272F; --inkoust-2:#27333C; --inkoust-3:#39464F;
+  --ocel:#5D6B76; --text-2:#3A4750; --linka:#D8DCD6; --svetla:#C3CBD1;
+  --metr:#F2B705; --metr-tmava:#C99400; --metr-svetla:#FFF4CC; --ok:#2B7A4B; --pozor:#B3261E;
+  --r:14px; --stin:0 1px 2px rgba(29,39,47,.06),0 8px 24px rgba(29,39,47,.08);
+  --cond:'Barlow Condensed','Barlow',system-ui,sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+html,body{margin:0}
+body{font:17px/1.6 'Barlow',system-ui,'Segoe UI',sans-serif;color:var(--inkoust);background:var(--papir);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,.cena-cislo,.cislo{font-family:var(--cond);line-height:1.08;margin:0;text-wrap:balance}
+p{text-wrap:pretty}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--metr);outline-offset:3px;border-radius:6px}
+.obal{max-width:1120px;margin:0 auto;padding:0 24px}
+.skryt{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skok{position:absolute;left:12px;top:-60px;background:var(--metr);color:var(--inkoust);padding:.6rem 1rem;border-radius:8px;font-weight:700;z-index:50;text-decoration:none}
+.skok:focus{top:12px}
+svg.ik{width:24px;height:24px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- hlavička ---------- */
+.hlava{background:var(--inkoust);color:#fff;position:sticky;top:0;z-index:30;border-bottom:1px solid rgba(255,255,255,.06)}
+.hlava .obal{display:flex;align-items:center;gap:18px;min-height:68px}
+.znacka{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;margin-right:auto;min-width:0}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--metr);display:grid;place-items:center;flex:0 0 auto;position:relative;overflow:hidden}
+.logo svg{width:24px;height:24px}
+.logo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:repeating-linear-gradient(90deg,var(--inkoust) 0 1.5px,transparent 1.5px 6px);opacity:.45}
+.znacka-text{display:flex;flex-direction:column;line-height:1.05;min-width:0}
+.znacka-text b{font:700 1.6rem/1 var(--cond);color:var(--metr);letter-spacing:.2px}
+.znacka-text span{font:600 .98rem/1.15 var(--cond);color:#E6EAED;letter-spacing:.3px;white-space:nowrap}
+.hlava nav{display:flex;gap:2px;align-items:center}
+.hlava nav a{text-decoration:none;font-weight:600;padding:.55rem .8rem;border-radius:8px;color:#E6EAED;transition:background .15s,color .15s}
+.hlava nav a:hover{background:rgba(255,255,255,.08);color:#fff}
+.hlava nav .btn{margin-left:8px;color:var(--inkoust)}
+.menu-btn{display:none;background:transparent;border:0;color:#fff;width:46px;height:46px;border-radius:10px;cursor:pointer;place-items:center}
+.menu-btn:hover{background:rgba(255,255,255,.08)}
+.menu-btn svg{width:26px;height:26px}
+
+/* ---------- tlačítka ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:0;border-radius:11px;padding:.85rem 1.35rem;font:700 1.03rem/1.2 'Barlow',system-ui,sans-serif;cursor:pointer;text-decoration:none;min-height:50px;background:var(--inkoust);color:#fff;transition:background .15s,transform .15s,box-shadow .15s}
+.btn:hover{background:#2E3B45}
+.btn:active{transform:translateY(1px)}
+.btn svg.ik{width:20px;height:20px}
+.btn-metr{background:var(--metr);color:var(--inkoust)}
+.btn-metr:hover{background:#FFC61A}
+.btn-tichy{background:transparent;color:var(--inkoust);box-shadow:inset 0 0 0 2px var(--inkoust)}
+.btn-tichy:hover{background:rgba(29,39,47,.07)}
+.btn-maly{min-height:42px;padding:.5rem .95rem;font-size:.97rem}
+.btn-velky{min-height:56px;padding:1rem 1.6rem;font-size:1.1rem}
+.btn:disabled{opacity:.55;cursor:default}
+
+/* ---------- metr: žlutý pruh s dílky ---------- */
+.metr{background:var(--metr);position:relative}
+.metr::after{content:"";position:absolute;left:0;right:0;bottom:0;height:16px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,var(--inkoust) 0 2px,transparent 2px 100px) 0 100%/100% 16px no-repeat,
+             repeating-linear-gradient(90deg,var(--inkoust) 0 1.5px,transparent 1.5px 50px) 0 100%/100% 10px no-repeat,
+             repeating-linear-gradient(90deg,var(--inkoust) 0 1px,transparent 1px 10px) 0 100%/100% 6px no-repeat;opacity:.5}
+
+/* ---------- úvod ---------- */
+.hero{padding:64px 0 88px;overflow:hidden}
+.hero-mrizka{display:grid;grid-template-columns:1.08fr .92fr;gap:56px;align-items:center}
+.stitek-hero{display:inline-flex;align-items:center;gap:8px;background:var(--inkoust);color:var(--metr);font:700 .92rem/1 var(--cond);letter-spacing:.8px;text-transform:uppercase;padding:.5rem .8rem;border-radius:999px;margin-bottom:22px}
+.stitek-hero i{width:8px;height:8px;border-radius:50%;background:var(--metr);box-shadow:0 0 0 3px rgba(242,183,5,.25)}
+.hero h1{font-size:clamp(2.6rem,6vw,4.4rem);font-weight:700;letter-spacing:-.6px}
+.hero h1 u{text-decoration:none;background:linear-gradient(transparent 62%,rgba(255,255,255,.55) 62% 92%,transparent 92%)}
+.hero p.lead{font-size:1.22rem;margin:20px 0 30px;max-width:34em;color:#27313A}
+.hero-akce{display:flex;gap:12px;flex-wrap:wrap}
+.duvera{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font-weight:600;font-size:.98rem}
+.duvera li{display:flex;align-items:center;gap:7px}
+.duvera svg.ik{width:20px;height:20px;stroke-width:2.6}
+
+/* ukázka: stoh dokladů */
+.stoh{position:relative;padding:26px 8px 8px 26px}
+.list{position:absolute;inset:0 34px 34px 0;background:#fff;border-radius:var(--r);box-shadow:0 6px 18px rgba(29,39,47,.14)}
+.list span{position:absolute;top:10px;left:16px;font:700 .82rem/1 var(--cond);letter-spacing:1px;text-transform:uppercase;color:var(--ocel)}
+.list.l2{transform:rotate(-4deg);background:#FBFBF8}
+.list.l1{transform:rotate(-2deg) translate(12px,10px)}
+.ukazka{position:relative;background:var(--karta);border-radius:var(--r);box-shadow:0 24px 50px rgba(29,39,47,.28);padding:20px 20px 18px;font-size:.95rem}
+.ukazka-h{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--inkoust);padding-bottom:10px;margin-bottom:6px}
+.ukazka-h b{font:700 1.4rem/1.05 var(--cond);display:block}
+.ukazka-h small{display:block;color:var(--ocel);font-size:.85rem;margin-top:3px}
+.ukazka-h .pill{background:var(--metr-svetla);color:#7A5B00;font-weight:700;font-size:.78rem;padding:.25rem .55rem;border-radius:999px;white-space:nowrap}
+.ur{display:grid;grid-template-columns:1fr auto;gap:0 12px;padding:8px 0;border-bottom:1px solid var(--linka)}
+.ur small{grid-column:1/-1;color:var(--ocel);font-size:.8rem}
+.ur b{font-weight:600}
+.ur em{font-style:normal;font-weight:700;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ukazka-celkem{display:flex;justify-content:space-between;align-items:center;background:var(--inkoust);color:#fff;border-radius:10px;padding:12px 16px;margin-top:14px}
+.ukazka-celkem span{font-size:.92rem;color:var(--svetla)}
+.ukazka-celkem b{font:700 1.7rem/1 var(--cond);color:var(--metr);font-variant-numeric:tabular-nums}
+.dalsi-krok{position:absolute;right:-10px;bottom:-22px;display:flex;align-items:center;gap:10px;background:var(--inkoust);color:#fff;border-radius:12px;padding:10px 14px 10px 12px;box-shadow:0 12px 26px rgba(29,39,47,.3);font-weight:600;font-size:.93rem}
+.dalsi-krok i{width:30px;height:30px;border-radius:8px;background:var(--metr);color:var(--inkoust);display:grid;place-items:center;font-style:normal}
+.dalsi-krok i svg{width:18px;height:18px;stroke-width:2.4}
+.dalsi-krok small{display:block;color:var(--svetla);font-weight:500;font-size:.78rem;line-height:1.1}
+
+/* ---------- čísla ---------- */
+.cisla{background:var(--inkoust);color:#fff;padding:34px 0}
+.cisla .obal{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.cisla .c{display:flex;flex-direction:column;gap:4px;padding-left:16px;border-left:3px solid var(--metr)}
+.cisla .cislo{font-size:2.5rem;font-weight:700;color:var(--metr);line-height:1}
+.cisla span{color:var(--svetla);font-size:.98rem;line-height:1.35}
+
+/* ---------- sekce ---------- */
+section{padding:88px 0}
+.nadpis-s{max-width:760px;margin-bottom:40px}
+.oko{display:inline-block;font:700 .9rem/1 var(--cond);letter-spacing:1.2px;text-transform:uppercase;color:var(--metr-tmava);margin-bottom:12px}
+section h2{font-size:clamp(2rem,4vw,2.9rem);font-weight:700;letter-spacing:-.3px}
+.podnadpis{color:var(--ocel);font-size:1.14rem;margin:14px 0 0}
+.tmava{background:var(--inkoust);color:#fff}
+.tmava .podnadpis{color:var(--svetla)}
+.tmava .oko{color:var(--metr)}
+.bila{background:#fff}
+
+/* průběh zakázky */
+.tok{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:14px;position:relative;counter-reset:tok}
+.tok::before{content:"";position:absolute;left:10%;right:10%;top:31px;height:3px;background:repeating-linear-gradient(90deg,var(--inkoust) 0 10px,transparent 10px 18px);opacity:.25}
+.tok li{position:relative;text-align:center;padding:0 4px}
+.tok .kolo{width:64px;height:64px;margin:0 auto 14px;border-radius:18px;background:var(--inkoust);color:var(--metr);display:grid;place-items:center;position:relative;box-shadow:0 0 0 6px var(--papir)}
+.bila .tok .kolo{box-shadow:0 0 0 6px #fff}
+.tok .kolo svg.ik{width:30px;height:30px}
+.tok .kolo::after{counter-increment:tok;content:counter(tok);position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--metr);color:var(--inkoust);font:700 .85rem/24px var(--cond);text-align:center}
+.tok h3{font-size:1.3rem;margin-bottom:6px}
+.tok p{margin:0;color:var(--text-2);font-size:.97rem;line-height:1.5}
+.tok-pozn{margin:34px auto 0;max-width:680px;text-align:center;background:var(--metr-svetla);border-radius:12px;padding:14px 18px;font-weight:600;display:flex;gap:10px;align-items:center;justify-content:center}
+.tok-pozn svg.ik{color:var(--metr-tmava)}
+
+/* funkce */
+.karty{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.karta{background:var(--karta);border:1px solid var(--linka);border-radius:var(--r);padding:26px;transition:box-shadow .2s,transform .2s,border-color .2s}
+.karty .karta:hover{box-shadow:var(--stin);transform:translateY(-2px);border-color:#C8CDC6}
+.karta .ikona{width:48px;height:48px;border-radius:12px;background:var(--metr-svetla);color:var(--inkoust);display:grid;place-items:center}
+.karta .ikona svg.ik{width:26px;height:26px}
+.karta h3{font-size:1.38rem;margin:16px 0 8px}
+.karta p{margin:0;color:var(--text-2)}
+
+/* kalkulačky */
+.kalk{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kalk div{background:#fff;border:1px solid var(--linka);border-radius:12px;padding:16px 16px 18px;border-top:5px solid var(--metr)}
+.kalk b{display:block;font:700 1.22rem/1.1 var(--cond);margin-bottom:6px}
+.kalk span{display:block;color:var(--ocel);font-size:.9rem;line-height:1.45}
+.remesla{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px;align-items:center}
+.remesla b{margin-right:6px}
+.remesla span{background:#fff;border:1px solid var(--linka);border-radius:999px;padding:.3rem .8rem;font-weight:600;font-size:.95rem}
+
+/* zdarma × licence */
+.srovnani{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.srovnani .karta{background:var(--inkoust-2);border-color:var(--inkoust-3);color:#fff;padding:30px}
+.srovnani .karta.lic{box-shadow:inset 0 0 0 2px var(--metr);border-color:transparent;position:relative}
+.srovnani .karta.lic .stitek{position:absolute;top:-13px;left:26px}
+.srovnani h3{font-size:1.6rem}
+.srovnani ul{margin:14px 0 0;padding:0;list-style:none}
+.srovnani li{padding:7px 0 7px 32px;position:relative}
+.srovnani li::before{content:"";position:absolute;left:0;top:10px;width:20px;height:20px;border-radius:50%;background:var(--metr) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D272F' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/13px no-repeat}
+.srovnani li.ne{color:#9AA4AB}
+.srovnani li.ne::before{background:var(--inkoust-3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA4AB' stroke-width='3.4' stroke-linecap='round'%3E%3Cpath d='M7 12h10'/%3E%3C/svg%3E") center/13px no-repeat}
+
+/* ceník */
+.tarify{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;max-width:880px}
+.tarif{background:var(--karta);border:2px solid var(--linka);border-radius:var(--r);padding:30px;display:flex;flex-direction:column;gap:10px;position:relative}
+.tarif.doporuc{border-color:var(--inkoust);box-shadow:0 16px 36px rgba(29,39,47,.14)}
+.stitek{align-self:flex-start;background:var(--metr);color:var(--inkoust);font:700 .82rem/1 'Barlow',system-ui,sans-serif;padding:.4rem .65rem;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
+.tarif .stitek{position:absolute;top:-13px;left:26px}
+.tarif h3{font-size:1.55rem}
+.cena-cislo{font-size:3rem;font-weight:700;font-variant-numeric:tabular-nums}
+.cena-cislo small{font-family:'Barlow',system-ui,sans-serif;font-size:1rem;font-weight:500;color:var(--ocel)}
+.tarif p{margin:0;color:var(--text-2);flex:1}
+.tarif .btn{margin-top:8px}
+.cenik-pozn{margin-top:18px;color:var(--ocel);font-size:.95rem;display:flex;gap:8px;align-items:flex-start;max-width:880px}
+.cenik-pozn svg.ik{width:20px;height:20px;margin-top:3px}
+
+/* nákup */
+.nakup{background:var(--karta);border-radius:var(--r);border:1px solid var(--linka);overflow:hidden;box-shadow:var(--stin)}
+.nakup-hlava{padding:26px 30px 36px}
+.nakup-hlava h2{margin:0;font-size:clamp(1.8rem,3.4vw,2.4rem)}
+.nakup-telo{padding:30px}
+.kroky-nakupu{display:flex;gap:6px;margin:14px 0 0;padding:0;list-style:none;font-weight:600;font-size:.95rem;flex-wrap:wrap}
+.kroky-nakupu li{padding:.3rem .8rem;border-radius:999px;background:rgba(29,39,47,.12)}
+.kroky-nakupu li.akt{background:var(--inkoust);color:#fff}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.pole{display:flex;flex-direction:column;gap:6px}
+.pole.cela,.cela{grid-column:1/-1}
+.pole label{font-weight:600}
+.pole input,.pole select{border:2px solid #BFC5BF;border-radius:11px;padding:.7rem .85rem;font:inherit;font-size:1.05rem;min-height:52px;background:#fff;color:var(--inkoust)}
+.pole input:focus,.pole select:focus{border-color:var(--inkoust);outline:none;box-shadow:0 0 0 4px rgba(242,183,5,.35)}
+.pole small{color:var(--ocel)}
+.pole .chyba{color:var(--pozor);font-weight:600}
+.souhlas{display:flex;gap:12px;align-items:flex-start;font-size:.97rem}
+.souhlas input{width:22px;height:22px;margin-top:2px;flex:0 0 auto;accent-color:var(--inkoust)}
+.nakup-akce{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.bezpecne{display:flex;gap:8px;align-items:center;color:var(--ocel);font-size:.93rem}
+.bezpecne svg.ik{width:18px;height:18px}
+.zprava{padding:12px 14px;border-radius:10px;font-weight:600;margin-top:14px}
+.zprava.chyba{background:#FBEDEC;color:var(--pozor)}
+.zprava.info{background:#EEF4F0;color:var(--ok)}
+.platba{display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:start}
+.qr-ram{background:#fff;border:2px solid var(--inkoust);border-radius:var(--r);padding:14px;text-align:center}
+.qr-ram img{width:220px;height:220px;display:block;image-rendering:pixelated}
+.qr-ram small{display:block;margin-top:8px;color:var(--ocel)}
+.udaje{display:grid;grid-template-columns:auto 1fr;gap:10px 20px;margin:0}
+.udaje dt{color:var(--ocel)}
+.udaje dd{margin:0;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.kopir{border:1px solid var(--linka);background:#fff;border-radius:7px;padding:.2rem .55rem;font:600 .85rem 'Barlow',system-ui,sans-serif;cursor:pointer;color:var(--inkoust)}
+.kopir:hover{border-color:var(--inkoust)}
+.cekani{display:flex;gap:12px;align-items:center;margin-top:20px;padding:14px 16px;border-radius:12px;background:#FFF8E1;font-weight:600}
+.tocitko{width:22px;height:22px;border:3px solid var(--inkoust);border-right-color:transparent;border-radius:50%;animation:toc 1s linear infinite;flex:0 0 auto}
+@keyframes toc{to{transform:rotate(360deg)}}
+.hotovo-h{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.hotovo-h .fajfka{width:48px;height:48px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:1.6rem;flex:0 0 auto}
+.klic{width:100%;min-height:96px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;border:2px solid var(--inkoust);border-radius:11px;padding:10px;resize:vertical;background:#F8F9F6;word-break:break-all}
+
+/* FAQ */
+.faq-mrizka{display:grid;grid-template-columns:.8fr 1.2fr;gap:48px;align-items:start}
+.faq-mrizka .nadpis-s{position:sticky;top:100px;margin:0}
+.faq details{background:var(--karta);border:1px solid var(--linka);border-radius:12px;margin-bottom:10px;transition:border-color .15s}
+.faq details[open]{border-color:#BFC5BF}
+.faq summary{cursor:pointer;padding:18px 20px;font-weight:700;font-size:1.08rem;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--papir) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D272F' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M12 6v12M6 12h12'/%3E%3C/svg%3E") center/14px no-repeat;transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg);background-color:var(--metr)}
+.faq details p{margin:0;padding:0 20px 18px;color:var(--text-2)}
+.podminky{margin-top:26px;font-size:.95rem;color:var(--ocel);background:transparent;border:1px dashed #BFC5BF}
+.podminky h3{font-size:1.2rem;color:var(--inkoust);margin-bottom:6px}
+.podminky p{margin:0}
+
+/* závěrečná výzva */
+.vyzva{padding:72px 0 88px}
+.vyzva .obal{display:flex;align-items:center;justify-content:space-between;gap:30px;flex-wrap:wrap}
+.vyzva h2{font-size:clamp(2rem,4.4vw,3.2rem);max-width:15em}
+.vyzva p{margin:10px 0 0;font-size:1.12rem;color:#27313A}
+
+footer{background:var(--inkoust);color:var(--svetla);padding:44px 0 36px;font-size:.96rem}
+.pata{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:30px}
+.pata h4{margin:0 0 10px;color:#fff;font:700 1.05rem var(--cond);letter-spacing:.6px;text-transform:uppercase}
+.pata ul{list-style:none;margin:0;padding:0}
+.pata li{margin:0 0 6px}
+.pata a{color:#fff;text-decoration:none}
+.pata a:hover{text-decoration:underline}
+.pata .znacka{margin-bottom:12px}
+.pata-spodek{border-top:1px solid var(--inkoust-3);margin-top:30px;padding-top:18px;font-size:.88rem;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* plovoucí výzva na mobilu */
+.mob-cta{display:none}
+
+@media (max-width:980px){
+  .kalk{grid-template-columns:repeat(3,1fr)}
+  .tok{grid-template-columns:1fr;gap:0;max-width:560px}
+  .tok::before{left:31px;right:auto;top:32px;bottom:32px;width:3px;height:auto;background:repeating-linear-gradient(180deg,var(--inkoust) 0 10px,transparent 10px 18px)}
+  .tok li{display:grid;grid-template-columns:64px 1fr;gap:4px 18px;text-align:left;padding:0 0 22px}
+  .tok .kolo{grid-row:span 2;margin:0}
+  .tok h3{align-self:end;margin:6px 0 2px}
+  .faq-mrizka{grid-template-columns:1fr;gap:26px}
+  .faq-mrizka .nadpis-s{position:static}
+}
+@media (max-width:860px){
+  .menu-btn{display:grid}
+  .hlava nav{display:none;position:absolute;left:0;right:0;top:100%;background:var(--inkoust);flex-direction:column;align-items:stretch;padding:8px 16px 18px;border-top:1px solid var(--inkoust-3);box-shadow:0 18px 30px rgba(0,0,0,.25)}
+  .hlava.otevreno nav{display:flex}
+  .hlava nav a{padding:.9rem .8rem;font-size:1.08rem}
+  .hlava nav .btn{margin:8px 0 0}
+  .hero-mrizka,.platba{grid-template-columns:1fr}
+  .hero-mrizka{gap:48px}
+  .stoh{max-width:520px;margin:0 auto;width:100%}
+  .karty{grid-template-columns:1fr 1fr}
+  .cisla .obal{grid-template-columns:1fr 1fr;gap:24px}
+  .qr-ram{justify-self:center}
+  .pata{grid-template-columns:1fr 1fr}
+  .pata > div:first-child{grid-column:1/-1}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  .obal{padding:0 16px}
+  .hlava .obal{min-height:62px;gap:10px}
+  .logo{width:36px;height:36px}
+  .znacka-text b{font-size:1.4rem}
+  .znacka-text span{font-size:.9rem}
+  .hero{padding:36px 0 70px}
+  .hero p.lead{font-size:1.1rem}
+  .hero-akce .btn,.nakup-akce .btn{flex:1 1 100%}
+  .stoh{padding:22px 4px 4px 18px}
+  .dalsi-krok{right:4px;bottom:-26px}
+  section{padding:60px 0}
+  .nadpis-s{margin-bottom:28px}
+  .karty,.srovnani,.form{grid-template-columns:1fr}
+  .kalk{grid-template-columns:1fr 1fr}
+  .cisla .cislo{font-size:2rem}
+  .nakup-telo{padding:20px}
+  .nakup-hlava{padding:20px 20px 32px}
+  .udaje{grid-template-columns:1fr;gap:2px}
+  .udaje dd{margin-bottom:8px}
+  .vyzva{padding:56px 0 64px}
+  .vyzva .btn{flex:1 1 100%}
+  .pata{grid-template-columns:1fr}
+  .mob-cta{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:25;gap:8px;transition:transform .25s,opacity .25s}
+  .mob-cta .btn{flex:1;box-shadow:0 10px 26px rgba(29,39,47,.35)}
+  .mob-cta.pryc{transform:translateY(120%);opacity:0;pointer-events:none}
+  footer{padding-bottom:96px}
+}
+@media (max-width:380px){ .znacka-text span{font-size:.82rem} .kalk{grid-template-columns:1fr} }
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a class="skok" href="#obsah">Přeskočit na obsah</a>
+
+<!-- sada ikon -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-sipka" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-metr" viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M6.5 7v4M10.5 7v2.5M14.5 7v4M18.5 7v2.5"/></symbol>
+  <symbol id="i-kalk" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 6.5h7M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5v3.5M8.5 18h.01M12 18h.01"/></symbol>
+  <symbol id="i-nabidka" viewBox="0 0 24 24"><path d="M14 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z"/><path d="M14 2.5v5h5M8.5 12.5h7M8.5 16h4.5"/></symbol>
+  <symbol id="i-protokol" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="18" rx="2"/><path d="M9 3.5V2.5h6v1M8.5 13l2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-faktura" viewBox="0 0 24 24"><path d="M6 2.5h12v19l-3-2-3 2-3-2-3 2z"/><path d="M9 7.5h6M9 11h6M9 14.5h3.5"/></symbol>
+  <symbol id="i-hledat" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></symbol>
+  <symbol id="i-balik" viewBox="0 0 24 24"><path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 6.5l9 6.5 9-6.5"/></symbol>
+  <symbol id="i-zamek" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M20 20h.01M17 20h.01M14 20v-.01M20 17v.01"/></symbol>
+  <symbol id="i-mobil" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></symbol>
+  <symbol id="i-blesk" viewBox="0 0 24 24"><path d="M13 2.5L4.5 13.5H12l-1 8 8.5-11H12z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-zavrit" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-y" viewBox="0 0 24 24"><path d="M5 3.5l7 10 7-10M12 13.5v8" stroke-width="3.6"/></symbol>
+</svg>
+
+<header class="hlava" id="hlava">
+  <div class="obal">
+    <a class="znacka" href="#" aria-label="YeY – Kancelář pro řemeslníky, na začátek stránky">
+      <span class="logo" aria-hidden="true"><svg class="ik" style="stroke:#1D272F"><use href="#i-y"/></svg></span>
+      <span class="znacka-text"><b>YeY</b><span>Kancelář pro řemeslníky</span></span>
+    </a>
+    <button class="menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="menu" aria-label="Menu">
+      <svg class="ik"><use href="#i-menu"/></svg>
+    </button>
+    <nav aria-label="Hlavní" id="menu">
+      <a href="#prubeh">Jak to funguje</a>
+      <a href="#funkce">Co umí</a>
+      <a href="#cenik">Ceník</a>
+      <a href="#faq">Otázky</a>
+      <a class="btn btn-metr btn-maly" href="yey.html" data-app>Otevřít aplikaci</a>
+    </nav>
+  </div>
+</header>
+
+<main id="obsah">
+<!-- ================= ÚVOD ================= -->
+<div class="metr hero">
+  <div class="obal hero-mrizka">
+    <div>
+      <span class="stitek-hero"><i aria-hidden="true"></i>Kalkulace · nabídky · faktury</span>
+      <h1>Od zaměření k&nbsp;faktuře <u>za&nbsp;pár minut</u></h1>
+      <p class="lead">Zadáte rozměry a YeY spočítá materiál i práci, vybere zboží z katalogu 130&nbsp;000 položek a připraví nabídku. Po práci z ní jedním tlačítkem uděláte předávací protokol a fakturu s QR platbou.</p>
+      <div class="hero-akce">
+        <a class="btn btn-velky" href="yey.html" data-app>Vyzkoušet zdarma <svg class="ik"><use href="#i-sipka"/></svg></a>
+        <a class="btn btn-tichy btn-velky" href="#cenik">Ceník licence</a>
+      </div>
+      <ul class="duvera">
+        <li><svg class="ik"><use href="#i-check"/></svg>Bez registrace</li>
+        <li><svg class="ik"><use href="#i-check"/></svg>Data zůstávají u vás</li>
+        <li><svg class="ik"><use href="#i-check"/></svg>Na mobilu i v počítači</li>
+      </ul>
+    </div>
+
+    <div class="stoh" aria-label="Ukázka výpočtu sádrokartonové příčky">
+      <div class="list l2" aria-hidden="true"></div>
+      <div class="list l1" aria-hidden="true"></div>
+      <div class="ukazka">
+        <div class="ukazka-h">
+          <div><b>Sádrokartonová příčka</b><small>4 × 2,6 m · dveře 90 cm</small></div>
+          <span class="pill">Kalkulace</span>
+        </div>
+        <div class="ur"><b>Deska SDK 12,5 mm</b><em>20 m²</em><small>8 desek 1250 × 2000, oboustranně</small></div>
+        <div class="ur"><b>Profil CW 75, 2,6 m</b><em>20,8 bm</em><small>8 stojek po 625 mm</small></div>
+        <div class="ur"><b>Profil UW 75, 4 m</b><em>12 bm</em><small>podlaha, strop a nadpraží</small></div>
+        <div class="ur"><b>Šrouby TN 25</b><em>1 bal</em><small>432 ks → balení 1000 ks</small></div>
+        <div class="ur"><b>Montáž SDK příčky</b><em>8,6 m²</em><small>práce podle vaší sazby</small></div>
+        <div class="ukazka-celkem"><span>Orientačně bez DPH</span><b>≈ 11 400 Kč</b></div>
+      </div>
+      <div class="dalsi-krok" aria-hidden="true"><i><svg class="ik"><use href="#i-sipka"/></svg></i><span><small>Další krok</small>Vytvořit nabídku</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ČÍSLA ================= -->
+<div class="cisla" aria-label="YeY v číslech">
+  <div class="obal">
+    <div class="c"><span class="cislo">10</span><span>kalkulaček pro běžné stavební práce</span></div>
+    <div class="c"><span class="cislo">130&nbsp;000</span><span>položek stavebnin v&nbsp;katalogu</span></div>
+    <div class="c"><span class="cislo">5 kroků</span><span>od zaměření po zaplacenou fakturu</span></div>
+    <div class="c"><span class="cislo">0 Kč</span><span>na vyzkoušení, bez registrace</span></div>
+  </div>
+</div>
+
+<!-- ================= PRŮBĚH ZAKÁZKY ================= -->
+<section id="prubeh" class="bila">
+  <div class="obal">
+    <div class="nadpis-s">
+      <span class="oko">Jak to funguje</span>
+      <h2>Celá zakázka v jednom toku</h2>
+      <p class="podnadpis">Každý doklad navazuje na předchozí. Nic nepřepisujete – položky, zákazník i ceny jdou dál samy.</p>
+    </div>
+    <ol class="tok">
+      <li><div class="kolo"><svg class="ik"><use href="#i-metr"/></svg></div><h3>Zaměření</h3><p>Rozměry stěn a místností, odečet dveří a oken.</p></li>
+      <li><div class="kolo"><svg class="ik"><use href="#i-kalk"/></svg></div><h3>Kalkulace</h3><p>Materiál podle spotřeby, zboží z katalogu, vaše sazba za práci.</p></li>
+      <li><div class="kolo"><svg class="ik"><use href="#i-nabidka"/></svg></div><h3>Nabídka</h3><p>Pro zákazníka do PDF nebo e-mailem. Po přijetí ji označíte.</p></li>
+      <li><div class="kolo"><svg class="ik"><use href="#i-protokol"/></svg></div><h3>Předání</h3><p>Předávací protokol z nabídky, s podpisy obou stran.</p></li>
+      <li><div class="kolo"><svg class="ik"><use href="#i-faktura"/></svg></div><h3>Faktura</h3><p>S QR platbou, kterou zákazník zaplatí mobilem.</p></li>
+    </ol>
+    <p class="tok-pozn"><svg class="ik"><use href="#i-blesk"/></svg>U každého dokladu je další krok jedno velké tlačítko.</p>
+  </div>
+</section>
+
+<!-- ================= FUNKCE ================= -->
+<section id="funkce">
+  <div class="obal">
+    <div class="nadpis-s">
+      <span class="oko">Co umí</span>
+      <h2>Všechno, co řemeslník řeší u stolu</h2>
+      <p class="podnadpis">Bez tabulek, bez shánění cen po e-shopech a bez přepisování z papíru.</p>
+    </div>
+    <div class="karty">
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-kalk"/></svg></div><h3>10 kalkulaček</h3><p>Zdivo, sádrokarton, omítky, malba, dlažba a obklad, hydroizolace, nivelace, plovoucí podlaha, beton a zateplení.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-hledat"/></svg></div><h3>Katalog 130 000 položek</h3><p>Hledání podle názvu, kódu i EAN. Filtr podle tématu a skupiny, řazení od nejlevnějšího.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-balik"/></svg></div><h3>Množství, jak se prodává</h3><p>Desky po celých kusech, profily podle výšky stěny, šrouby po baleních, tmel po pytlích.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-qr"/></svg></div><h3>Faktury s QR platbou</h3><p>Nabídky, předávací protokoly a faktury s vaším logem, IČO a QR kódem pro rychlou platbu.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-mail"/></svg></div><h3>Poptávka materiálu</h3><p>Vyfiltrujete materiál z nabídky a pošlete ho dodavateli e-mailem – i s kódy a EAN.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-zamek"/></svg></div><h3>Data u vás</h3><p>Vše se ukládá ve vašem zařízení nebo ve vaší složce, třeba v OneDrivu. Záloha jedním klikem.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= KALKULAČKY ================= -->
+<section id="kalkulacky" style="padding-top:0">
+  <div class="obal">
+    <div class="nadpis-s">
+      <span class="oko">Kalkulačky</span>
+      <h2>Spočítá to za vás – od příčky po fasádu</h2>
+      <p class="podnadpis">Spotřeba podle běžných norem. Každý řádek můžete změnit, nahradit jiným zbožím nebo vynechat.</p>
+    </div>
+    <div class="kalk">
+      <div><b>Zdivo</b><span>tvárnice, cihly, malta, odečet otvorů</span></div>
+      <div><b>Sádrokarton</b><span>příčky, předstěny, podhledy</span></div>
+      <div><b>Omítky</b><span>jádro, štuk, stěny i strop</span></div>
+      <div><b>Malba</b><span>barva, penetrace, zakrývání</span></div>
+      <div><b>Dlažba a obklad</b><span>i velkoformáty, lepidlo, spárovačka</span></div>
+      <div><b>Hydroizolace</b><span>stěrka, pásky, manžety, rohy</span></div>
+      <div><b>Nivelace</b><span>stěrka, penetrace, okrajová páska</span></div>
+      <div><b>Plovoucí podlaha</b><span>balení, podložka, fólie, lišty</span></div>
+      <div><b>Beton a potěr</b><span>pytle i beton z betonárny</span></div>
+      <div><b>Zateplení</b><span>od lepidla po omítku, hmoždinky</span></div>
+    </div>
+    <div class="remesla"><b>Pro:</b><span>zedníky</span><span>sádrokartonáře</span><span>obkladače</span><span>malíře</span><span>podlaháře</span><span>stavební firmy</span><span>hodinové manžely</span></div>
+  </div>
+</section>
+
+<!-- ================= ZDARMA × LICENCE ================= -->
+<section class="tmava">
+  <div class="obal">
+    <div class="nadpis-s">
+      <span class="oko">Zdarma × licence</span>
+      <h2>Vyzkoušejte zdarma, licenci kupte, až budete chtít</h2>
+      <p class="podnadpis">Všechny funkce jsou dostupné hned. Licence odemkne doklady pro vaši firmu.</p>
+    </div>
+    <div class="srovnani">
+      <div class="karta"><h3>Zdarma</h3><ul>
+        <li>všechny kalkulačky a katalog</li><li>nabídky, faktury, protokoly</li><li>poptávky materiálu</li>
+        <li class="ne">doklady s vodoznakem „ukázka“</li><li class="ne">bez IČO na dokladech</li></ul></div>
+      <div class="karta lic"><span class="stitek">Pro vaši firmu</span><h3>S licencí</h3><ul>
+        <li>všechno ze zdarma verze</li><li>doklady bez vodoznaku</li><li>IČO vaší firmy na nabídkách a fakturách</li>
+        <li>aktivace jedním klikem po zaplacení</li><li>klíč přijde i e-mailem</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CENÍK ================= -->
+<section id="cenik">
+  <div class="obal">
+    <div class="nadpis-s">
+      <span class="oko">Ceník</span>
+      <h2>Jednoduchý ceník bez skrytých poplatků</h2>
+      <p class="podnadpis">Zaplatíte QR kódem z mobilního bankovnictví. Licenční klíč se vygeneruje sám, jakmile platba dorazí.</p>
+    </div>
+    <div class="tarify" id="tarify"></div>
+    <p class="cenik-pozn"><svg class="ik"><use href="#i-info"/></svg><span>Licence je vázaná na IČO a platí na všech vašich zařízeních. Ceny jsou konečné. Ceny materiálu v aplikaci jsou orientační – slouží k hrubému odhadu zakázky.</span></p>
+  </div>
+</section>
+
+<!-- ================= NÁKUP ================= -->
+<section id="koupit" style="padding-top:0">
+  <div class="obal">
+    <div class="nakup">
+      <div class="nakup-hlava metr">
+        <h2>Koupit licenci</h2>
+        <ol class="kroky-nakupu" aria-label="Postup"><li data-krok="1" class="akt">1 Údaje</li><li data-krok="2">2 Platba</li><li data-krok="3">3 Licenční klíč</li></ol>
+      </div>
+      <div class="nakup-telo">
+
+        <!-- krok 1 -->
+        <form id="k1" class="form" novalidate>
+          <div class="pole cela"><label for="f-tarif">Licence</label><select id="f-tarif"></select></div>
+          <div class="pole"><label for="f-ico">IČO firmy</label>
+            <input id="f-ico" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="12345678" required>
+            <small id="f-ico-pozn">Licence bude vystavena na toto IČO.</small></div>
+          <div class="pole"><label for="f-email">E-mail</label>
+            <input id="f-email" type="email" autocomplete="email" placeholder="vy@firma.cz" required>
+            <small>Pošleme na něj licenční klíč.</small></div>
+          <label class="souhlas cela"><input type="checkbox" id="f-souhlas" required>
+            <span>Souhlasím s <a href="#podminky">obchodními podmínkami</a> a beru na vědomí, že ceny materiálu v aplikaci jsou orientační.</span></label>
+          <div class="nakup-akce cela">
+            <button class="btn btn-velky" type="submit" id="f-odeslat">Pokračovat k platbě</button>
+            <span class="bezpecne"><svg class="ik"><use href="#i-zamek"/></svg>Platíte převodem z vlastní banky. Kartu nezadáváte.</span>
+          </div>
+          <div id="k1-zprava" class="zprava chyba cela skryt" role="alert"></div>
+        </form>
+
+        <!-- krok 2 -->
+        <div id="k2" class="skryt">
+          <div class="platba">
+            <div class="qr-ram"><img id="qr" alt="QR kód pro platbu"><small>Naskenujte v mobilním bankovnictví</small></div>
+            <div>
+              <dl class="udaje">
+                <dt>Licence</dt><dd id="p-tarif"></dd>
+                <dt>Částka</dt><dd id="p-castka"></dd>
+                <dt>Číslo účtu</dt><dd><span id="p-ucet"></span><button type="button" class="kopir" data-kopir="p-ucet">Kopírovat</button></dd>
+                <dt>Variabilní symbol</dt><dd><span id="p-vs"></span><button type="button" class="kopir" data-kopir="p-vs">Kopírovat</button></dd>
+                <dt>Zpráva</dt><dd id="p-zprava"></dd>
+                <dt>IČO</dt><dd id="p-ico"></dd>
+              </dl>
+              <div class="cekani" id="cekani" aria-live="polite"><div class="tocitko" aria-hidden="true"></div>
+                <div><span id="cekani-text">Čekám na připsání platby.</span><br><small style="font-weight:500">Okamžitá platba dorazí obvykle do 15 minut, běžná do druhého pracovního dne. Stránku můžete zavřít – klíč přijde e-mailem a po návratu se tu ukáže.</small></div></div>
+              <div class="nakup-akce" style="margin-top:14px">
+                <button class="btn btn-tichy btn-maly" type="button" id="p-zkontrolovat">Zkontrolovat platbu</button>
+                <button class="btn btn-tichy btn-maly" type="button" id="p-zrusit">Nová objednávka</button>
+              </div>
+              <div id="k2-zprava" class="zprava chyba skryt" role="alert"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- krok 3 -->
+        <div id="k3" class="skryt">
+          <div class="hotovo-h"><div class="fajfka" aria-hidden="true">✓</div>
+            <div><h3 style="font-size:1.6rem">Platba přijata, licence je hotová</h3><div id="h-info" style="color:var(--ocel)"></div></div></div>
+          <label for="h-klic" style="font-weight:600">Licenční klíč</label>
+          <textarea id="h-klic" class="klic" readonly></textarea>
+          <div class="nakup-akce" style="margin-top:12px">
+            <a class="btn btn-metr" id="h-aktivovat" href="yey.html">Aktivovat v aplikaci</a>
+            <button class="btn btn-tichy" type="button" id="h-kopir">Kopírovat klíč</button>
+          </div>
+          <p style="color:var(--ocel);margin:14px 0 0">„Aktivovat v aplikaci“ otevře YeY a licenci rovnou zapne. Na jiném zařízení vložte klíč ručně v Nastavení → Licence.</p>
+        </div>
+
+        <!-- nedostupné -->
+        <div id="k0" class="skryt">
+          <p style="margin:0">Online nákup licence právě není dostupný. Napište nám na <a id="kontakt-mail" href="#"></a> a licenci vám vystavíme ručně.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq" class="bila">
+  <div class="obal faq-mrizka">
+    <div class="nadpis-s">
+      <span class="oko">Otázky</span>
+      <h2>Na co se řemeslníci ptají</h2>
+      <p class="podnadpis">Nenašli jste odpověď? Napište nám na <a id="faq-mail" href="#"></a>.</p>
+    </div>
+    <div class="faq">
+      <details><summary>Jak přesné jsou ceny materiálu?</summary><p>Ceny v katalogu jsou orientační – vycházejí z průměrných cen prodejen a e-shopů a jsou zaokrouhlené. Slouží k hrubému odhadu zakázky. Přesnou cenu vám potvrdí dodavatel; poptávku mu pošlete přímo z aplikace.</p></details>
+      <details><summary>Kde jsou uložená moje data?</summary><p>Ve vašem zařízení – v prohlížeči, nebo v pracovní složce, kterou si připojíte (třeba ve OneDrivu nebo na Google Disku). Na náš server se nic neposílá, katalog se jen čte.</p></details>
+      <details><summary>Potřebuji něco instalovat?</summary><p>Ne. YeY běží v prohlížeči na počítači, tabletu i mobilu. Stačí otevřít aplikaci a začít počítat.</p></details>
+      <details><summary>Jak aktivuji licenci?</summary><p>Po zaplacení se na této stránce ukáže licenční klíč s tlačítkem „Aktivovat v aplikaci“. Klíč přijde i e-mailem. Ručně ho vložíte v aplikaci v Nastavení → Licence.</p></details>
+      <details><summary>Mohu licenci používat na více zařízeních?</summary><p>Ano. Licence je vázaná na IČO, ne na zařízení. Klíč vložte na každém zařízení, kde aplikaci používáte.</p></details>
+      <details><summary>Co když platba nedorazí?</summary><p>Zkontrolujte, že jste zadali správný variabilní symbol a celou částku. Pokud se klíč neobjeví do dvou pracovních dnů, napište nám a uveďte variabilní symbol.</p></details>
+      <details><summary>Dostanu doklad o zaplacení?</summary><p>Ano, na požádání vám vystavíme fakturu na IČO, pro které je licence vydaná.</p></details>
+      <div class="karta podminky" id="podminky">
+        <h3>Obchodní podmínky (shrnutí)</h3>
+        <p>Licence opravňuje k užívání aplikace YeY – Kancelář pro řemeslníky pro firmu s uvedeným IČO po dobu platnosti zvoleného tarifu. Ceny materiálu v aplikaci jsou orientační a nejsou nabídkou prodeje. Aplikace neukládá vaše data na náš server. Plné znění podmínek a zásad ochrany osobních údajů najdete v <a href="obchodni-podminky.html">obchodních podmínkách</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VÝZVA ================= -->
+<div class="metr vyzva">
+  <div class="obal">
+    <div>
+      <h2>Příští nabídku máte hotovou dřív, než odjedete ze zaměření</h2>
+      <p>Zdarma, bez registrace, rovnou v prohlížeči.</p>
+    </div>
+    <a class="btn btn-velky" href="yey.html" data-app>Otevřít YeY <svg class="ik"><use href="#i-sipka"/></svg></a>
+  </div>
+</div>
+</main>
+
+<footer>
+  <div class="obal">
+    <div class="pata">
+      <div>
+        <a class="znacka" href="#" aria-label="Na začátek stránky">
+          <span class="logo" aria-hidden="true"><svg class="ik" style="stroke:#1D272F"><use href="#i-y"/></svg></span>
+          <span class="znacka-text"><b>YeY</b><span>Kancelář pro řemeslníky</span></span>
+        </a>
+        <p style="margin:0;max-width:28em">Kalkulace, nabídky, protokoly a faktury pro řemeslníky. V prohlížeči, na mobilu i v počítači.</p>
+      </div>
+      <div><h4>Aplikace</h4><ul>
+        <li><a href="yey.html" data-app>Otevřít YeY</a></li><li><a href="#funkce">Co umí</a></li><li><a href="#cenik">Ceník</a></li><li><a href="#faq">Otázky</a></li></ul></div>
+      <div><h4>Kontakt</h4><ul>
+        <li><a id="pata-mail" href="#"></a></li><li><a href="#koupit">Koupit licenci</a></li><li><a href="obchodni-podminky.html">Obchodní podmínky</a></li></ul></div>
+    </div>
+    <div class="pata-spodek"><span>© <span id="rok">2026</span> YeY – Kancelář pro řemeslníky</span><span>Ceny materiálu jsou orientační.</span></div>
+  </div>
+</footer>
+
+<div class="mob-cta" id="mob-cta">
+  <a class="btn btn-metr" href="yey.html" data-app>Vyzkoušet zdarma</a>
+  <a class="btn" href="#cenik">Ceník</a>
+</div>
+
+<script>
+//---------------------------------------------------------------------
+//
+// QR Code Generator for JavaScript
+//
+// Copyright (c) 2009 Kazuhiko Arase
+//
+// URL: http://www.d-project.com/
+//
+// Licensed under the MIT license:
+//  http://www.opensource.org/licenses/mit-license.php
+//
+// The word 'QR Code' is registered trademark of
+// DENSO WAVE INCORPORATED
+//  http://www.denso-wave.com/qrcode/faqpatent-e.html
+//
+//---------------------------------------------------------------------
+
+var qrcode = function() {
+
+  //---------------------------------------------------------------------
+  // qrcode
+  //---------------------------------------------------------------------
+
+  /**
+   * qrcode
+   * @param typeNumber 1 to 40
+   * @param errorCorrectionLevel 'L','M','Q','H'
+   */
+  var qrcode = function(typeNumber, errorCorrectionLevel) {
+
+    var PAD0 = 0xEC;
+    var PAD1 = 0x11;
+
+    var _typeNumber = typeNumber;
+    var _errorCorrectionLevel = QRErrorCorrectionLevel[errorCorrectionLevel];
+    var _modules = null;
+    var _moduleCount = 0;
+    var _dataCache = null;
+    var _dataList = [];
+
+    var _this = {};
+
+    var makeImpl = function(test, maskPattern) {
+
+      _moduleCount = _typeNumber * 4 + 17;
+      _modules = function(moduleCount) {
+        var modules = new Array(moduleCount);
+        for (var row = 0; row < moduleCount; row += 1) {
+          modules[row] = new Array(moduleCount);
+          for (var col = 0; col < moduleCount; col += 1) {
+            modules[row][col] = null;
+          }
+        }
+        return modules;
+      }(_moduleCount);
+
+      setupPositionProbePattern(0, 0);
+      setupPositionProbePattern(_moduleCount - 7, 0);
+      setupPositionProbePattern(0, _moduleCount - 7);
+      setupPositionAdjustPattern();
+      setupTimingPattern();
+      setupTypeInfo(test, maskPattern);
+
+      if (_typeNumber >= 7) {
+        setupTypeNumber(test);
+      }
+
+      if (_dataCache == null) {
+        _dataCache = createData(_typeNumber, _errorCorrectionLevel, _dataList);
+      }
+
+      mapData(_dataCache, maskPattern);
+    };
+
+    var setupPositionProbePattern = function(row, col) {
+
+      for (var r = -1; r <= 7; r += 1) {
+
+        if (row + r <= -1 || _moduleCount <= row + r) continue;
+
+        for (var c = -1; c <= 7; c += 1) {
+
+          if (col + c <= -1 || _moduleCount <= col + c) continue;
+
+          if ( (0 <= r && r <= 6 && (c == 0 || c == 6) )
+              || (0 <= c && c <= 6 && (r == 0 || r == 6) )
+              || (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+            _modules[row + r][col + c] = true;
+          } else {
+            _modules[row + r][col + c] = false;
+          }
+        }
+      }
+    };
+
+    var getBestMaskPattern = function() {
+
+      var minLostPoint = 0;
+      var pattern = 0;
+
+      for (var i = 0; i < 8; i += 1) {
+
+        makeImpl(true, i);
+
+        var lostPoint = QRUtil.getLostPoint(_this);
+
+        if (i == 0 || minLostPoint > lostPoint) {
+          minLostPoint = lostPoint;
+          pattern = i;
+        }
+      }
+
+      return pattern;
+    };
+
+    var setupTimingPattern = function() {
+
+      for (var r = 8; r < _moduleCount - 8; r += 1) {
+        if (_modules[r][6] != null) {
+          continue;
+        }
+        _modules[r][6] = (r % 2 == 0);
+      }
+
+      for (var c = 8; c < _moduleCount - 8; c += 1) {
+        if (_modules[6][c] != null) {
+          continue;
+        }
+        _modules[6][c] = (c % 2 == 0);
+      }
+    };
+
+    var setupPositionAdjustPattern = function() {
+
+      var pos = QRUtil.getPatternPosition(_typeNumber);
+
+      for (var i = 0; i < pos.length; i += 1) {
+
+        for (var j = 0; j < pos.length; j += 1) {
+
+          var row = pos[i];
+          var col = pos[j];
+
+          if (_modules[row][col] != null) {
+            continue;
+          }
+
+          for (var r = -2; r <= 2; r += 1) {
+
+            for (var c = -2; c <= 2; c += 1) {
+
+              if (r == -2 || r == 2 || c == -2 || c == 2
+                  || (r == 0 && c == 0) ) {
+                _modules[row + r][col + c] = true;
+              } else {
+                _modules[row + r][col + c] = false;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    var setupTypeNumber = function(test) {
+
+      var bits = QRUtil.getBCHTypeNumber(_typeNumber);
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[Math.floor(i / 3)][i % 3 + _moduleCount - 8 - 3] = mod;
+      }
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[i % 3 + _moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+      }
+    };
+
+    var setupTypeInfo = function(test, maskPattern) {
+
+      var data = (_errorCorrectionLevel << 3) | maskPattern;
+      var bits = QRUtil.getBCHTypeInfo(data);
+
+      // vertical
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 6) {
+          _modules[i][8] = mod;
+        } else if (i < 8) {
+          _modules[i + 1][8] = mod;
+        } else {
+          _modules[_moduleCount - 15 + i][8] = mod;
+        }
+      }
+
+      // horizontal
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 8) {
+          _modules[8][_moduleCount - i - 1] = mod;
+        } else if (i < 9) {
+          _modules[8][15 - i - 1 + 1] = mod;
+        } else {
+          _modules[8][15 - i - 1] = mod;
+        }
+      }
+
+      // fixed module
+      _modules[_moduleCount - 8][8] = (!test);
+    };
+
+    var mapData = function(data, maskPattern) {
+
+      var inc = -1;
+      var row = _moduleCount - 1;
+      var bitIndex = 7;
+      var byteIndex = 0;
+      var maskFunc = QRUtil.getMaskFunction(maskPattern);
+
+      for (var col = _moduleCount - 1; col > 0; col -= 2) {
+
+        if (col == 6) col -= 1;
+
+        while (true) {
+
+          for (var c = 0; c < 2; c += 1) {
+
+            if (_modules[row][col - c] == null) {
+
+              var dark = false;
+
+              if (byteIndex < data.length) {
+                dark = ( ( (data[byteIndex] >>> bitIndex) & 1) == 1);
+              }
+
+              var mask = maskFunc(row, col - c);
+
+              if (mask) {
+                dark = !dark;
+              }
+
+              _modules[row][col - c] = dark;
+              bitIndex -= 1;
+
+              if (bitIndex == -1) {
+                byteIndex += 1;
+                bitIndex = 7;
+              }
+            }
+          }
+
+          row += inc;
+
+          if (row < 0 || _moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
+        }
+      }
+    };
+
+    var createBytes = function(buffer, rsBlocks) {
+
+      var offset = 0;
+
+      var maxDcCount = 0;
+      var maxEcCount = 0;
+
+      var dcdata = new Array(rsBlocks.length);
+      var ecdata = new Array(rsBlocks.length);
+
+      for (var r = 0; r < rsBlocks.length; r += 1) {
+
+        var dcCount = rsBlocks[r].dataCount;
+        var ecCount = rsBlocks[r].totalCount - dcCount;
+
+        maxDcCount = Math.max(maxDcCount, dcCount);
+        maxEcCount = Math.max(maxEcCount, ecCount);
+
+        dcdata[r] = new Array(dcCount);
+
+        for (var i = 0; i < dcdata[r].length; i += 1) {
+          dcdata[r][i] = 0xff & buffer.getBuffer()[i + offset];
+        }
+        offset += dcCount;
+
+        var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+        var rawPoly = qrPolynomial(dcdata[r], rsPoly.getLength() - 1);
+
+        var modPoly = rawPoly.mod(rsPoly);
+        ecdata[r] = new Array(rsPoly.getLength() - 1);
+        for (var i = 0; i < ecdata[r].length; i += 1) {
+          var modIndex = i + modPoly.getLength() - ecdata[r].length;
+          ecdata[r][i] = (modIndex >= 0)? modPoly.getAt(modIndex) : 0;
+        }
+      }
+
+      var totalCodeCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalCodeCount += rsBlocks[i].totalCount;
+      }
+
+      var data = new Array(totalCodeCount);
+      var index = 0;
+
+      for (var i = 0; i < maxDcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < dcdata[r].length) {
+            data[index] = dcdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      for (var i = 0; i < maxEcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < ecdata[r].length) {
+            data[index] = ecdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      return data;
+    };
+
+    var createData = function(typeNumber, errorCorrectionLevel, dataList) {
+
+      var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectionLevel);
+
+      var buffer = qrBitBuffer();
+
+      for (var i = 0; i < dataList.length; i += 1) {
+        var data = dataList[i];
+        buffer.put(data.getMode(), 4);
+        buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+        data.write(buffer);
+      }
+
+      // calc num max data.
+      var totalDataCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalDataCount += rsBlocks[i].dataCount;
+      }
+
+      if (buffer.getLengthInBits() > totalDataCount * 8) {
+        throw 'code length overflow. ('
+          + buffer.getLengthInBits()
+          + '>'
+          + totalDataCount * 8
+          + ')';
+      }
+
+      // end code
+      if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) {
+        buffer.put(0, 4);
+      }
+
+      // padding
+      while (buffer.getLengthInBits() % 8 != 0) {
+        buffer.putBit(false);
+      }
+
+      // padding
+      while (true) {
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD0, 8);
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD1, 8);
+      }
+
+      return createBytes(buffer, rsBlocks);
+    };
+
+    _this.addData = function(data, mode) {
+
+      mode = mode || 'Byte';
+
+      var newData = null;
+
+      switch(mode) {
+      case 'Numeric' :
+        newData = qrNumber(data);
+        break;
+      case 'Alphanumeric' :
+        newData = qrAlphaNum(data);
+        break;
+      case 'Byte' :
+        newData = qr8BitByte(data);
+        break;
+      case 'Kanji' :
+        newData = qrKanji(data);
+        break;
+      default :
+        throw 'mode:' + mode;
+      }
+
+      _dataList.push(newData);
+      _dataCache = null;
+    };
+
+    _this.isDark = function(row, col) {
+      if (row < 0 || _moduleCount <= row || col < 0 || _moduleCount <= col) {
+        throw row + ',' + col;
+      }
+      return _modules[row][col];
+    };
+
+    _this.getModuleCount = function() {
+      return _moduleCount;
+    };
+
+    _this.make = function() {
+      if (_typeNumber < 1) {
+        var typeNumber = 1;
+
+        for (; typeNumber < 40; typeNumber++) {
+          var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, _errorCorrectionLevel);
+          var buffer = qrBitBuffer();
+
+          for (var i = 0; i < _dataList.length; i++) {
+            var data = _dataList[i];
+            buffer.put(data.getMode(), 4);
+            buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+            data.write(buffer);
+          }
+
+          var totalDataCount = 0;
+          for (var i = 0; i < rsBlocks.length; i++) {
+            totalDataCount += rsBlocks[i].dataCount;
+          }
+
+          if (buffer.getLengthInBits() <= totalDataCount * 8) {
+            break;
+          }
+        }
+
+        _typeNumber = typeNumber;
+      }
+
+      makeImpl(false, getBestMaskPattern() );
+    };
+
+    _this.createTableTag = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var qrHtml = '';
+
+      qrHtml += '<table style="';
+      qrHtml += ' border-width: 0px; border-style: none;';
+      qrHtml += ' border-collapse: collapse;';
+      qrHtml += ' padding: 0px; margin: ' + margin + 'px;';
+      qrHtml += '">';
+      qrHtml += '<tbody>';
+
+      for (var r = 0; r < _this.getModuleCount(); r += 1) {
+
+        qrHtml += '<tr>';
+
+        for (var c = 0; c < _this.getModuleCount(); c += 1) {
+          qrHtml += '<td style="';
+          qrHtml += ' border-width: 0px; border-style: none;';
+          qrHtml += ' border-collapse: collapse;';
+          qrHtml += ' padding: 0px; margin: 0px;';
+          qrHtml += ' width: ' + cellSize + 'px;';
+          qrHtml += ' height: ' + cellSize + 'px;';
+          qrHtml += ' background-color: ';
+          qrHtml += _this.isDark(r, c)? '#000000' : '#ffffff';
+          qrHtml += ';';
+          qrHtml += '"/>';
+        }
+
+        qrHtml += '</tr>';
+      }
+
+      qrHtml += '</tbody>';
+      qrHtml += '</table>';
+
+      return qrHtml;
+    };
+
+    _this.createSvgTag = function(cellSize, margin, alt, title) {
+
+      var opts = {};
+      if (typeof arguments[0] == 'object') {
+        // Called by options.
+        opts = arguments[0];
+        // overwrite cellSize and margin.
+        cellSize = opts.cellSize;
+        margin = opts.margin;
+        alt = opts.alt;
+        title = opts.title;
+      }
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      // Compose alt property surrogate
+      alt = (typeof alt === 'string') ? {text: alt} : alt || {};
+      alt.text = alt.text || null;
+      alt.id = (alt.text) ? alt.id || 'qrcode-description' : null;
+
+      // Compose title property surrogate
+      title = (typeof title === 'string') ? {text: title} : title || {};
+      title.text = title.text || null;
+      title.id = (title.text) ? title.id || 'qrcode-title' : null;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var c, mc, r, mr, qrSvg='', rect;
+
+      rect = 'l' + cellSize + ',0 0,' + cellSize +
+        ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+
+      qrSvg += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+      qrSvg += !opts.scalable ? ' width="' + size + 'px" height="' + size + 'px"' : '';
+      qrSvg += ' viewBox="0 0 ' + size + ' ' + size + '" ';
+      qrSvg += ' preserveAspectRatio="xMinYMin meet"';
+      qrSvg += (title.text || alt.text) ? ' role="img" aria-labelledby="' +
+          escapeXml([title.id, alt.id].join(' ').trim() ) + '"' : '';
+      qrSvg += '>';
+      qrSvg += (title.text) ? '<title id="' + escapeXml(title.id) + '">' +
+          escapeXml(title.text) + '</title>' : '';
+      qrSvg += (alt.text) ? '<description id="' + escapeXml(alt.id) + '">' +
+          escapeXml(alt.text) + '</description>' : '';
+      qrSvg += '<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>';
+      qrSvg += '<path d="';
+
+      for (r = 0; r < _this.getModuleCount(); r += 1) {
+        mr = r * cellSize + margin;
+        for (c = 0; c < _this.getModuleCount(); c += 1) {
+          if (_this.isDark(r, c) ) {
+            mc = c*cellSize+margin;
+            qrSvg += 'M' + mc + ',' + mr + rect;
+          }
+        }
+      }
+
+      qrSvg += '" stroke="transparent" fill="black"/>';
+      qrSvg += '</svg>';
+
+      return qrSvg;
+    };
+
+    _this.createDataURL = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      return createDataURL(size, size, function(x, y) {
+        if (min <= x && x < max && min <= y && y < max) {
+          var c = Math.floor( (x - min) / cellSize);
+          var r = Math.floor( (y - min) / cellSize);
+          return _this.isDark(r, c)? 0 : 1;
+        } else {
+          return 1;
+        }
+      } );
+    };
+
+    _this.createImgTag = function(cellSize, margin, alt) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+
+      var img = '';
+      img += '<img';
+      img += '\u0020src="';
+      img += _this.createDataURL(cellSize, margin);
+      img += '"';
+      img += '\u0020width="';
+      img += size;
+      img += '"';
+      img += '\u0020height="';
+      img += size;
+      img += '"';
+      if (alt) {
+        img += '\u0020alt="';
+        img += escapeXml(alt);
+        img += '"';
+      }
+      img += '/>';
+
+      return img;
+    };
+
+    var escapeXml = function(s) {
+      var escaped = '';
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charAt(i);
+        switch(c) {
+        case '<': escaped += '&lt;'; break;
+        case '>': escaped += '&gt;'; break;
+        case '&': escaped += '&amp;'; break;
+        case '"': escaped += '&quot;'; break;
+        default : escaped += c; break;
+        }
+      }
+      return escaped;
+    };
+
+    var _createHalfASCII = function(margin) {
+      var cellSize = 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r1, r2, p;
+
+      var blocks = {
+        '██': '█',
+        '█ ': '▀',
+        ' █': '▄',
+        '  ': ' '
+      };
+
+      var blocksLastLineNoMargin = {
+        '██': '▀',
+        '█ ': '▀',
+        ' █': ' ',
+        '  ': ' '
+      };
+
+      var ascii = '';
+      for (y = 0; y < size; y += 2) {
+        r1 = Math.floor((y - min) / cellSize);
+        r2 = Math.floor((y + 1 - min) / cellSize);
+        for (x = 0; x < size; x += 1) {
+          p = '█';
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r1, Math.floor((x - min) / cellSize))) {
+            p = ' ';
+          }
+
+          if (min <= x && x < max && min <= y+1 && y+1 < max && _this.isDark(r2, Math.floor((x - min) / cellSize))) {
+            p += ' ';
+          }
+          else {
+            p += '█';
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          ascii += (margin < 1 && y+1 >= max) ? blocksLastLineNoMargin[p] : blocks[p];
+        }
+
+        ascii += '\n';
+      }
+
+      if (size % 2 && margin > 0) {
+        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('▀');
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.createASCII = function(cellSize, margin) {
+      cellSize = cellSize || 1;
+
+      if (cellSize < 2) {
+        return _createHalfASCII(margin);
+      }
+
+      cellSize -= 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r, p;
+
+      var white = Array(cellSize+1).join('██');
+      var black = Array(cellSize+1).join('  ');
+
+      var ascii = '';
+      var line = '';
+      for (y = 0; y < size; y += 1) {
+        r = Math.floor( (y - min) / cellSize);
+        line = '';
+        for (x = 0; x < size; x += 1) {
+          p = 1;
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r, Math.floor((x - min) / cellSize))) {
+            p = 0;
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          line += p ? white : black;
+        }
+
+        for (r = 0; r < cellSize; r += 1) {
+          ascii += line + '\n';
+        }
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.renderTo2dContext = function(context, cellSize) {
+      cellSize = cellSize || 2;
+      var length = _this.getModuleCount();
+      for (var row = 0; row < length; row++) {
+        for (var col = 0; col < length; col++) {
+          context.fillStyle = _this.isDark(row, col) ? 'black' : 'white';
+          context.fillRect(row * cellSize, col * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrcode.stringToBytes
+  //---------------------------------------------------------------------
+
+  qrcode.stringToBytesFuncs = {
+    'default' : function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        bytes.push(c & 0xff);
+      }
+      return bytes;
+    }
+  };
+
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['default'];
+
+  //---------------------------------------------------------------------
+  // qrcode.createStringToBytes
+  //---------------------------------------------------------------------
+
+  /**
+   * @param unicodeData base64 string of byte array.
+   * [16bit Unicode],[16bit Bytes], ...
+   * @param numChars
+   */
+  qrcode.createStringToBytes = function(unicodeData, numChars) {
+
+    // create conversion map.
+
+    var unicodeMap = function() {
+
+      var bin = base64DecodeInputStream(unicodeData);
+      var read = function() {
+        var b = bin.read();
+        if (b == -1) throw 'eof';
+        return b;
+      };
+
+      var count = 0;
+      var unicodeMap = {};
+      while (true) {
+        var b0 = bin.read();
+        if (b0 == -1) break;
+        var b1 = read();
+        var b2 = read();
+        var b3 = read();
+        var k = String.fromCharCode( (b0 << 8) | b1);
+        var v = (b2 << 8) | b3;
+        unicodeMap[k] = v;
+        count += 1;
+      }
+      if (count != numChars) {
+        throw count + ' != ' + numChars;
+      }
+
+      return unicodeMap;
+    }();
+
+    var unknownChar = '?'.charCodeAt(0);
+
+    return function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        if (c < 128) {
+          bytes.push(c);
+        } else {
+          var b = unicodeMap[s.charAt(i)];
+          if (typeof b == 'number') {
+            if ( (b & 0xff) == b) {
+              // 1byte
+              bytes.push(b);
+            } else {
+              // 2bytes
+              bytes.push(b >>> 8);
+              bytes.push(b & 0xff);
+            }
+          } else {
+            bytes.push(unknownChar);
+          }
+        }
+      }
+      return bytes;
+    };
+  };
+
+  //---------------------------------------------------------------------
+  // QRMode
+  //---------------------------------------------------------------------
+
+  var QRMode = {
+    MODE_NUMBER :    1 << 0,
+    MODE_ALPHA_NUM : 1 << 1,
+    MODE_8BIT_BYTE : 1 << 2,
+    MODE_KANJI :     1 << 3
+  };
+
+  //---------------------------------------------------------------------
+  // QRErrorCorrectionLevel
+  //---------------------------------------------------------------------
+
+  var QRErrorCorrectionLevel = {
+    L : 1,
+    M : 0,
+    Q : 3,
+    H : 2
+  };
+
+  //---------------------------------------------------------------------
+  // QRMaskPattern
+  //---------------------------------------------------------------------
+
+  var QRMaskPattern = {
+    PATTERN000 : 0,
+    PATTERN001 : 1,
+    PATTERN010 : 2,
+    PATTERN011 : 3,
+    PATTERN100 : 4,
+    PATTERN101 : 5,
+    PATTERN110 : 6,
+    PATTERN111 : 7
+  };
+
+  //---------------------------------------------------------------------
+  // QRUtil
+  //---------------------------------------------------------------------
+
+  var QRUtil = function() {
+
+    var PATTERN_POSITION_TABLE = [
+      [],
+      [6, 18],
+      [6, 22],
+      [6, 26],
+      [6, 30],
+      [6, 34],
+      [6, 22, 38],
+      [6, 24, 42],
+      [6, 26, 46],
+      [6, 28, 50],
+      [6, 30, 54],
+      [6, 32, 58],
+      [6, 34, 62],
+      [6, 26, 46, 66],
+      [6, 26, 48, 70],
+      [6, 26, 50, 74],
+      [6, 30, 54, 78],
+      [6, 30, 56, 82],
+      [6, 30, 58, 86],
+      [6, 34, 62, 90],
+      [6, 28, 50, 72, 94],
+      [6, 26, 50, 74, 98],
+      [6, 30, 54, 78, 102],
+      [6, 28, 54, 80, 106],
+      [6, 32, 58, 84, 110],
+      [6, 30, 58, 86, 114],
+      [6, 34, 62, 90, 118],
+      [6, 26, 50, 74, 98, 122],
+      [6, 30, 54, 78, 102, 126],
+      [6, 26, 52, 78, 104, 130],
+      [6, 30, 56, 82, 108, 134],
+      [6, 34, 60, 86, 112, 138],
+      [6, 30, 58, 86, 114, 142],
+      [6, 34, 62, 90, 118, 146],
+      [6, 30, 54, 78, 102, 126, 150],
+      [6, 24, 50, 76, 102, 128, 154],
+      [6, 28, 54, 80, 106, 132, 158],
+      [6, 32, 58, 84, 110, 136, 162],
+      [6, 26, 54, 82, 110, 138, 166],
+      [6, 30, 58, 86, 114, 142, 170]
+    ];
+    var G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+    var G18 = (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0);
+    var G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+    var _this = {};
+
+    var getBCHDigit = function(data) {
+      var digit = 0;
+      while (data != 0) {
+        digit += 1;
+        data >>>= 1;
+      }
+      return digit;
+    };
+
+    _this.getBCHTypeInfo = function(data) {
+      var d = data << 10;
+      while (getBCHDigit(d) - getBCHDigit(G15) >= 0) {
+        d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15) ) );
+      }
+      return ( (data << 10) | d) ^ G15_MASK;
+    };
+
+    _this.getBCHTypeNumber = function(data) {
+      var d = data << 12;
+      while (getBCHDigit(d) - getBCHDigit(G18) >= 0) {
+        d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18) ) );
+      }
+      return (data << 12) | d;
+    };
+
+    _this.getPatternPosition = function(typeNumber) {
+      return PATTERN_POSITION_TABLE[typeNumber - 1];
+    };
+
+    _this.getMaskFunction = function(maskPattern) {
+
+      switch (maskPattern) {
+
+      case QRMaskPattern.PATTERN000 :
+        return function(i, j) { return (i + j) % 2 == 0; };
+      case QRMaskPattern.PATTERN001 :
+        return function(i, j) { return i % 2 == 0; };
+      case QRMaskPattern.PATTERN010 :
+        return function(i, j) { return j % 3 == 0; };
+      case QRMaskPattern.PATTERN011 :
+        return function(i, j) { return (i + j) % 3 == 0; };
+      case QRMaskPattern.PATTERN100 :
+        return function(i, j) { return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 == 0; };
+      case QRMaskPattern.PATTERN101 :
+        return function(i, j) { return (i * j) % 2 + (i * j) % 3 == 0; };
+      case QRMaskPattern.PATTERN110 :
+        return function(i, j) { return ( (i * j) % 2 + (i * j) % 3) % 2 == 0; };
+      case QRMaskPattern.PATTERN111 :
+        return function(i, j) { return ( (i * j) % 3 + (i + j) % 2) % 2 == 0; };
+
+      default :
+        throw 'bad maskPattern:' + maskPattern;
+      }
+    };
+
+    _this.getErrorCorrectPolynomial = function(errorCorrectLength) {
+      var a = qrPolynomial([1], 0);
+      for (var i = 0; i < errorCorrectLength; i += 1) {
+        a = a.multiply(qrPolynomial([1, QRMath.gexp(i)], 0) );
+      }
+      return a;
+    };
+
+    _this.getLengthInBits = function(mode, type) {
+
+      if (1 <= type && type < 10) {
+
+        // 1 - 9
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 10;
+        case QRMode.MODE_ALPHA_NUM : return 9;
+        case QRMode.MODE_8BIT_BYTE : return 8;
+        case QRMode.MODE_KANJI     : return 8;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 27) {
+
+        // 10 - 26
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 12;
+        case QRMode.MODE_ALPHA_NUM : return 11;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 10;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 41) {
+
+        // 27 - 40
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 14;
+        case QRMode.MODE_ALPHA_NUM : return 13;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 12;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else {
+        throw 'type:' + type;
+      }
+    };
+
+    _this.getLostPoint = function(qrcode) {
+
+      var moduleCount = qrcode.getModuleCount();
+
+      var lostPoint = 0;
+
+      // LEVEL1
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount; col += 1) {
+
+          var sameCount = 0;
+          var dark = qrcode.isDark(row, col);
+
+          for (var r = -1; r <= 1; r += 1) {
+
+            if (row + r < 0 || moduleCount <= row + r) {
+              continue;
+            }
+
+            for (var c = -1; c <= 1; c += 1) {
+
+              if (col + c < 0 || moduleCount <= col + c) {
+                continue;
+              }
+
+              if (r == 0 && c == 0) {
+                continue;
+              }
+
+              if (dark == qrcode.isDark(row + r, col + c) ) {
+                sameCount += 1;
+              }
+            }
+          }
+
+          if (sameCount > 5) {
+            lostPoint += (3 + sameCount - 5);
+          }
+        }
+      };
+
+      // LEVEL2
+
+      for (var row = 0; row < moduleCount - 1; row += 1) {
+        for (var col = 0; col < moduleCount - 1; col += 1) {
+          var count = 0;
+          if (qrcode.isDark(row, col) ) count += 1;
+          if (qrcode.isDark(row + 1, col) ) count += 1;
+          if (qrcode.isDark(row, col + 1) ) count += 1;
+          if (qrcode.isDark(row + 1, col + 1) ) count += 1;
+          if (count == 0 || count == 4) {
+            lostPoint += 3;
+          }
+        }
+      }
+
+      // LEVEL3
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount - 6; col += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row, col + 1)
+              &&  qrcode.isDark(row, col + 2)
+              &&  qrcode.isDark(row, col + 3)
+              &&  qrcode.isDark(row, col + 4)
+              && !qrcode.isDark(row, col + 5)
+              &&  qrcode.isDark(row, col + 6) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount - 6; row += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row + 1, col)
+              &&  qrcode.isDark(row + 2, col)
+              &&  qrcode.isDark(row + 3, col)
+              &&  qrcode.isDark(row + 4, col)
+              && !qrcode.isDark(row + 5, col)
+              &&  qrcode.isDark(row + 6, col) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      // LEVEL4
+
+      var darkCount = 0;
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount; row += 1) {
+          if (qrcode.isDark(row, col) ) {
+            darkCount += 1;
+          }
+        }
+      }
+
+      var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+      lostPoint += ratio * 10;
+
+      return lostPoint;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // QRMath
+  //---------------------------------------------------------------------
+
+  var QRMath = function() {
+
+    var EXP_TABLE = new Array(256);
+    var LOG_TABLE = new Array(256);
+
+    // initialize tables
+    for (var i = 0; i < 8; i += 1) {
+      EXP_TABLE[i] = 1 << i;
+    }
+    for (var i = 8; i < 256; i += 1) {
+      EXP_TABLE[i] = EXP_TABLE[i - 4]
+        ^ EXP_TABLE[i - 5]
+        ^ EXP_TABLE[i - 6]
+        ^ EXP_TABLE[i - 8];
+    }
+    for (var i = 0; i < 255; i += 1) {
+      LOG_TABLE[EXP_TABLE[i] ] = i;
+    }
+
+    var _this = {};
+
+    _this.glog = function(n) {
+
+      if (n < 1) {
+        throw 'glog(' + n + ')';
+      }
+
+      return LOG_TABLE[n];
+    };
+
+    _this.gexp = function(n) {
+
+      while (n < 0) {
+        n += 255;
+      }
+
+      while (n >= 256) {
+        n -= 255;
+      }
+
+      return EXP_TABLE[n];
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrPolynomial
+  //---------------------------------------------------------------------
+
+  function qrPolynomial(num, shift) {
+
+    if (typeof num.length == 'undefined') {
+      throw num.length + '/' + shift;
+    }
+
+    var _num = function() {
+      var offset = 0;
+      while (offset < num.length && num[offset] == 0) {
+        offset += 1;
+      }
+      var _num = new Array(num.length - offset + shift);
+      for (var i = 0; i < num.length - offset; i += 1) {
+        _num[i] = num[i + offset];
+      }
+      return _num;
+    }();
+
+    var _this = {};
+
+    _this.getAt = function(index) {
+      return _num[index];
+    };
+
+    _this.getLength = function() {
+      return _num.length;
+    };
+
+    _this.multiply = function(e) {
+
+      var num = new Array(_this.getLength() + e.getLength() - 1);
+
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        for (var j = 0; j < e.getLength(); j += 1) {
+          num[i + j] ^= QRMath.gexp(QRMath.glog(_this.getAt(i) ) + QRMath.glog(e.getAt(j) ) );
+        }
+      }
+
+      return qrPolynomial(num, 0);
+    };
+
+    _this.mod = function(e) {
+
+      if (_this.getLength() - e.getLength() < 0) {
+        return _this;
+      }
+
+      var ratio = QRMath.glog(_this.getAt(0) ) - QRMath.glog(e.getAt(0) );
+
+      var num = new Array(_this.getLength() );
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        num[i] = _this.getAt(i);
+      }
+
+      for (var i = 0; i < e.getLength(); i += 1) {
+        num[i] ^= QRMath.gexp(QRMath.glog(e.getAt(i) ) + ratio);
+      }
+
+      // recursive call
+      return qrPolynomial(num, 0).mod(e);
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // QRRSBlock
+  //---------------------------------------------------------------------
+
+  var QRRSBlock = function() {
+
+    var RS_BLOCK_TABLE = [
+
+      // L
+      // M
+      // Q
+      // H
+
+      // 1
+      [1, 26, 19],
+      [1, 26, 16],
+      [1, 26, 13],
+      [1, 26, 9],
+
+      // 2
+      [1, 44, 34],
+      [1, 44, 28],
+      [1, 44, 22],
+      [1, 44, 16],
+
+      // 3
+      [1, 70, 55],
+      [1, 70, 44],
+      [2, 35, 17],
+      [2, 35, 13],
+
+      // 4
+      [1, 100, 80],
+      [2, 50, 32],
+      [2, 50, 24],
+      [4, 25, 9],
+
+      // 5
+      [1, 134, 108],
+      [2, 67, 43],
+      [2, 33, 15, 2, 34, 16],
+      [2, 33, 11, 2, 34, 12],
+
+      // 6
+      [2, 86, 68],
+      [4, 43, 27],
+      [4, 43, 19],
+      [4, 43, 15],
+
+      // 7
+      [2, 98, 78],
+      [4, 49, 31],
+      [2, 32, 14, 4, 33, 15],
+      [4, 39, 13, 1, 40, 14],
+
+      // 8
+      [2, 121, 97],
+      [2, 60, 38, 2, 61, 39],
+      [4, 40, 18, 2, 41, 19],
+      [4, 40, 14, 2, 41, 15],
+
+      // 9
+      [2, 146, 116],
+      [3, 58, 36, 2, 59, 37],
+      [4, 36, 16, 4, 37, 17],
+      [4, 36, 12, 4, 37, 13],
+
+      // 10
+      [2, 86, 68, 2, 87, 69],
+      [4, 69, 43, 1, 70, 44],
+      [6, 43, 19, 2, 44, 20],
+      [6, 43, 15, 2, 44, 16],
+
+      // 11
+      [4, 101, 81],
+      [1, 80, 50, 4, 81, 51],
+      [4, 50, 22, 4, 51, 23],
+      [3, 36, 12, 8, 37, 13],
+
+      // 12
+      [2, 116, 92, 2, 117, 93],
+      [6, 58, 36, 2, 59, 37],
+      [4, 46, 20, 6, 47, 21],
+      [7, 42, 14, 4, 43, 15],
+
+      // 13
+      [4, 133, 107],
+      [8, 59, 37, 1, 60, 38],
+      [8, 44, 20, 4, 45, 21],
+      [12, 33, 11, 4, 34, 12],
+
+      // 14
+      [3, 145, 115, 1, 146, 116],
+      [4, 64, 40, 5, 65, 41],
+      [11, 36, 16, 5, 37, 17],
+      [11, 36, 12, 5, 37, 13],
+
+      // 15
+      [5, 109, 87, 1, 110, 88],
+      [5, 65, 41, 5, 66, 42],
+      [5, 54, 24, 7, 55, 25],
+      [11, 36, 12, 7, 37, 13],
+
+      // 16
+      [5, 122, 98, 1, 123, 99],
+      [7, 73, 45, 3, 74, 46],
+      [15, 43, 19, 2, 44, 20],
+      [3, 45, 15, 13, 46, 16],
+
+      // 17
+      [1, 135, 107, 5, 136, 108],
+      [10, 74, 46, 1, 75, 47],
+      [1, 50, 22, 15, 51, 23],
+      [2, 42, 14, 17, 43, 15],
+
+      // 18
+      [5, 150, 120, 1, 151, 121],
+      [9, 69, 43, 4, 70, 44],
+      [17, 50, 22, 1, 51, 23],
+      [2, 42, 14, 19, 43, 15],
+
+      // 19
+      [3, 141, 113, 4, 142, 114],
+      [3, 70, 44, 11, 71, 45],
+      [17, 47, 21, 4, 48, 22],
+      [9, 39, 13, 16, 40, 14],
+
+      // 20
+      [3, 135, 107, 5, 136, 108],
+      [3, 67, 41, 13, 68, 42],
+      [15, 54, 24, 5, 55, 25],
+      [15, 43, 15, 10, 44, 16],
+
+      // 21
+      [4, 144, 116, 4, 145, 117],
+      [17, 68, 42],
+      [17, 50, 22, 6, 51, 23],
+      [19, 46, 16, 6, 47, 17],
+
+      // 22
+      [2, 139, 111, 7, 140, 112],
+      [17, 74, 46],
+      [7, 54, 24, 16, 55, 25],
+      [34, 37, 13],
+
+      // 23
+      [4, 151, 121, 5, 152, 122],
+      [4, 75, 47, 14, 76, 48],
+      [11, 54, 24, 14, 55, 25],
+      [16, 45, 15, 14, 46, 16],
+
+      // 24
+      [6, 147, 117, 4, 148, 118],
+      [6, 73, 45, 14, 74, 46],
+      [11, 54, 24, 16, 55, 25],
+      [30, 46, 16, 2, 47, 17],
+
+      // 25
+      [8, 132, 106, 4, 133, 107],
+      [8, 75, 47, 13, 76, 48],
+      [7, 54, 24, 22, 55, 25],
+      [22, 45, 15, 13, 46, 16],
+
+      // 26
+      [10, 142, 114, 2, 143, 115],
+      [19, 74, 46, 4, 75, 47],
+      [28, 50, 22, 6, 51, 23],
+      [33, 46, 16, 4, 47, 17],
+
+      // 27
+      [8, 152, 122, 4, 153, 123],
+      [22, 73, 45, 3, 74, 46],
+      [8, 53, 23, 26, 54, 24],
+      [12, 45, 15, 28, 46, 16],
+
+      // 28
+      [3, 147, 117, 10, 148, 118],
+      [3, 73, 45, 23, 74, 46],
+      [4, 54, 24, 31, 55, 25],
+      [11, 45, 15, 31, 46, 16],
+
+      // 29
+      [7, 146, 116, 7, 147, 117],
+      [21, 73, 45, 7, 74, 46],
+      [1, 53, 23, 37, 54, 24],
+      [19, 45, 15, 26, 46, 16],
+
+      // 30
+      [5, 145, 115, 10, 146, 116],
+      [19, 75, 47, 10, 76, 48],
+      [15, 54, 24, 25, 55, 25],
+      [23, 45, 15, 25, 46, 16],
+
+      // 31
+      [13, 145, 115, 3, 146, 116],
+      [2, 74, 46, 29, 75, 47],
+      [42, 54, 24, 1, 55, 25],
+      [23, 45, 15, 28, 46, 16],
+
+      // 32
+      [17, 145, 115],
+      [10, 74, 46, 23, 75, 47],
+      [10, 54, 24, 35, 55, 25],
+      [19, 45, 15, 35, 46, 16],
+
+      // 33
+      [17, 145, 115, 1, 146, 116],
+      [14, 74, 46, 21, 75, 47],
+      [29, 54, 24, 19, 55, 25],
+      [11, 45, 15, 46, 46, 16],
+
+      // 34
+      [13, 145, 115, 6, 146, 116],
+      [14, 74, 46, 23, 75, 47],
+      [44, 54, 24, 7, 55, 25],
+      [59, 46, 16, 1, 47, 17],
+
+      // 35
+      [12, 151, 121, 7, 152, 122],
+      [12, 75, 47, 26, 76, 48],
+      [39, 54, 24, 14, 55, 25],
+      [22, 45, 15, 41, 46, 16],
+
+      // 36
+      [6, 151, 121, 14, 152, 122],
+      [6, 75, 47, 34, 76, 48],
+      [46, 54, 24, 10, 55, 25],
+      [2, 45, 15, 64, 46, 16],
+
+      // 37
+      [17, 152, 122, 4, 153, 123],
+      [29, 74, 46, 14, 75, 47],
+      [49, 54, 24, 10, 55, 25],
+      [24, 45, 15, 46, 46, 16],
+
+      // 38
+      [4, 152, 122, 18, 153, 123],
+      [13, 74, 46, 32, 75, 47],
+      [48, 54, 24, 14, 55, 25],
+      [42, 45, 15, 32, 46, 16],
+
+      // 39
+      [20, 147, 117, 4, 148, 118],
+      [40, 75, 47, 7, 76, 48],
+      [43, 54, 24, 22, 55, 25],
+      [10, 45, 15, 67, 46, 16],
+
+      // 40
+      [19, 148, 118, 6, 149, 119],
+      [18, 75, 47, 31, 76, 48],
+      [34, 54, 24, 34, 55, 25],
+      [20, 45, 15, 61, 46, 16]
+    ];
+
+    var qrRSBlock = function(totalCount, dataCount) {
+      var _this = {};
+      _this.totalCount = totalCount;
+      _this.dataCount = dataCount;
+      return _this;
+    };
+
+    var _this = {};
+
+    var getRsBlockTable = function(typeNumber, errorCorrectionLevel) {
+
+      switch(errorCorrectionLevel) {
+      case QRErrorCorrectionLevel.L :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0];
+      case QRErrorCorrectionLevel.M :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1];
+      case QRErrorCorrectionLevel.Q :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2];
+      case QRErrorCorrectionLevel.H :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3];
+      default :
+        return undefined;
+      }
+    };
+
+    _this.getRSBlocks = function(typeNumber, errorCorrectionLevel) {
+
+      var rsBlock = getRsBlockTable(typeNumber, errorCorrectionLevel);
+
+      if (typeof rsBlock == 'undefined') {
+        throw 'bad rs block @ typeNumber:' + typeNumber +
+            '/errorCorrectionLevel:' + errorCorrectionLevel;
+      }
+
+      var length = rsBlock.length / 3;
+
+      var list = [];
+
+      for (var i = 0; i < length; i += 1) {
+
+        var count = rsBlock[i * 3 + 0];
+        var totalCount = rsBlock[i * 3 + 1];
+        var dataCount = rsBlock[i * 3 + 2];
+
+        for (var j = 0; j < count; j += 1) {
+          list.push(qrRSBlock(totalCount, dataCount) );
+        }
+      }
+
+      return list;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrBitBuffer
+  //---------------------------------------------------------------------
+
+  var qrBitBuffer = function() {
+
+    var _buffer = [];
+    var _length = 0;
+
+    var _this = {};
+
+    _this.getBuffer = function() {
+      return _buffer;
+    };
+
+    _this.getAt = function(index) {
+      var bufIndex = Math.floor(index / 8);
+      return ( (_buffer[bufIndex] >>> (7 - index % 8) ) & 1) == 1;
+    };
+
+    _this.put = function(num, length) {
+      for (var i = 0; i < length; i += 1) {
+        _this.putBit( ( (num >>> (length - i - 1) ) & 1) == 1);
+      }
+    };
+
+    _this.getLengthInBits = function() {
+      return _length;
+    };
+
+    _this.putBit = function(bit) {
+
+      var bufIndex = Math.floor(_length / 8);
+      if (_buffer.length <= bufIndex) {
+        _buffer.push(0);
+      }
+
+      if (bit) {
+        _buffer[bufIndex] |= (0x80 >>> (_length % 8) );
+      }
+
+      _length += 1;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrNumber
+  //---------------------------------------------------------------------
+
+  var qrNumber = function(data) {
+
+    var _mode = QRMode.MODE_NUMBER;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _data;
+
+      var i = 0;
+
+      while (i + 2 < data.length) {
+        buffer.put(strToNum(data.substring(i, i + 3) ), 10);
+        i += 3;
+      }
+
+      if (i < data.length) {
+        if (data.length - i == 1) {
+          buffer.put(strToNum(data.substring(i, i + 1) ), 4);
+        } else if (data.length - i == 2) {
+          buffer.put(strToNum(data.substring(i, i + 2) ), 7);
+        }
+      }
+    };
+
+    var strToNum = function(s) {
+      var num = 0;
+      for (var i = 0; i < s.length; i += 1) {
+        num = num * 10 + chatToNum(s.charAt(i) );
+      }
+      return num;
+    };
+
+    var chatToNum = function(c) {
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      }
+      throw 'illegal char :' + c;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrAlphaNum
+  //---------------------------------------------------------------------
+
+  var qrAlphaNum = function(data) {
+
+    var _mode = QRMode.MODE_ALPHA_NUM;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var s = _data;
+
+      var i = 0;
+
+      while (i + 1 < s.length) {
+        buffer.put(
+          getCode(s.charAt(i) ) * 45 +
+          getCode(s.charAt(i + 1) ), 11);
+        i += 2;
+      }
+
+      if (i < s.length) {
+        buffer.put(getCode(s.charAt(i) ), 6);
+      }
+    };
+
+    var getCode = function(c) {
+
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      } else if ('A' <= c && c <= 'Z') {
+        return c.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+      } else {
+        switch (c) {
+        case ' ' : return 36;
+        case '$' : return 37;
+        case '%' : return 38;
+        case '*' : return 39;
+        case '+' : return 40;
+        case '-' : return 41;
+        case '.' : return 42;
+        case '/' : return 43;
+        case ':' : return 44;
+        default :
+          throw 'illegal char :' + c;
+        }
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qr8BitByte
+  //---------------------------------------------------------------------
+
+  var qr8BitByte = function(data) {
+
+    var _mode = QRMode.MODE_8BIT_BYTE;
+    var _data = data;
+    var _bytes = qrcode.stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _bytes.length;
+    };
+
+    _this.write = function(buffer) {
+      for (var i = 0; i < _bytes.length; i += 1) {
+        buffer.put(_bytes[i], 8);
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrKanji
+  //---------------------------------------------------------------------
+
+  var qrKanji = function(data) {
+
+    var _mode = QRMode.MODE_KANJI;
+    var _data = data;
+
+    var stringToBytes = qrcode.stringToBytesFuncs['SJIS'];
+    if (!stringToBytes) {
+      throw 'sjis not supported.';
+    }
+    !function(c, code) {
+      // self test for sjis support.
+      var test = stringToBytes(c);
+      if (test.length != 2 || ( (test[0] << 8) | test[1]) != code) {
+        throw 'sjis not supported.';
+      }
+    }('\u53cb', 0x9746);
+
+    var _bytes = stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return ~~(_bytes.length / 2);
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _bytes;
+
+      var i = 0;
+
+      while (i + 1 < data.length) {
+
+        var c = ( (0xff & data[i]) << 8) | (0xff & data[i + 1]);
+
+        if (0x8140 <= c && c <= 0x9FFC) {
+          c -= 0x8140;
+        } else if (0xE040 <= c && c <= 0xEBBF) {
+          c -= 0xC140;
+        } else {
+          throw 'illegal char at ' + (i + 1) + '/' + c;
+        }
+
+        c = ( (c >>> 8) & 0xff) * 0xC0 + (c & 0xff);
+
+        buffer.put(c, 13);
+
+        i += 2;
+      }
+
+      if (i < data.length) {
+        throw 'illegal char at ' + (i + 1);
+      }
+    };
+
+    return _this;
+  };
+
+  //=====================================================================
+  // GIF Support etc.
+  //
+
+  //---------------------------------------------------------------------
+  // byteArrayOutputStream
+  //---------------------------------------------------------------------
+
+  var byteArrayOutputStream = function() {
+
+    var _bytes = [];
+
+    var _this = {};
+
+    _this.writeByte = function(b) {
+      _bytes.push(b & 0xff);
+    };
+
+    _this.writeShort = function(i) {
+      _this.writeByte(i);
+      _this.writeByte(i >>> 8);
+    };
+
+    _this.writeBytes = function(b, off, len) {
+      off = off || 0;
+      len = len || b.length;
+      for (var i = 0; i < len; i += 1) {
+        _this.writeByte(b[i + off]);
+      }
+    };
+
+    _this.writeString = function(s) {
+      for (var i = 0; i < s.length; i += 1) {
+        _this.writeByte(s.charCodeAt(i) );
+      }
+    };
+
+    _this.toByteArray = function() {
+      return _bytes;
+    };
+
+    _this.toString = function() {
+      var s = '';
+      s += '[';
+      for (var i = 0; i < _bytes.length; i += 1) {
+        if (i > 0) {
+          s += ',';
+        }
+        s += _bytes[i];
+      }
+      s += ']';
+      return s;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64EncodeOutputStream
+  //---------------------------------------------------------------------
+
+  var base64EncodeOutputStream = function() {
+
+    var _buffer = 0;
+    var _buflen = 0;
+    var _length = 0;
+    var _base64 = '';
+
+    var _this = {};
+
+    var writeEncoded = function(b) {
+      _base64 += String.fromCharCode(encode(b & 0x3f) );
+    };
+
+    var encode = function(n) {
+      if (n < 0) {
+        // error.
+      } else if (n < 26) {
+        return 0x41 + n;
+      } else if (n < 52) {
+        return 0x61 + (n - 26);
+      } else if (n < 62) {
+        return 0x30 + (n - 52);
+      } else if (n == 62) {
+        return 0x2b;
+      } else if (n == 63) {
+        return 0x2f;
+      }
+      throw 'n:' + n;
+    };
+
+    _this.writeByte = function(n) {
+
+      _buffer = (_buffer << 8) | (n & 0xff);
+      _buflen += 8;
+      _length += 1;
+
+      while (_buflen >= 6) {
+        writeEncoded(_buffer >>> (_buflen - 6) );
+        _buflen -= 6;
+      }
+    };
+
+    _this.flush = function() {
+
+      if (_buflen > 0) {
+        writeEncoded(_buffer << (6 - _buflen) );
+        _buffer = 0;
+        _buflen = 0;
+      }
+
+      if (_length % 3 != 0) {
+        // padding
+        var padlen = 3 - _length % 3;
+        for (var i = 0; i < padlen; i += 1) {
+          _base64 += '=';
+        }
+      }
+    };
+
+    _this.toString = function() {
+      return _base64;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64DecodeInputStream
+  //---------------------------------------------------------------------
+
+  var base64DecodeInputStream = function(str) {
+
+    var _str = str;
+    var _pos = 0;
+    var _buffer = 0;
+    var _buflen = 0;
+
+    var _this = {};
+
+    _this.read = function() {
+
+      while (_buflen < 8) {
+
+        if (_pos >= _str.length) {
+          if (_buflen == 0) {
+            return -1;
+          }
+          throw 'unexpected end of file./' + _buflen;
+        }
+
+        var c = _str.charAt(_pos);
+        _pos += 1;
+
+        if (c == '=') {
+          _buflen = 0;
+          return -1;
+        } else if (c.match(/^\s$/) ) {
+          // ignore if whitespace.
+          continue;
+        }
+
+        _buffer = (_buffer << 6) | decode(c.charCodeAt(0) );
+        _buflen += 6;
+      }
+
+      var n = (_buffer >>> (_buflen - 8) ) & 0xff;
+      _buflen -= 8;
+      return n;
+    };
+
+    var decode = function(c) {
+      if (0x41 <= c && c <= 0x5a) {
+        return c - 0x41;
+      } else if (0x61 <= c && c <= 0x7a) {
+        return c - 0x61 + 26;
+      } else if (0x30 <= c && c <= 0x39) {
+        return c - 0x30 + 52;
+      } else if (c == 0x2b) {
+        return 62;
+      } else if (c == 0x2f) {
+        return 63;
+      } else {
+        throw 'c:' + c;
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // gifImage (B/W)
+  //---------------------------------------------------------------------
+
+  var gifImage = function(width, height) {
+
+    var _width = width;
+    var _height = height;
+    var _data = new Array(width * height);
+
+    var _this = {};
+
+    _this.setPixel = function(x, y, pixel) {
+      _data[y * _width + x] = pixel;
+    };
+
+    _this.write = function(out) {
+
+      //---------------------------------
+      // GIF Signature
+
+      out.writeString('GIF87a');
+
+      //---------------------------------
+      // Screen Descriptor
+
+      out.writeShort(_width);
+      out.writeShort(_height);
+
+      out.writeByte(0x80); // 2bit
+      out.writeByte(0);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Global Color Map
+
+      // black
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+
+      // white
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+
+      //---------------------------------
+      // Image Descriptor
+
+      out.writeString(',');
+      out.writeShort(0);
+      out.writeShort(0);
+      out.writeShort(_width);
+      out.writeShort(_height);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Local Color Map
+
+      //---------------------------------
+      // Raster Data
+
+      var lzwMinCodeSize = 2;
+      var raster = getLZWRaster(lzwMinCodeSize);
+
+      out.writeByte(lzwMinCodeSize);
+
+      var offset = 0;
+
+      while (raster.length - offset > 255) {
+        out.writeByte(255);
+        out.writeBytes(raster, offset, 255);
+        offset += 255;
+      }
+
+      out.writeByte(raster.length - offset);
+      out.writeBytes(raster, offset, raster.length - offset);
+      out.writeByte(0x00);
+
+      //---------------------------------
+      // GIF Terminator
+      out.writeString(';');
+    };
+
+    var bitOutputStream = function(out) {
+
+      var _out = out;
+      var _bitLength = 0;
+      var _bitBuffer = 0;
+
+      var _this = {};
+
+      _this.write = function(data, length) {
+
+        if ( (data >>> length) != 0) {
+          throw 'length over';
+        }
+
+        while (_bitLength + length >= 8) {
+          _out.writeByte(0xff & ( (data << _bitLength) | _bitBuffer) );
+          length -= (8 - _bitLength);
+          data >>>= (8 - _bitLength);
+          _bitBuffer = 0;
+          _bitLength = 0;
+        }
+
+        _bitBuffer = (data << _bitLength) | _bitBuffer;
+        _bitLength = _bitLength + length;
+      };
+
+      _this.flush = function() {
+        if (_bitLength > 0) {
+          _out.writeByte(_bitBuffer);
+        }
+      };
+
+      return _this;
+    };
+
+    var getLZWRaster = function(lzwMinCodeSize) {
+
+      var clearCode = 1 << lzwMinCodeSize;
+      var endCode = (1 << lzwMinCodeSize) + 1;
+      var bitLength = lzwMinCodeSize + 1;
+
+      // Setup LZWTable
+      var table = lzwTable();
+
+      for (var i = 0; i < clearCode; i += 1) {
+        table.add(String.fromCharCode(i) );
+      }
+      table.add(String.fromCharCode(clearCode) );
+      table.add(String.fromCharCode(endCode) );
+
+      var byteOut = byteArrayOutputStream();
+      var bitOut = bitOutputStream(byteOut);
+
+      // clear code
+      bitOut.write(clearCode, bitLength);
+
+      var dataIndex = 0;
+
+      var s = String.fromCharCode(_data[dataIndex]);
+      dataIndex += 1;
+
+      while (dataIndex < _data.length) {
+
+        var c = String.fromCharCode(_data[dataIndex]);
+        dataIndex += 1;
+
+        if (table.contains(s + c) ) {
+
+          s = s + c;
+
+        } else {
+
+          bitOut.write(table.indexOf(s), bitLength);
+
+          if (table.size() < 0xfff) {
+
+            if (table.size() == (1 << bitLength) ) {
+              bitLength += 1;
+            }
+
+            table.add(s + c);
+          }
+
+          s = c;
+        }
+      }
+
+      bitOut.write(table.indexOf(s), bitLength);
+
+      // end code
+      bitOut.write(endCode, bitLength);
+
+      bitOut.flush();
+
+      return byteOut.toByteArray();
+    };
+
+    var lzwTable = function() {
+
+      var _map = {};
+      var _size = 0;
+
+      var _this = {};
+
+      _this.add = function(key) {
+        if (_this.contains(key) ) {
+          throw 'dup key:' + key;
+        }
+        _map[key] = _size;
+        _size += 1;
+      };
+
+      _this.size = function() {
+        return _size;
+      };
+
+      _this.indexOf = function(key) {
+        return _map[key];
+      };
+
+      _this.contains = function(key) {
+        return typeof _map[key] != 'undefined';
+      };
+
+      return _this;
+    };
+
+    return _this;
+  };
+
+  var createDataURL = function(width, height, getPixel) {
+    var gif = gifImage(width, height);
+    for (var y = 0; y < height; y += 1) {
+      for (var x = 0; x < width; x += 1) {
+        gif.setPixel(x, y, getPixel(x, y) );
+      }
+    }
+
+    var b = byteArrayOutputStream();
+    gif.write(b);
+
+    var base64 = base64EncodeOutputStream();
+    var bytes = b.toByteArray();
+    for (var i = 0; i < bytes.length; i += 1) {
+      base64.writeByte(bytes[i]);
+    }
+    base64.flush();
+
+    return 'data:image/gif;base64,' + base64;
+  };
+
+  //---------------------------------------------------------------------
+  // returns qrcode function.
+
+  return qrcode;
+}();
+
+// multibyte support
+!function() {
+
+  qrcode.stringToBytesFuncs['UTF-8'] = function(s) {
+    // http://stackoverflow.com/questions/18729405/how-to-convert-utf8-string-to-byte-array
+    function toUTF8Array(str) {
+      var utf8 = [];
+      for (var i=0; i < str.length; i++) {
+        var charcode = str.charCodeAt(i);
+        if (charcode < 0x80) utf8.push(charcode);
+        else if (charcode < 0x800) {
+          utf8.push(0xc0 | (charcode >> 6),
+              0x80 | (charcode & 0x3f));
+        }
+        else if (charcode < 0xd800 || charcode >= 0xe000) {
+          utf8.push(0xe0 | (charcode >> 12),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+        // surrogate pair
+        else {
+          i++;
+          // UTF-16 encodes 0x10000-0x10FFFF by
+          // subtracting 0x10000 and splitting the
+          // 20 bits of 0x0-0xFFFFF into two halves
+          charcode = 0x10000 + (((charcode & 0x3ff)<<10)
+            | (str.charCodeAt(i) & 0x3ff));
+          utf8.push(0xf0 | (charcode >>18),
+              0x80 | ((charcode>>12) & 0x3f),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+      }
+      return utf8;
+    }
+    return toUTF8Array(s);
+  };
+
+}();
+
+(function (factory) {
+  if (typeof define === 'function' && define.amd) {
+      define([], factory);
+  } else if (typeof exports === 'object') {
+      module.exports = factory();
+  }
+}(function () {
+    return qrcode;
+}));
+
+</script>
+<script>
+/* =====================================================================
+   NASTAVENÍ
+   ===================================================================== */
+const FUNKCE_URL = 'https://hkzhjoveiqadezmvksdz.supabase.co/functions/v1/licence';   // Supabase funkce `licence`
+const APP_URL    = 'yey.html';                                                        // aplikace, kde se licence aktivuje
+const KONTAKT    = 'info@yey.cz';                                                     // kontakt pro ruční vyřízení
+const KONTROLA_S = 20;                                                                // jak často se ptát na platbu (s)
+const VYCHOZI_TARIFY = {                                                              // jen pro zobrazení, platí ceník na serveru
+  rok:    { nazev: 'Roční licence',  cena: 990,  dni: 365,  popis: 'Plná verze na 12 měsíců' },
+  trvala: { nazev: 'Trvalá licence', cena: 2490, dni: null, popis: 'Jednorázově, bez dalších poplatků' }
+};
+const ULOZENI = 'yey-licence-objednavka';
+
+/* =====================================================================
+   POMOCNÉ
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const kc = n => Number(n).toLocaleString('cs-CZ', { maximumFractionDigits: 2 }) + ' Kč';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function icoPlatne(ico) {
+  if (!/^\d{8}$/.test(ico)) return false;
+  let s = 0; for (let i = 0; i < 7; i++) s += Number(ico[i]) * (8 - i);
+  return (11 - (s % 11)) % 10 === Number(ico[7]);
+}
+const cti = () => { try { return JSON.parse(localStorage.getItem(ULOZENI) || 'null'); } catch (e) { return null; } };
+const pis = v => { try { v ? localStorage.setItem(ULOZENI, JSON.stringify(v)) : localStorage.removeItem(ULOZENI); } catch (e) {} };
+async function volej(data) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = await fetch(FUNKCE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal: ctl.signal });
+    let d = null; try { d = await r.json(); } catch (e) {}
+    if (!r.ok || !d || d.ok === false) throw Object.assign(new Error((d && d.chyba) || ('Server odpověděl chybou ' + r.status)), { status: r.status });
+    return d;
+  } finally { clearTimeout(t); }
+}
+async function doSchranky(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch (e) {}
+  try { const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); const ok = document.execCommand('copy'); a.remove(); return ok; } catch (e) { return false; }
+}
+
+/* =====================================================================
+   MENU A MOBILNÍ VÝZVA
+   ===================================================================== */
+(function () {
+  const h = $('#hlava'), b = $('#menu-btn');
+  const nastav = o => { h.classList.toggle('otevreno', o); b.setAttribute('aria-expanded', o); b.innerHTML = `<svg class="ik"><use href="#i-${o ? 'zavrit' : 'menu'}"/></svg>`; };
+  b.addEventListener('click', () => nastav(!h.classList.contains('otevreno')));
+  $('#menu').addEventListener('click', e => { if (e.target.closest('a')) nastav(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') nastav(false); });
+  // plovoucí tlačítka na mobilu zmizí v úvodu, u nákupu a v patičce
+  const cta = $('#mob-cta'), skryj = new Set();
+  const io = new IntersectionObserver(zaznamy => {
+    zaznamy.forEach(z => z.isIntersecting ? skryj.add(z.target) : skryj.delete(z.target));
+    cta.classList.toggle('pryc', skryj.size > 0);
+  }, { threshold: 0.05 });
+  ['.hero', '#koupit', 'footer', '.vyzva'].forEach(s => { const el = $(s); if (el) io.observe(el); });
+})();
+
+/* =====================================================================
+   CENÍK
+   ===================================================================== */
+let TARIFY = VYCHOZI_TARIFY;
+function vykresliTarify() {
+  const klice = Object.keys(TARIFY);
+  $('#tarify').innerHTML = klice.map((k, i) => {
+    const t = TARIFY[k], dop = klice.length > 1 && i === klice.length - 1;
+    const naMesic = t.dni ? Math.round(t.cena / (t.dni / 30.4)) : null;
+    return `<div class="tarif${dop ? ' doporuc' : ''}">
+      ${dop ? '<span class="stitek">Nejvýhodnější</span>' : ''}
+      <h3>${esc(t.nazev)}</h3>
+      <div class="cena-cislo">${kc(t.cena)} <small>${t.dni ? '/ ' + (t.dni >= 360 ? 'rok' : t.dni + ' dní') : 'jednou provždy'}</small></div>
+      <p>${esc(t.popis || '')}${naMesic ? ` <br><small style="color:var(--ocel)">vychází na ${kc(naMesic)} měsíčně</small>` : ''}</p>
+      <a class="btn${dop ? ' btn-metr' : ''}" href="#koupit" data-tarif="${esc(k)}">Koupit</a></div>`;
+  }).join('');
+  $('#f-tarif').innerHTML = klice.map(k => `<option value="${esc(k)}">${esc(TARIFY[k].nazev)} – ${kc(TARIFY[k].cena)}</option>`).join('');
+}
+$('#tarify').addEventListener('click', e => { const b = e.target.closest('[data-tarif]'); if (b) $('#f-tarif').value = b.dataset.tarif; });
+
+/* =====================================================================
+   NÁKUP
+   ===================================================================== */
+function krok(n) {
+  ['k0', 'k1', 'k2', 'k3'].forEach((id, i) => $('#' + id).classList.toggle('skryt', i !== n));
+  document.querySelectorAll('[data-krok]').forEach(s => s.classList.toggle('akt', Number(s.dataset.krok) === n));
+  if (krok.uz && (n === 2 || n === 3)) { const k = $('#koupit'); const y = k.getBoundingClientRect().top + scrollY - 76; scrollTo({ top: y, behavior: 'smooth' }); }
+  krok.uz = true;
+}
+function zobrazChybu(el, t) { el.textContent = t; el.classList.toggle('skryt', !t); }
+
+$('#f-ico').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
+  const v = e.target.value, p = $('#f-ico-pozn');
+  if (v.length === 8 && !icoPlatne(v)) { p.textContent = 'Toto IČO není platné – zkontrolujte číslice.'; p.className = 'chyba'; }
+  else { p.textContent = 'Licence bude vystavena na toto IČO.'; p.className = ''; }
+});
+
+$('#k1').addEventListener('submit', async e => {
+  e.preventDefault();
+  const ico = $('#f-ico').value.trim(), email = $('#f-email').value.trim(), tarif = $('#f-tarif').value;
+  const z = $('#k1-zprava');
+  if (!icoPlatne(ico)) { zobrazChybu(z, 'Zadejte platné IČO (8 číslic).'); $('#f-ico').focus(); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) { zobrazChybu(z, 'Zkontrolujte e-mail.'); $('#f-email').focus(); return; }
+  if (!$('#f-souhlas').checked) { zobrazChybu(z, 'Pro pokračování potvrďte souhlas s podmínkami.'); return; }
+  zobrazChybu(z, '');
+  const btn = $('#f-odeslat'); btn.disabled = true; btn.textContent = 'Připravuji platbu…';
+  try {
+    const d = await volej({ akce: 'objednat', ico, email, tarif });
+    const obj = { id: d.id, token: d.token, vs: d.vs, castka: d.castka, nazev: d.nazev, ucet: d.ucet, spd: d.spd, zprava: d.zprava, ico, firma: d.firma, email };
+    pis(obj);
+    ukazPlatbu(obj);
+  } catch (err) {
+    if (!err.status || err.status >= 500 && err.status !== 503) { krok(0); return; }
+    zobrazChybu(z, err.message);
+  } finally { btn.disabled = false; btn.textContent = 'Pokračovat k platbě'; }
+});
+
+let casovac = null;
+function ukazPlatbu(o) {
+  krok(2);
+  try { const qr = qrcode(0, 'M'); qr.addData(o.spd); qr.make(); $('#qr').src = qr.createDataURL(6, 2); } catch (e) { $('#qr').alt = 'QR kód se nepodařilo vytvořit'; }
+  $('#p-tarif').textContent = o.nazev || '';
+  $('#p-castka').textContent = kc(o.castka);
+  $('#p-ucet').textContent = o.ucet || '';
+  $('#p-vs').textContent = o.vs;
+  $('#p-zprava').textContent = o.zprava || '';
+  $('#p-ico').textContent = o.ico + (o.firma ? ' · ' + o.firma : '');
+  zobrazChybu($('#k2-zprava'), '');
+  sleduj(o);
+}
+function sleduj(o) {
+  clearInterval(casovac);
+  const kontrola = async () => {
+    try {
+      const d = await volej({ akce: 'stav', id: o.id, token: o.token });
+      if (d.stav === 'vydano' && d.licence) { clearInterval(casovac); ukazKlic(o, d); return; }
+      $('#cekani-text').textContent = d.stav === 'zaplaceno' ? 'Platba přijata, připravuji klíč…' : 'Čekám na připsání platby.';
+      zobrazChybu($('#k2-zprava'), '');
+    } catch (err) {
+      if (err.status === 404) { clearInterval(casovac); pis(null); krok(1); zobrazChybu($('#k1-zprava'), 'Objednávka už neexistuje, vytvořte prosím novou.'); return; }
+      zobrazChybu($('#k2-zprava'), 'Stav platby se teď nepodařilo zjistit. Zkusím to znovu.');
+    }
+  };
+  kontrola();
+  casovac = setInterval(kontrola, KONTROLA_S * 1000);
+}
+function ukazKlic(o, d) {
+  krok(3);
+  $('#h-klic').value = d.licence;
+  $('#h-info').textContent = `IČO ${d.ico}${d.firma ? ' · ' + d.firma : ''} · ${d.exp ? 'platí do ' + new Date(d.exp).toLocaleDateString('cs-CZ') : 'trvalá'}${d.emailOdeslan ? ' · klíč jsme poslali i na ' + (o.email || 'váš e-mail') : ''}`;
+  $('#h-aktivovat').href = APP_URL + '#licence=' + encodeURIComponent(d.licence);
+  pis({ ...o, hotovo: true });
+}
+$('#p-zkontrolovat').addEventListener('click', () => { const o = cti(); if (o) sleduj(o); });
+$('#p-zrusit').addEventListener('click', () => {
+  if (!confirm('Založit novou objednávku? Pokud jste už zaplatili, počkejte prosím na klíč – přijde i e-mailem.')) return;
+  clearInterval(casovac); pis(null); krok(1);
+});
+$('#h-kopir').addEventListener('click', async () => { const ok = await doSchranky($('#h-klic').value); $('#h-kopir').textContent = ok ? 'Zkopírováno ✓' : 'Nepodařilo se'; setTimeout(() => $('#h-kopir').textContent = 'Kopírovat klíč', 2000); });
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-kopir]'); if (!b) return;
+  const ok = await doSchranky($('#' + b.dataset.kopir).textContent.replace(/\s/g, '') ); b.textContent = ok ? '✓' : '×'; setTimeout(() => b.textContent = 'Kopírovat', 1500);
+});
+
+/* =====================================================================
+   START
+   ===================================================================== */
+(async function start() {
+  document.querySelectorAll('[data-app]').forEach(a => a.href = APP_URL);
+  ['#kontakt-mail', '#pata-mail', '#faq-mail'].forEach(s => { const a = $(s); if (a) { a.href = 'mailto:' + KONTAKT; a.textContent = KONTAKT; } });
+  $('#rok').textContent = new Date().getFullYear();
+  vykresliTarify();
+  const ulozena = cti();
+  if (ulozena && ulozena.id) { ulozena.hotovo ? sleduj(ulozena) : ukazPlatbu(ulozena); }
+  try {
+    const d = await volej({ akce: 'tarify' });
+    if (d.tarify && Object.keys(d.tarify).length) { const v = $('#f-tarif').value; TARIFY = d.tarify; vykresliTarify(); if (TARIFY[v]) $('#f-tarif').value = v; }
+    if (d.platbyAktivni === false && !(ulozena && ulozena.id)) krok(0);
+  } catch (e) { if (!(ulozena && ulozena.id)) krok(0); }
+})();
+</script>
+</body>
+</html>

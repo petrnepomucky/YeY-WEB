@@ -3,182 +3,356 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YeY Odhad – hrubý rozpočet zakázky za pár minut</title>
-<meta name="description" content="Kalkulačky materiálu, katalog 130 000 položek stavebnin a nabídka pro zákazníka. Pro řemeslníky, v prohlížeči, bez registrace.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📏</text></svg>">
+<title>YeY – Kancelář pro řemeslníky</title>
+<meta name="description" content="Kalkulace materiálu, nabídky, předávací protokoly a faktury s QR platbou. Kancelář pro řemeslníky v prohlížeči – bez registrace, data zůstávají u vás.">
+<meta name="theme-color" content="#1D272F">
+<meta property="og:title" content="YeY – Kancelář pro řemeslníky">
+<meta property="og:description" content="Od zaměření k faktuře za pár minut. 10 kalkulaček, katalog 130 000 položek, nabídky a faktury s QR platbou.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23F2B705'/><path d='M18 14l14 20 14-20' fill='none' stroke='%231D272F' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/><path d='M32 34v16' stroke='%231D272F' stroke-width='7' stroke-linecap='round'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap&subset=latin-ext" rel="stylesheet">
 <style>
 :root{
-  --papir:#F4F5F2; --karta:#FFFFFF; --inkoust:#1D272F; --ocel:#5D6B76; --linka:#D8DCD6;
-  --metr:#F2B705; --metr-tmava:#C99400; --ok:#2B7A4B; --pozor:#B3261E; --r:12px;
+  --papir:#F4F5F2; --karta:#FFFFFF; --inkoust:#1D272F; --inkoust-2:#27333C; --inkoust-3:#39464F;
+  --ocel:#5D6B76; --text-2:#3A4750; --linka:#D8DCD6; --svetla:#C3CBD1;
+  --metr:#F2B705; --metr-tmava:#C99400; --metr-svetla:#FFF4CC; --ok:#2B7A4B; --pozor:#B3261E;
+  --r:14px; --stin:0 1px 2px rgba(29,39,47,.06),0 8px 24px rgba(29,39,47,.08);
+  --cond:'Barlow Condensed','Barlow',system-ui,sans-serif;
   color-scheme: light;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
 html,body{margin:0}
-body{font:17px/1.55 'Barlow',system-ui,'Segoe UI',sans-serif;color:var(--inkoust);background:var(--papir);-webkit-font-smoothing:antialiased}
-h1,h2,h3,.znacka,.cena-cislo{font-family:'Barlow Condensed','Barlow',system-ui,sans-serif;line-height:1.1;margin:0}
+body{font:17px/1.6 'Barlow',system-ui,'Segoe UI',sans-serif;color:var(--inkoust);background:var(--papir);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,.cena-cislo,.cislo{font-family:var(--cond);line-height:1.08;margin:0;text-wrap:balance}
+p{text-wrap:pretty}
 a{color:inherit}
-:focus-visible{outline:3px solid var(--inkoust);outline-offset:2px}
-.obal{max-width:1080px;margin:0 auto;padding:0 20px}
+:focus-visible{outline:3px solid var(--metr);outline-offset:3px;border-radius:6px}
+.obal{max-width:1120px;margin:0 auto;padding:0 24px}
 .skryt{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skok{position:absolute;left:12px;top:-60px;background:var(--metr);color:var(--inkoust);padding:.6rem 1rem;border-radius:8px;font-weight:700;z-index:50;text-decoration:none}
+.skok:focus{top:12px}
+svg.ik{width:24px;height:24px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
-/* hlavička */
-.hlava{background:var(--inkoust);color:#fff;position:sticky;top:0;z-index:20}
-.hlava .obal{display:flex;align-items:center;gap:16px;min-height:60px}
-.znacka{font-size:1.7rem;font-weight:700;color:var(--metr);text-decoration:none}
-.znacka small{color:#fff;font-size:1.05rem;font-weight:600;margin-left:.35rem}
-.hlava nav{margin-left:auto;display:flex;gap:4px;align-items:center}
-.hlava nav a{text-decoration:none;font-weight:600;padding:.5rem .7rem;border-radius:8px;opacity:.9}
-.hlava nav a:hover{background:rgba(255,255,255,.08);opacity:1}
-.hlava nav .btn{margin-left:6px}
+/* ---------- hlavička ---------- */
+.hlava{background:var(--inkoust);color:#fff;position:sticky;top:0;z-index:30;border-bottom:1px solid rgba(255,255,255,.06)}
+.hlava .obal{display:flex;align-items:center;gap:18px;min-height:68px}
+.znacka{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;margin-right:auto;min-width:0}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--metr);display:grid;place-items:center;flex:0 0 auto;position:relative;overflow:hidden}
+.logo svg{width:24px;height:24px}
+.logo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:repeating-linear-gradient(90deg,var(--inkoust) 0 1.5px,transparent 1.5px 6px);opacity:.45}
+.znacka-text{display:flex;flex-direction:column;line-height:1.05;min-width:0}
+.znacka-text b{font:700 1.6rem/1 var(--cond);color:var(--metr);letter-spacing:.2px}
+.znacka-text span{font:600 .98rem/1.15 var(--cond);color:#E6EAED;letter-spacing:.3px;white-space:nowrap}
+.hlava nav{display:flex;gap:2px;align-items:center}
+.hlava nav a{text-decoration:none;font-weight:600;padding:.55rem .8rem;border-radius:8px;color:#E6EAED;transition:background .15s,color .15s}
+.hlava nav a:hover{background:rgba(255,255,255,.08);color:#fff}
+.hlava nav .btn{margin-left:8px;color:var(--inkoust)}
+.menu-btn{display:none;background:transparent;border:0;color:#fff;width:46px;height:46px;border-radius:10px;cursor:pointer;place-items:center}
+.menu-btn:hover{background:rgba(255,255,255,.08)}
+.menu-btn svg{width:26px;height:26px}
 
-/* tlačítka */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:0;border-radius:10px;padding:.8rem 1.25rem;font-weight:700;font-size:1.02rem;cursor:pointer;text-decoration:none;line-height:1.2;min-height:48px;background:var(--inkoust);color:#fff}
+/* ---------- tlačítka ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:0;border-radius:11px;padding:.85rem 1.35rem;font:700 1.03rem/1.2 'Barlow',system-ui,sans-serif;cursor:pointer;text-decoration:none;min-height:50px;background:var(--inkoust);color:#fff;transition:background .15s,transform .15s,box-shadow .15s}
 .btn:hover{background:#2E3B45}
+.btn:active{transform:translateY(1px)}
+.btn svg.ik{width:20px;height:20px}
 .btn-metr{background:var(--metr);color:var(--inkoust)}
-.btn-metr:hover{background:#E0A800}
-.btn-tichy{background:transparent;color:var(--inkoust);border:2px solid var(--inkoust)}
-.btn-tichy:hover{background:rgba(29,39,47,.06)}
-.btn-maly{min-height:40px;padding:.5rem .9rem;font-size:.95rem}
+.btn-metr:hover{background:#FFC61A}
+.btn-tichy{background:transparent;color:var(--inkoust);box-shadow:inset 0 0 0 2px var(--inkoust)}
+.btn-tichy:hover{background:rgba(29,39,47,.07)}
+.btn-maly{min-height:42px;padding:.5rem .95rem;font-size:.97rem}
+.btn-velky{min-height:56px;padding:1rem 1.6rem;font-size:1.1rem}
 .btn:disabled{opacity:.55;cursor:default}
 
-/* metr – žlutý pruh s dílky */
+/* ---------- metr: žlutý pruh s dílky ---------- */
 .metr{background:var(--metr);position:relative}
-.metr::after{content:"";position:absolute;left:0;right:0;bottom:0;height:14px;pointer-events:none;
-  background:repeating-linear-gradient(90deg,var(--inkoust) 0 2px,transparent 2px 60px) 0 100%/100% 14px no-repeat,
-             repeating-linear-gradient(90deg,var(--inkoust) 0 1px,transparent 1px 12px) 0 100%/100% 7px no-repeat;opacity:.55}
+.metr::after{content:"";position:absolute;left:0;right:0;bottom:0;height:16px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,var(--inkoust) 0 2px,transparent 2px 100px) 0 100%/100% 16px no-repeat,
+             repeating-linear-gradient(90deg,var(--inkoust) 0 1.5px,transparent 1.5px 50px) 0 100%/100% 10px no-repeat,
+             repeating-linear-gradient(90deg,var(--inkoust) 0 1px,transparent 1px 10px) 0 100%/100% 6px no-repeat;opacity:.5}
 
-/* úvod */
-.hero{padding:56px 0 70px}
-.hero-mrizka{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
-.hero h1{font-size:clamp(2.4rem,5.4vw,4rem);font-weight:700;letter-spacing:-.5px}
-.hero p.lead{font-size:1.2rem;margin:18px 0 26px;max-width:36em}
+/* ---------- úvod ---------- */
+.hero{padding:64px 0 88px;overflow:hidden}
+.hero-mrizka{display:grid;grid-template-columns:1.08fr .92fr;gap:56px;align-items:center}
+.stitek-hero{display:inline-flex;align-items:center;gap:8px;background:var(--inkoust);color:var(--metr);font:700 .92rem/1 var(--cond);letter-spacing:.8px;text-transform:uppercase;padding:.5rem .8rem;border-radius:999px;margin-bottom:22px}
+.stitek-hero i{width:8px;height:8px;border-radius:50%;background:var(--metr);box-shadow:0 0 0 3px rgba(242,183,5,.25)}
+.hero h1{font-size:clamp(2.6rem,6vw,4.4rem);font-weight:700;letter-spacing:-.6px}
+.hero h1 u{text-decoration:none;background:linear-gradient(transparent 62%,rgba(255,255,255,.55) 62% 92%,transparent 92%)}
+.hero p.lead{font-size:1.22rem;margin:20px 0 30px;max-width:34em;color:#27313A}
 .hero-akce{display:flex;gap:12px;flex-wrap:wrap}
-.hero-pozn{margin-top:14px;font-size:.95rem;font-weight:500}
-.ukazka{background:var(--karta);border-radius:var(--r);box-shadow:0 18px 40px rgba(29,39,47,.22);padding:18px;font-size:.95rem}
-.ukazka-h{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--inkoust);padding-bottom:8px;margin-bottom:8px}
-.ukazka-h b{font-family:'Barlow Condensed','Barlow',system-ui,sans-serif;font-size:1.35rem}
-.ukazka-h span{color:var(--ocel);font-size:.85rem}
-.ur{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:7px 0;border-bottom:1px solid var(--linka)}
+.duvera{display:flex;flex-wrap:wrap;gap:8px 20px;margin:22px 0 0;padding:0;list-style:none;font-weight:600;font-size:.98rem}
+.duvera li{display:flex;align-items:center;gap:7px}
+.duvera svg.ik{width:20px;height:20px;stroke-width:2.6}
+
+/* ukázka: stoh dokladů */
+.stoh{position:relative;padding:26px 8px 8px 26px}
+.list{position:absolute;inset:0 34px 34px 0;background:#fff;border-radius:var(--r);box-shadow:0 6px 18px rgba(29,39,47,.14)}
+.list span{position:absolute;top:10px;left:16px;font:700 .82rem/1 var(--cond);letter-spacing:1px;text-transform:uppercase;color:var(--ocel)}
+.list.l2{transform:rotate(-4deg);background:#FBFBF8}
+.list.l1{transform:rotate(-2deg) translate(12px,10px)}
+.ukazka{position:relative;background:var(--karta);border-radius:var(--r);box-shadow:0 24px 50px rgba(29,39,47,.28);padding:20px 20px 18px;font-size:.95rem}
+.ukazka-h{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--inkoust);padding-bottom:10px;margin-bottom:6px}
+.ukazka-h b{font:700 1.4rem/1.05 var(--cond);display:block}
+.ukazka-h small{display:block;color:var(--ocel);font-size:.85rem;margin-top:3px}
+.ukazka-h .pill{background:var(--metr-svetla);color:#7A5B00;font-weight:700;font-size:.78rem;padding:.25rem .55rem;border-radius:999px;white-space:nowrap}
+.ur{display:grid;grid-template-columns:1fr auto;gap:0 12px;padding:8px 0;border-bottom:1px solid var(--linka)}
 .ur small{grid-column:1/-1;color:var(--ocel);font-size:.8rem}
 .ur b{font-weight:600}
-.ur em{font-style:normal;font-weight:700;text-align:right;white-space:nowrap}
-.ukazka-celkem{display:flex;justify-content:space-between;align-items:center;background:var(--inkoust);color:#fff;border-radius:8px;padding:10px 14px;margin-top:12px}
-.ukazka-celkem b{font-family:'Barlow Condensed','Barlow',system-ui,sans-serif;font-size:1.6rem;color:var(--metr)}
+.ur em{font-style:normal;font-weight:700;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ukazka-celkem{display:flex;justify-content:space-between;align-items:center;background:var(--inkoust);color:#fff;border-radius:10px;padding:12px 16px;margin-top:14px}
+.ukazka-celkem span{font-size:.92rem;color:var(--svetla)}
+.ukazka-celkem b{font:700 1.7rem/1 var(--cond);color:var(--metr);font-variant-numeric:tabular-nums}
+.dalsi-krok{position:absolute;right:-10px;bottom:-22px;display:flex;align-items:center;gap:10px;background:var(--inkoust);color:#fff;border-radius:12px;padding:10px 14px 10px 12px;box-shadow:0 12px 26px rgba(29,39,47,.3);font-weight:600;font-size:.93rem}
+.dalsi-krok i{width:30px;height:30px;border-radius:8px;background:var(--metr);color:var(--inkoust);display:grid;place-items:center;font-style:normal}
+.dalsi-krok i svg{width:18px;height:18px;stroke-width:2.4}
+.dalsi-krok small{display:block;color:var(--svetla);font-weight:500;font-size:.78rem;line-height:1.1}
 
-/* sekce */
-section{padding:64px 0}
-section h2{font-size:clamp(1.9rem,3.6vw,2.6rem);font-weight:700;margin-bottom:10px}
-.podnadpis{color:var(--ocel);font-size:1.1rem;margin:0 0 30px;max-width:40em}
-.karty{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.karta{background:var(--karta);border:1px solid var(--linka);border-radius:var(--r);padding:22px}
-.karta .ik{font-size:1.8rem;line-height:1}
-.karta h3{font-size:1.35rem;margin:10px 0 6px}
-.karta p{margin:0;color:#3A4750}
-.kroky{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:krok}
-.krok{background:var(--karta);border-radius:var(--r);padding:22px;border-top:6px solid var(--metr);counter-increment:krok}
-.krok::before{content:counter(krok);display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--inkoust);color:var(--metr);font:700 1.3rem 'Barlow Condensed','Barlow',system-ui,sans-serif}
-.krok h3{font-size:1.3rem;margin:12px 0 6px}
-.krok p{margin:0;color:#3A4750}
+/* ---------- čísla ---------- */
+.cisla{background:var(--inkoust);color:#fff;padding:34px 0}
+.cisla .obal{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.cisla .c{display:flex;flex-direction:column;gap:4px;padding-left:16px;border-left:3px solid var(--metr)}
+.cisla .cislo{font-size:2.5rem;font-weight:700;color:var(--metr);line-height:1}
+.cisla span{color:var(--svetla);font-size:.98rem;line-height:1.35}
+
+/* ---------- sekce ---------- */
+section{padding:88px 0}
+.nadpis-s{max-width:760px;margin-bottom:40px}
+.oko{display:inline-block;font:700 .9rem/1 var(--cond);letter-spacing:1.2px;text-transform:uppercase;color:var(--metr-tmava);margin-bottom:12px}
+section h2{font-size:clamp(2rem,4vw,2.9rem);font-weight:700;letter-spacing:-.3px}
+.podnadpis{color:var(--ocel);font-size:1.14rem;margin:14px 0 0}
 .tmava{background:var(--inkoust);color:#fff}
-.tmava .podnadpis{color:#C3CBD1}
-.srovnani{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.srovnani .karta{background:#27333C;border-color:#39464F;color:#fff}
-.srovnani .karta.lic{border:2px solid var(--metr)}
-.srovnani ul{margin:10px 0 0;padding:0;list-style:none}
-.srovnani li{padding:6px 0 6px 28px;position:relative}
-.srovnani li::before{content:"✓";position:absolute;left:0;color:var(--metr);font-weight:700}
-.srovnani li.ne::before{content:"–";color:#8A949B}
-.srovnani h3{font-size:1.5rem}
+.tmava .podnadpis{color:var(--svetla)}
+.tmava .oko{color:var(--metr)}
+.bila{background:#fff}
+
+/* průběh zakázky */
+.tok{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:14px;position:relative;counter-reset:tok}
+.tok::before{content:"";position:absolute;left:10%;right:10%;top:31px;height:3px;background:repeating-linear-gradient(90deg,var(--inkoust) 0 10px,transparent 10px 18px);opacity:.25}
+.tok li{position:relative;text-align:center;padding:0 4px}
+.tok .kolo{width:64px;height:64px;margin:0 auto 14px;border-radius:18px;background:var(--inkoust);color:var(--metr);display:grid;place-items:center;position:relative;box-shadow:0 0 0 6px var(--papir)}
+.bila .tok .kolo{box-shadow:0 0 0 6px #fff}
+.tok .kolo svg.ik{width:30px;height:30px}
+.tok .kolo::after{counter-increment:tok;content:counter(tok);position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--metr);color:var(--inkoust);font:700 .85rem/24px var(--cond);text-align:center}
+.tok h3{font-size:1.3rem;margin-bottom:6px}
+.tok p{margin:0;color:var(--text-2);font-size:.97rem;line-height:1.5}
+.tok-pozn{margin:34px auto 0;max-width:680px;text-align:center;background:var(--metr-svetla);border-radius:12px;padding:14px 18px;font-weight:600;display:flex;gap:10px;align-items:center;justify-content:center}
+.tok-pozn svg.ik{color:var(--metr-tmava)}
+
+/* funkce */
+.karty{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.karta{background:var(--karta);border:1px solid var(--linka);border-radius:var(--r);padding:26px;transition:box-shadow .2s,transform .2s,border-color .2s}
+.karty .karta:hover{box-shadow:var(--stin);transform:translateY(-2px);border-color:#C8CDC6}
+.karta .ikona{width:48px;height:48px;border-radius:12px;background:var(--metr-svetla);color:var(--inkoust);display:grid;place-items:center}
+.karta .ikona svg.ik{width:26px;height:26px}
+.karta h3{font-size:1.38rem;margin:16px 0 8px}
+.karta p{margin:0;color:var(--text-2)}
+
+/* kalkulačky */
+.kalk{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.kalk div{background:#fff;border:1px solid var(--linka);border-radius:12px;padding:16px 16px 18px;border-top:5px solid var(--metr)}
+.kalk b{display:block;font:700 1.22rem/1.1 var(--cond);margin-bottom:6px}
+.kalk span{display:block;color:var(--ocel);font-size:.9rem;line-height:1.45}
+.remesla{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px;align-items:center}
+.remesla b{margin-right:6px}
+.remesla span{background:#fff;border:1px solid var(--linka);border-radius:999px;padding:.3rem .8rem;font-weight:600;font-size:.95rem}
+
+/* zdarma × licence */
+.srovnani{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.srovnani .karta{background:var(--inkoust-2);border-color:var(--inkoust-3);color:#fff;padding:30px}
+.srovnani .karta.lic{box-shadow:inset 0 0 0 2px var(--metr);border-color:transparent;position:relative}
+.srovnani .karta.lic .stitek{position:absolute;top:-13px;left:26px}
+.srovnani h3{font-size:1.6rem}
+.srovnani ul{margin:14px 0 0;padding:0;list-style:none}
+.srovnani li{padding:7px 0 7px 32px;position:relative}
+.srovnani li::before{content:"";position:absolute;left:0;top:10px;width:20px;height:20px;border-radius:50%;background:var(--metr) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D272F' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/13px no-repeat}
+.srovnani li.ne{color:#9AA4AB}
+.srovnani li.ne::before{background:var(--inkoust-3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA4AB' stroke-width='3.4' stroke-linecap='round'%3E%3Cpath d='M7 12h10'/%3E%3C/svg%3E") center/13px no-repeat}
 
 /* ceník */
-.tarify{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
-.tarif{background:var(--karta);border:2px solid var(--linka);border-radius:var(--r);padding:26px;display:flex;flex-direction:column;gap:8px}
-.tarif.doporuc{border-color:var(--inkoust);box-shadow:0 10px 28px rgba(29,39,47,.12)}
-.tarif .stitek{align-self:flex-start;background:var(--metr);font-weight:700;font-size:.8rem;padding:.15rem .55rem;border-radius:4px;text-transform:uppercase;letter-spacing:.4px}
-.tarif h3{font-size:1.5rem}
-.cena-cislo{font-size:2.6rem;font-weight:700}
+.tarify{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;max-width:880px}
+.tarif{background:var(--karta);border:2px solid var(--linka);border-radius:var(--r);padding:30px;display:flex;flex-direction:column;gap:10px;position:relative}
+.tarif.doporuc{border-color:var(--inkoust);box-shadow:0 16px 36px rgba(29,39,47,.14)}
+.stitek{align-self:flex-start;background:var(--metr);color:var(--inkoust);font:700 .82rem/1 'Barlow',system-ui,sans-serif;padding:.4rem .65rem;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
+.tarif .stitek{position:absolute;top:-13px;left:26px}
+.tarif h3{font-size:1.55rem}
+.cena-cislo{font-size:3rem;font-weight:700;font-variant-numeric:tabular-nums}
 .cena-cislo small{font-family:'Barlow',system-ui,sans-serif;font-size:1rem;font-weight:500;color:var(--ocel)}
-.tarif p{margin:0;color:#3A4750;flex:1}
-.cenik-pozn{margin-top:14px;color:var(--ocel);font-size:.95rem}
+.tarif p{margin:0;color:var(--text-2);flex:1}
+.tarif .btn{margin-top:8px}
+.cenik-pozn{margin-top:18px;color:var(--ocel);font-size:.95rem;display:flex;gap:8px;align-items:flex-start;max-width:880px}
+.cenik-pozn svg.ik{width:20px;height:20px;margin-top:3px}
 
 /* nákup */
-.nakup{background:var(--karta);border-radius:var(--r);border:1px solid var(--linka);overflow:hidden}
-.nakup-hlava{padding:22px 26px 30px}
-.nakup-hlava h2{margin:0}
-.nakup-telo{padding:26px}
-.kroky-nakupu{display:flex;gap:6px;margin-top:10px;font-weight:600;font-size:.95rem;flex-wrap:wrap}
-.kroky-nakupu span{padding:.25rem .7rem;border-radius:999px;background:rgba(29,39,47,.12)}
-.kroky-nakupu span.akt{background:var(--inkoust);color:#fff}
-.form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.nakup{background:var(--karta);border-radius:var(--r);border:1px solid var(--linka);overflow:hidden;box-shadow:var(--stin)}
+.nakup-hlava{padding:26px 30px 36px}
+.nakup-hlava h2{margin:0;font-size:clamp(1.8rem,3.4vw,2.4rem)}
+.nakup-telo{padding:30px}
+.kroky-nakupu{display:flex;gap:6px;margin:14px 0 0;padding:0;list-style:none;font-weight:600;font-size:.95rem;flex-wrap:wrap}
+.kroky-nakupu li{padding:.3rem .8rem;border-radius:999px;background:rgba(29,39,47,.12)}
+.kroky-nakupu li.akt{background:var(--inkoust);color:#fff}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .pole{display:flex;flex-direction:column;gap:6px}
-.pole.cela{grid-column:1/-1}
+.pole.cela,.cela{grid-column:1/-1}
 .pole label{font-weight:600}
-.pole input,.pole select{border:2px solid #BFC5BF;border-radius:10px;padding:.7rem .8rem;font-size:1.05rem;min-height:50px;background:#fff}
-.pole input:focus,.pole select:focus{border-color:var(--inkoust);outline:none;box-shadow:0 0 0 3px rgba(29,39,47,.15)}
+.pole input,.pole select{border:2px solid #BFC5BF;border-radius:11px;padding:.7rem .85rem;font:inherit;font-size:1.05rem;min-height:52px;background:#fff;color:var(--inkoust)}
+.pole input:focus,.pole select:focus{border-color:var(--inkoust);outline:none;box-shadow:0 0 0 4px rgba(242,183,5,.35)}
 .pole small{color:var(--ocel)}
 .pole .chyba{color:var(--pozor);font-weight:600}
-.souhlas{display:flex;gap:10px;align-items:flex-start;font-size:.95rem}
-.souhlas input{width:22px;height:22px;margin-top:2px;flex:0 0 auto}
-.nakup-akce{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.souhlas{display:flex;gap:12px;align-items:flex-start;font-size:.97rem}
+.souhlas input{width:22px;height:22px;margin-top:2px;flex:0 0 auto;accent-color:var(--inkoust)}
+.nakup-akce{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.bezpecne{display:flex;gap:8px;align-items:center;color:var(--ocel);font-size:.93rem}
+.bezpecne svg.ik{width:18px;height:18px}
 .zprava{padding:12px 14px;border-radius:10px;font-weight:600;margin-top:14px}
 .zprava.chyba{background:#FBEDEC;color:var(--pozor)}
 .zprava.info{background:#EEF4F0;color:var(--ok)}
-.platba{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start}
-.qr-ram{background:#fff;border:2px solid var(--inkoust);border-radius:var(--r);padding:12px;text-align:center}
+.platba{display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:start}
+.qr-ram{background:#fff;border:2px solid var(--inkoust);border-radius:var(--r);padding:14px;text-align:center}
 .qr-ram img{width:220px;height:220px;display:block;image-rendering:pixelated}
-.qr-ram small{display:block;margin-top:6px;color:var(--ocel)}
-.udaje{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;margin:0}
+.qr-ram small{display:block;margin-top:8px;color:var(--ocel)}
+.udaje{display:grid;grid-template-columns:auto 1fr;gap:10px 20px;margin:0}
 .udaje dt{color:var(--ocel)}
-.udaje dd{margin:0;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.kopir{border:1px solid var(--linka);background:#fff;border-radius:6px;padding:.15rem .5rem;font-size:.85rem;cursor:pointer;font-weight:600}
-.cekani{display:flex;gap:12px;align-items:center;margin-top:18px;padding:14px;border-radius:10px;background:#FFF8E1;font-weight:600}
+.udaje dd{margin:0;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.kopir{border:1px solid var(--linka);background:#fff;border-radius:7px;padding:.2rem .55rem;font:600 .85rem 'Barlow',system-ui,sans-serif;cursor:pointer;color:var(--inkoust)}
+.kopir:hover{border-color:var(--inkoust)}
+.cekani{display:flex;gap:12px;align-items:center;margin-top:20px;padding:14px 16px;border-radius:12px;background:#FFF8E1;font-weight:600}
 .tocitko{width:22px;height:22px;border:3px solid var(--inkoust);border-right-color:transparent;border-radius:50%;animation:toc 1s linear infinite;flex:0 0 auto}
 @keyframes toc{to{transform:rotate(360deg)}}
-.hotovo-h{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-.hotovo-h .fajfka{width:46px;height:46px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:1.6rem;flex:0 0 auto}
-.klic{width:100%;min-height:96px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;border:2px solid var(--inkoust);border-radius:10px;padding:10px;resize:vertical;background:#F8F9F6;word-break:break-all}
+.hotovo-h{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.hotovo-h .fajfka{width:48px;height:48px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:1.6rem;flex:0 0 auto}
+.klic{width:100%;min-height:96px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;border:2px solid var(--inkoust);border-radius:11px;padding:10px;resize:vertical;background:#F8F9F6;word-break:break-all}
 
 /* FAQ */
-.faq details{background:var(--karta);border:1px solid var(--linka);border-radius:10px;margin-bottom:10px}
-.faq summary{cursor:pointer;padding:16px 18px;font-weight:700;font-size:1.08rem;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq-mrizka{display:grid;grid-template-columns:.8fr 1.2fr;gap:48px;align-items:start}
+.faq-mrizka .nadpis-s{position:sticky;top:100px;margin:0}
+.faq details{background:var(--karta);border:1px solid var(--linka);border-radius:12px;margin-bottom:10px;transition:border-color .15s}
+.faq details[open]{border-color:#BFC5BF}
+.faq summary{cursor:pointer;padding:18px 20px;font-weight:700;font-size:1.08rem;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:14px}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"+";font-size:1.4rem;line-height:1;color:var(--ocel)}
-.faq details[open] summary::after{content:"–"}
-.faq details p{margin:0;padding:0 18px 16px;color:#3A4750}
+.faq summary::after{content:"";flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--papir) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D272F' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M12 6v12M6 12h12'/%3E%3C/svg%3E") center/14px no-repeat;transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg);background-color:var(--metr)}
+.faq details p{margin:0;padding:0 20px 18px;color:var(--text-2)}
+.podminky{margin-top:26px;font-size:.95rem;color:var(--ocel);background:transparent;border:1px dashed #BFC5BF}
+.podminky h3{font-size:1.2rem;color:var(--inkoust);margin-bottom:6px}
+.podminky p{margin:0}
 
-footer{background:var(--inkoust);color:#C3CBD1;padding:34px 0;font-size:.95rem}
-footer .obal{display:flex;gap:20px;justify-content:space-between;flex-wrap:wrap}
-footer a{color:#fff}
+/* závěrečná výzva */
+.vyzva{padding:72px 0 88px}
+.vyzva .obal{display:flex;align-items:center;justify-content:space-between;gap:30px;flex-wrap:wrap}
+.vyzva h2{font-size:clamp(2rem,4.4vw,3.2rem);max-width:15em}
+.vyzva p{margin:10px 0 0;font-size:1.12rem;color:#27313A}
 
+footer{background:var(--inkoust);color:var(--svetla);padding:44px 0 36px;font-size:.96rem}
+.pata{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:30px}
+.pata h4{margin:0 0 10px;color:#fff;font:700 1.05rem var(--cond);letter-spacing:.6px;text-transform:uppercase}
+.pata ul{list-style:none;margin:0;padding:0}
+.pata li{margin:0 0 6px}
+.pata a{color:#fff;text-decoration:none}
+.pata a:hover{text-decoration:underline}
+.pata .znacka{margin-bottom:12px}
+.pata-spodek{border-top:1px solid var(--inkoust-3);margin-top:30px;padding-top:18px;font-size:.88rem;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* plovoucí výzva na mobilu */
+.mob-cta{display:none}
+
+@media (max-width:980px){
+  .kalk{grid-template-columns:repeat(3,1fr)}
+  .tok{grid-template-columns:1fr;gap:0;max-width:560px}
+  .tok::before{left:31px;right:auto;top:32px;bottom:32px;width:3px;height:auto;background:repeating-linear-gradient(180deg,var(--inkoust) 0 10px,transparent 10px 18px)}
+  .tok li{display:grid;grid-template-columns:64px 1fr;gap:4px 18px;text-align:left;padding:0 0 22px}
+  .tok .kolo{grid-row:span 2;margin:0}
+  .tok h3{align-self:end;margin:6px 0 2px}
+  .faq-mrizka{grid-template-columns:1fr;gap:26px}
+  .faq-mrizka .nadpis-s{position:static}
+}
 @media (max-width:860px){
+  .menu-btn{display:grid}
+  .hlava nav{display:none;position:absolute;left:0;right:0;top:100%;background:var(--inkoust);flex-direction:column;align-items:stretch;padding:8px 16px 18px;border-top:1px solid var(--inkoust-3);box-shadow:0 18px 30px rgba(0,0,0,.25)}
+  .hlava.otevreno nav{display:flex}
+  .hlava nav a{padding:.9rem .8rem;font-size:1.08rem}
+  .hlava nav .btn{margin:8px 0 0}
   .hero-mrizka,.platba{grid-template-columns:1fr}
-  .karty,.kroky{grid-template-columns:1fr 1fr}
+  .hero-mrizka{gap:48px}
+  .stoh{max-width:520px;margin:0 auto;width:100%}
+  .karty{grid-template-columns:1fr 1fr}
+  .cisla .obal{grid-template-columns:1fr 1fr;gap:24px}
   .qr-ram{justify-self:center}
+  .pata{grid-template-columns:1fr 1fr}
+  .pata > div:first-child{grid-column:1/-1}
 }
 @media (max-width:640px){
   body{font-size:16px}
-  .hlava nav a:not(.btn){display:none}
-  .hero{padding:34px 0 50px}
-  section{padding:44px 0}
-  .karty,.kroky,.srovnani,.form{grid-template-columns:1fr}
-  .nakup-telo,.nakup-hlava{padding:18px}
+  .obal{padding:0 16px}
+  .hlava .obal{min-height:62px;gap:10px}
+  .logo{width:36px;height:36px}
+  .znacka-text b{font-size:1.4rem}
+  .znacka-text span{font-size:.9rem}
+  .hero{padding:36px 0 70px}
+  .hero p.lead{font-size:1.1rem}
   .hero-akce .btn,.nakup-akce .btn{flex:1 1 100%}
+  .stoh{padding:22px 4px 4px 18px}
+  .dalsi-krok{right:4px;bottom:-26px}
+  section{padding:60px 0}
+  .nadpis-s{margin-bottom:28px}
+  .karty,.srovnani,.form{grid-template-columns:1fr}
+  .kalk{grid-template-columns:1fr 1fr}
+  .cisla .cislo{font-size:2rem}
+  .nakup-telo{padding:20px}
+  .nakup-hlava{padding:20px 20px 32px}
   .udaje{grid-template-columns:1fr;gap:2px}
   .udaje dd{margin-bottom:8px}
+  .vyzva{padding:56px 0 64px}
+  .vyzva .btn{flex:1 1 100%}
+  .pata{grid-template-columns:1fr}
+  .mob-cta{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:25;gap:8px;transition:transform .25s,opacity .25s}
+  .mob-cta .btn{flex:1;box-shadow:0 10px 26px rgba(29,39,47,.35)}
+  .mob-cta.pryc{transform:translateY(120%);opacity:0;pointer-events:none}
+  footer{padding-bottom:96px}
 }
+@media (max-width:380px){ .znacka-text span{font-size:.82rem} .kalk{grid-template-columns:1fr} }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
+<a class="skok" href="#obsah">Přeskočit na obsah</a>
 
-<header class="hlava">
+<!-- sada ikon -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-sipka" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-metr" viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M6.5 7v4M10.5 7v2.5M14.5 7v4M18.5 7v2.5"/></symbol>
+  <symbol id="i-kalk" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M8.5 6.5h7M8.5 11h.01M12 11h.01M15.5 11h.01M8.5 14.5h.01M12 14.5h.01M15.5 14.5v3.5M8.5 18h.01M12 18h.01"/></symbol>
+  <symbol id="i-nabidka" viewBox="0 0 24 24"><path d="M14 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z"/><path d="M14 2.5v5h5M8.5 12.5h7M8.5 16h4.5"/></symbol>
+  <symbol id="i-protokol" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="18" rx="2"/><path d="M9 3.5V2.5h6v1M8.5 13l2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-faktura" viewBox="0 0 24 24"><path d="M6 2.5h12v19l-3-2-3 2-3-2-3 2z"/><path d="M9 7.5h6M9 11h6M9 14.5h3.5"/></symbol>
+  <symbol id="i-hledat" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></symbol>
+  <symbol id="i-balik" viewBox="0 0 24 24"><path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 6.5l9 6.5 9-6.5"/></symbol>
+  <symbol id="i-zamek" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M20 20h.01M17 20h.01M14 20v-.01M20 17v.01"/></symbol>
+  <symbol id="i-mobil" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></symbol>
+  <symbol id="i-blesk" viewBox="0 0 24 24"><path d="M13 2.5L4.5 13.5H12l-1 8 8.5-11H12z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-zavrit" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-y" viewBox="0 0 24 24"><path d="M5 3.5l7 10 7-10M12 13.5v8" stroke-width="3.6"/></symbol>
+</svg>
+
+<header class="hlava" id="hlava">
   <div class="obal">
-    <a class="znacka" href="#">YeY<small>Odhad</small></a>
-    <nav aria-label="Hlavní">
+    <a class="znacka" href="#" aria-label="YeY – Kancelář pro řemeslníky, na začátek stránky">
+      <span class="logo" aria-hidden="true"><svg class="ik" style="stroke:#1D272F"><use href="#i-y"/></svg></span>
+      <span class="znacka-text"><b>YeY</b><span>Kancelář pro řemeslníky</span></span>
+    </a>
+    <button class="menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="menu" aria-label="Menu">
+      <svg class="ik"><use href="#i-menu"/></svg>
+    </button>
+    <nav aria-label="Hlavní" id="menu">
+      <a href="#prubeh">Jak to funguje</a>
       <a href="#funkce">Co umí</a>
       <a href="#cenik">Ceník</a>
       <a href="#faq">Otázky</a>
@@ -187,70 +361,130 @@ footer a{color:#fff}
   </div>
 </header>
 
-<main>
+<main id="obsah">
 <!-- ================= ÚVOD ================= -->
 <div class="metr hero">
   <div class="obal hero-mrizka">
     <div>
-      <h1>Hrubý rozpočet zakázky za pár minut</h1>
-      <p class="lead">Zadáte rozměry, YeY spočítá materiál i práci, vybere zboží z katalogu 130&nbsp;000 položek stavebnin a připraví nabídku pro zákazníka. Přímo v prohlížeči, na mobilu i v počítači.</p>
+      <span class="stitek-hero"><i aria-hidden="true"></i>Kalkulace · nabídky · faktury</span>
+      <h1>Od zaměření k&nbsp;faktuře <u>za&nbsp;pár minut</u></h1>
+      <p class="lead">Zadáte rozměry a YeY spočítá materiál i práci, vybere zboží z katalogu 130&nbsp;000 položek a připraví nabídku. Po práci z ní jedním tlačítkem uděláte předávací protokol a fakturu s QR platbou.</p>
       <div class="hero-akce">
-        <a class="btn" href="yey.html" data-app>Vyzkoušet zdarma</a>
-        <a class="btn btn-tichy" href="#cenik">Ceník licence</a>
+        <a class="btn btn-velky" href="yey.html" data-app>Vyzkoušet zdarma <svg class="ik"><use href="#i-sipka"/></svg></a>
+        <a class="btn btn-tichy btn-velky" href="#cenik">Ceník licence</a>
       </div>
-      <p class="hero-pozn">Bez registrace. Data zůstávají u vás v zařízení.</p>
+      <ul class="duvera">
+        <li><svg class="ik"><use href="#i-check"/></svg>Bez registrace</li>
+        <li><svg class="ik"><use href="#i-check"/></svg>Data zůstávají u vás</li>
+        <li><svg class="ik"><use href="#i-check"/></svg>Na mobilu i v počítači</li>
+      </ul>
     </div>
-    <div class="ukazka" aria-label="Ukázka výpočtu">
-      <div class="ukazka-h"><b>Sádrokartonová příčka</b><span>4 × 2,6 m, dveře 90</span></div>
-      <div class="ur"><b>Deska SDK 12,5 mm</b><em>20 m²</em><small>8 desek 1250 × 2000</small></div>
-      <div class="ur"><b>Profil CW 75, 2,6 m</b><em>20,8 bm</em><small>8 stojek po 625 mm</small></div>
-      <div class="ur"><b>Profil UW 75, 4 m</b><em>12 bm</em><small>podlaha, strop a nadpraží</small></div>
-      <div class="ur"><b>Šrouby TN 25</b><em>1 bal</em><small>432 ks → balení 1000 ks</small></div>
-      <div class="ur"><b>Montáž SDK příčky</b><em>8,6 m²</em><small>práce podle vaší sazby</small></div>
-      <div class="ukazka-celkem"><span>Orientačně bez DPH</span><b>≈ 11 400 Kč</b></div>
+
+    <div class="stoh" aria-label="Ukázka výpočtu sádrokartonové příčky">
+      <div class="list l2" aria-hidden="true"></div>
+      <div class="list l1" aria-hidden="true"></div>
+      <div class="ukazka">
+        <div class="ukazka-h">
+          <div><b>Sádrokartonová příčka</b><small>4 × 2,6 m · dveře 90 cm</small></div>
+          <span class="pill">Kalkulace</span>
+        </div>
+        <div class="ur"><b>Deska SDK 12,5 mm</b><em>20 m²</em><small>8 desek 1250 × 2000, oboustranně</small></div>
+        <div class="ur"><b>Profil CW 75, 2,6 m</b><em>20,8 bm</em><small>8 stojek po 625 mm</small></div>
+        <div class="ur"><b>Profil UW 75, 4 m</b><em>12 bm</em><small>podlaha, strop a nadpraží</small></div>
+        <div class="ur"><b>Šrouby TN 25</b><em>1 bal</em><small>432 ks → balení 1000 ks</small></div>
+        <div class="ur"><b>Montáž SDK příčky</b><em>8,6 m²</em><small>práce podle vaší sazby</small></div>
+        <div class="ukazka-celkem"><span>Orientačně bez DPH</span><b>≈ 11 400 Kč</b></div>
+      </div>
+      <div class="dalsi-krok" aria-hidden="true"><i><svg class="ik"><use href="#i-sipka"/></svg></i><span><small>Další krok</small>Vytvořit nabídku</span></div>
     </div>
   </div>
 </div>
 
+<!-- ================= ČÍSLA ================= -->
+<div class="cisla" aria-label="YeY v číslech">
+  <div class="obal">
+    <div class="c"><span class="cislo">10</span><span>kalkulaček pro běžné stavební práce</span></div>
+    <div class="c"><span class="cislo">130&nbsp;000</span><span>položek stavebnin v&nbsp;katalogu</span></div>
+    <div class="c"><span class="cislo">5 kroků</span><span>od zaměření po zaplacenou fakturu</span></div>
+    <div class="c"><span class="cislo">0 Kč</span><span>na vyzkoušení, bez registrace</span></div>
+  </div>
+</div>
+
+<!-- ================= PRŮBĚH ZAKÁZKY ================= -->
+<section id="prubeh" class="bila">
+  <div class="obal">
+    <div class="nadpis-s">
+      <span class="oko">Jak to funguje</span>
+      <h2>Celá zakázka v jednom toku</h2>
+      <p class="podnadpis">Každý doklad navazuje na předchozí. Nic nepřepisujete – položky, zákazník i ceny jdou dál samy.</p>
+    </div>
+    <ol class="tok">
+      <li><div class="kolo"><svg class="ik"><use href="#i-metr"/></svg></div><h3>Zaměření</h3><p>Rozměry stěn a místností, odečet dveří a oken.</p></li>
+      <li><div class="kolo"><svg class="ik"><use href="#i-kalk"/></svg></div><h3>Kalkulace</h3><p>Materiál podle spotřeby, zboží z katalogu, vaše sazba za práci.</p></li>
+      <li><div class="kolo"><svg class="ik"><use href="#i-nabidka"/></svg></div><h3>Nabídka</h3><p>Pro zákazníka do PDF nebo e-mailem. Po přijetí ji označíte.</p></li>
+      <li><div class="kolo"><svg class="ik"><use href="#i-protokol"/></svg></div><h3>Předání</h3><p>Předávací protokol z nabídky, s podpisy obou stran.</p></li>
+      <li><div class="kolo"><svg class="ik"><use href="#i-faktura"/></svg></div><h3>Faktura</h3><p>S QR platbou, kterou zákazník zaplatí mobilem.</p></li>
+    </ol>
+    <p class="tok-pozn"><svg class="ik"><use href="#i-blesk"/></svg>U každého dokladu je další krok jedno velké tlačítko.</p>
+  </div>
+</section>
+
 <!-- ================= FUNKCE ================= -->
 <section id="funkce">
   <div class="obal">
-    <h2>Všechno pro odhad na jednom místě</h2>
-    <p class="podnadpis">Postaveno pro řemeslníky, kteří potřebují zákazníkovi rychle říct, kolik to bude stát – bez tabulek a bez shánění cen po e-shopech.</p>
+    <div class="nadpis-s">
+      <span class="oko">Co umí</span>
+      <h2>Všechno, co řemeslník řeší u stolu</h2>
+      <p class="podnadpis">Bez tabulek, bez shánění cen po e-shopech a bez přepisování z papíru.</p>
+    </div>
     <div class="karty">
-      <div class="karta"><div class="ik">📐</div><h3>10 kalkulaček</h3><p>Zdivo, sádrokarton, omítky, malba, dlažba a obklad, hydroizolace, nivelace, plovoucí podlaha, beton a zateplení.</p></div>
-      <div class="karta"><div class="ik">🔎</div><h3>Katalog 130 000 položek</h3><p>Hledání podle názvu, kódu i EAN. Filtr podle tématu a skupiny, řazení od nejlevnějšího.</p></div>
-      <div class="karta"><div class="ik">📦</div><h3>Množství, jak se prodává</h3><p>Desky v m² po celých kusech, profily podle výšky stěny, šrouby po baleních, tmel po pytlích.</p></div>
-      <div class="karta"><div class="ik">🧾</div><h3>Nabídky a faktury</h3><p>Z výpočtu jedním tlačítkem nabídka. Faktury s QR platbou, předávací protokoly, vlastní ceník.</p></div>
-      <div class="karta"><div class="ik">✉️</div><h3>Poptávka materiálu</h3><p>Vyfiltrujete materiál z nabídky a pošlete dodavateli e-mailem – s kódy a EAN.</p></div>
-      <div class="karta"><div class="ik">🔒</div><h3>Data u vás</h3><p>Vše se ukládá ve vašem zařízení nebo do vaší složky (třeba v OneDrivu). Záloha jedním klikem.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-kalk"/></svg></div><h3>10 kalkulaček</h3><p>Zdivo, sádrokarton, omítky, malba, dlažba a obklad, hydroizolace, nivelace, plovoucí podlaha, beton a zateplení.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-hledat"/></svg></div><h3>Katalog 130 000 položek</h3><p>Hledání podle názvu, kódu i EAN. Filtr podle tématu a skupiny, řazení od nejlevnějšího.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-balik"/></svg></div><h3>Množství, jak se prodává</h3><p>Desky po celých kusech, profily podle výšky stěny, šrouby po baleních, tmel po pytlích.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-qr"/></svg></div><h3>Faktury s QR platbou</h3><p>Nabídky, předávací protokoly a faktury s vaším logem, IČO a QR kódem pro rychlou platbu.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-mail"/></svg></div><h3>Poptávka materiálu</h3><p>Vyfiltrujete materiál z nabídky a pošlete ho dodavateli e-mailem – i s kódy a EAN.</p></div>
+      <div class="karta"><div class="ikona"><svg class="ik"><use href="#i-zamek"/></svg></div><h3>Data u vás</h3><p>Vše se ukládá ve vašem zařízení nebo ve vaší složce, třeba v OneDrivu. Záloha jedním klikem.</p></div>
     </div>
   </div>
 </section>
 
-<!-- ================= JAK TO FUNGUJE ================= -->
-<section style="padding-top:0">
+<!-- ================= KALKULAČKY ================= -->
+<section id="kalkulacky" style="padding-top:0">
   <div class="obal">
-    <h2>Jak to funguje</h2>
-    <p class="podnadpis">Od zaměření k nabídce ve třech krocích.</p>
-    <div class="kroky">
-      <div class="krok"><h3>Zadáte rozměry</h3><p>Stěny, místnosti nebo rovnou m². Odečtete dveře a okna, vyberete skladbu – třeba příčku W112 nebo obklad 30 × 60.</p></div>
-      <div class="krok"><h3>YeY spočítá materiál</h3><p>Spotřeba podle běžných norem, zboží z katalogu podle ceny. Každý řádek můžete změnit nebo vynechat.</p></div>
-      <div class="krok"><h3>Pošlete nabídku</h3><p>Materiál i práce se vloží do nabídky. Vytisknete ji do PDF nebo pošlete zákazníkovi.</p></div>
+    <div class="nadpis-s">
+      <span class="oko">Kalkulačky</span>
+      <h2>Spočítá to za vás – od příčky po fasádu</h2>
+      <p class="podnadpis">Spotřeba podle běžných norem. Každý řádek můžete změnit, nahradit jiným zbožím nebo vynechat.</p>
     </div>
+    <div class="kalk">
+      <div><b>Zdivo</b><span>tvárnice, cihly, malta, odečet otvorů</span></div>
+      <div><b>Sádrokarton</b><span>příčky, předstěny, podhledy</span></div>
+      <div><b>Omítky</b><span>jádro, štuk, stěny i strop</span></div>
+      <div><b>Malba</b><span>barva, penetrace, zakrývání</span></div>
+      <div><b>Dlažba a obklad</b><span>i velkoformáty, lepidlo, spárovačka</span></div>
+      <div><b>Hydroizolace</b><span>stěrka, pásky, manžety, rohy</span></div>
+      <div><b>Nivelace</b><span>stěrka, penetrace, okrajová páska</span></div>
+      <div><b>Plovoucí podlaha</b><span>balení, podložka, fólie, lišty</span></div>
+      <div><b>Beton a potěr</b><span>pytle i beton z betonárny</span></div>
+      <div><b>Zateplení</b><span>od lepidla po omítku, hmoždinky</span></div>
+    </div>
+    <div class="remesla"><b>Pro:</b><span>zedníky</span><span>sádrokartonáře</span><span>obkladače</span><span>malíře</span><span>podlaháře</span><span>stavební firmy</span><span>hodinové manžely</span></div>
   </div>
 </section>
 
 <!-- ================= ZDARMA × LICENCE ================= -->
 <section class="tmava">
   <div class="obal">
-    <h2>Vyzkoušejte zdarma, licenci kupte, až budete chtít</h2>
-    <p class="podnadpis">Všechny funkce jsou dostupné hned. Licence odemkne doklady pro vaši firmu.</p>
+    <div class="nadpis-s">
+      <span class="oko">Zdarma × licence</span>
+      <h2>Vyzkoušejte zdarma, licenci kupte, až budete chtít</h2>
+      <p class="podnadpis">Všechny funkce jsou dostupné hned. Licence odemkne doklady pro vaši firmu.</p>
+    </div>
     <div class="srovnani">
       <div class="karta"><h3>Zdarma</h3><ul>
         <li>všechny kalkulačky a katalog</li><li>nabídky, faktury, protokoly</li><li>poptávky materiálu</li>
         <li class="ne">doklady s vodoznakem „ukázka“</li><li class="ne">bez IČO na dokladech</li></ul></div>
-      <div class="karta lic"><h3>S licencí</h3><ul>
+      <div class="karta lic"><span class="stitek">Pro vaši firmu</span><h3>S licencí</h3><ul>
         <li>všechno ze zdarma verze</li><li>doklady bez vodoznaku</li><li>IČO vaší firmy na nabídkách a fakturách</li>
         <li>aktivace jedním klikem po zaplacení</li><li>klíč přijde i e-mailem</li></ul></div>
     </div>
@@ -260,10 +494,13 @@ footer a{color:#fff}
 <!-- ================= CENÍK ================= -->
 <section id="cenik">
   <div class="obal">
-    <h2>Ceník</h2>
-    <p class="podnadpis">Platíte QR kódem z mobilního bankovnictví. Licenční klíč se vygeneruje sám, jakmile platba dorazí.</p>
+    <div class="nadpis-s">
+      <span class="oko">Ceník</span>
+      <h2>Jednoduchý ceník bez skrytých poplatků</h2>
+      <p class="podnadpis">Zaplatíte QR kódem z mobilního bankovnictví. Licenční klíč se vygeneruje sám, jakmile platba dorazí.</p>
+    </div>
     <div class="tarify" id="tarify"></div>
-    <p class="cenik-pozn">Licence je vázaná na IČO. Ceny jsou konečné. Ceny materiálu v aplikaci jsou orientační – slouží k hrubému odhadu zakázky.</p>
+    <p class="cenik-pozn"><svg class="ik"><use href="#i-info"/></svg><span>Licence je vázaná na IČO a platí na všech vašich zařízeních. Ceny jsou konečné. Ceny materiálu v aplikaci jsou orientační – slouží k hrubému odhadu zakázky.</span></p>
   </div>
 </section>
 
@@ -273,7 +510,7 @@ footer a{color:#fff}
     <div class="nakup">
       <div class="nakup-hlava metr">
         <h2>Koupit licenci</h2>
-        <div class="kroky-nakupu" aria-label="Postup"><span data-krok="1" class="akt">1 Údaje</span><span data-krok="2">2 Platba</span><span data-krok="3">3 Licenční klíč</span></div>
+        <ol class="kroky-nakupu" aria-label="Postup"><li data-krok="1" class="akt">1 Údaje</li><li data-krok="2">2 Platba</li><li data-krok="3">3 Licenční klíč</li></ol>
       </div>
       <div class="nakup-telo">
 
@@ -286,12 +523,13 @@ footer a{color:#fff}
           <div class="pole"><label for="f-email">E-mail</label>
             <input id="f-email" type="email" autocomplete="email" placeholder="vy@firma.cz" required>
             <small>Pošleme na něj licenční klíč.</small></div>
-          <label class="souhlas cela" style="grid-column:1/-1"><input type="checkbox" id="f-souhlas" required>
+          <label class="souhlas cela"><input type="checkbox" id="f-souhlas" required>
             <span>Souhlasím s <a href="#podminky">obchodními podmínkami</a> a beru na vědomí, že ceny materiálu v aplikaci jsou orientační.</span></label>
-          <div class="nakup-akce cela" style="grid-column:1/-1">
-            <button class="btn" type="submit" id="f-odeslat">Pokračovat k platbě</button>
+          <div class="nakup-akce cela">
+            <button class="btn btn-velky" type="submit" id="f-odeslat">Pokračovat k platbě</button>
+            <span class="bezpecne"><svg class="ik"><use href="#i-zamek"/></svg>Platíte převodem z vlastní banky. Kartu nezadáváte.</span>
           </div>
-          <div id="k1-zprava" class="zprava chyba cela skryt" role="alert" style="grid-column:1/-1"></div>
+          <div id="k1-zprava" class="zprava chyba cela skryt" role="alert"></div>
         </form>
 
         <!-- krok 2 -->
@@ -341,35 +579,64 @@ footer a{color:#fff}
 </section>
 
 <!-- ================= FAQ ================= -->
-<section id="faq" style="padding-top:0">
-  <div class="obal faq">
-    <h2 style="margin-bottom:20px">Časté otázky</h2>
-    <details><summary>Jak přesné jsou ceny materiálu?</summary><p>Ceny v katalogu jsou orientační – vycházejí z průměrných cen prodejen a e-shopů a jsou zaokrouhlené. Slouží k hrubému odhadu zakázky. Přesnou cenu vám potvrdí dodavatel; poptávku mu pošlete přímo z aplikace.</p></details>
-    <details><summary>Kde jsou uložená moje data?</summary><p>Ve vašem zařízení – v prohlížeči, nebo v pracovní složce, kterou si připojíte (třeba ve OneDrivu nebo na Google Disku). Na náš server se nic neposílá, katalog se jen čte.</p></details>
-    <details><summary>Jak aktivuji licenci?</summary><p>Po zaplacení se na této stránce ukáže licenční klíč s tlačítkem „Aktivovat v aplikaci“. Klíč přijde i e-mailem. Ručně ho vložíte v aplikaci v Nastavení → Licence.</p></details>
-    <details><summary>Mohu licenci používat na více zařízeních?</summary><p>Ano. Licence je vázaná na IČO, ne na zařízení. Klíč vložte na každém zařízení, kde aplikaci používáte.</p></details>
-    <details><summary>Co když platba nedorazí?</summary><p>Zkontrolujte, že jste zadali správný variabilní symbol a celou částku. Pokud se klíč neobjeví do dvou pracovních dnů, napište nám a uveďte variabilní symbol.</p></details>
-    <details><summary>Dostanu doklad o zaplacení?</summary><p>Ano, na požádání vám vystavíme fakturu na IČO, pro které je licence vydaná.</p></details>
-  </div>
-</section>
-
-<!-- ================= PODMÍNKY ================= -->
-<section id="podminky" style="padding-top:0">
-  <div class="obal">
-    <div class="karta">
-      <h3 style="font-size:1.4rem;margin-bottom:6px">Obchodní podmínky (shrnutí)</h3>
-      <p style="margin:0 0 8px">Licence opravňuje k užívání aplikace YeY Odhad pro firmu s uvedeným IČO po dobu platnosti zvoleného tarifu. Ceny materiálu v aplikaci jsou orientační a nejsou nabídkou prodeje. Aplikace neukládá vaše data na náš server. Plné znění podmínek a zásad ochrany osobních údajů najdete v <a href="obchodni-podminky.html">obchodních podmínkách</a>.</p>
+<section id="faq" class="bila">
+  <div class="obal faq-mrizka">
+    <div class="nadpis-s">
+      <span class="oko">Otázky</span>
+      <h2>Na co se řemeslníci ptají</h2>
+      <p class="podnadpis">Nenašli jste odpověď? Napište nám na <a id="faq-mail" href="#"></a>.</p>
+    </div>
+    <div class="faq">
+      <details><summary>Jak přesné jsou ceny materiálu?</summary><p>Ceny v katalogu jsou orientační – vycházejí z průměrných cen prodejen a e-shopů a jsou zaokrouhlené. Slouží k hrubému odhadu zakázky. Přesnou cenu vám potvrdí dodavatel; poptávku mu pošlete přímo z aplikace.</p></details>
+      <details><summary>Kde jsou uložená moje data?</summary><p>Ve vašem zařízení – v prohlížeči, nebo v pracovní složce, kterou si připojíte (třeba ve OneDrivu nebo na Google Disku). Na náš server se nic neposílá, katalog se jen čte.</p></details>
+      <details><summary>Potřebuji něco instalovat?</summary><p>Ne. YeY běží v prohlížeči na počítači, tabletu i mobilu. Stačí otevřít aplikaci a začít počítat.</p></details>
+      <details><summary>Jak aktivuji licenci?</summary><p>Po zaplacení se na této stránce ukáže licenční klíč s tlačítkem „Aktivovat v aplikaci“. Klíč přijde i e-mailem. Ručně ho vložíte v aplikaci v Nastavení → Licence.</p></details>
+      <details><summary>Mohu licenci používat na více zařízeních?</summary><p>Ano. Licence je vázaná na IČO, ne na zařízení. Klíč vložte na každém zařízení, kde aplikaci používáte.</p></details>
+      <details><summary>Co když platba nedorazí?</summary><p>Zkontrolujte, že jste zadali správný variabilní symbol a celou částku. Pokud se klíč neobjeví do dvou pracovních dnů, napište nám a uveďte variabilní symbol.</p></details>
+      <details><summary>Dostanu doklad o zaplacení?</summary><p>Ano, na požádání vám vystavíme fakturu na IČO, pro které je licence vydaná.</p></details>
+      <div class="karta podminky" id="podminky">
+        <h3>Obchodní podmínky (shrnutí)</h3>
+        <p>Licence opravňuje k užívání aplikace YeY – Kancelář pro řemeslníky pro firmu s uvedeným IČO po dobu platnosti zvoleného tarifu. Ceny materiálu v aplikaci jsou orientační a nejsou nabídkou prodeje. Aplikace neukládá vaše data na náš server. Plné znění podmínek a zásad ochrany osobních údajů najdete v <a href="obchodni-podminky.html">obchodních podmínkách</a>.</p>
+      </div>
     </div>
   </div>
 </section>
+
+<!-- ================= VÝZVA ================= -->
+<div class="metr vyzva">
+  <div class="obal">
+    <div>
+      <h2>Příští nabídku máte hotovou dřív, než odjedete ze zaměření</h2>
+      <p>Zdarma, bez registrace, rovnou v prohlížeči.</p>
+    </div>
+    <a class="btn btn-velky" href="yey.html" data-app>Otevřít YeY <svg class="ik"><use href="#i-sipka"/></svg></a>
+  </div>
+</div>
 </main>
 
 <footer>
   <div class="obal">
-    <div><b style="color:#fff">YeY</b> – Kancelář pro řemeslníky</div>
-    <div>Kontakt: <a id="pata-mail" href="#"></a></div>
+    <div class="pata">
+      <div>
+        <a class="znacka" href="#" aria-label="Na začátek stránky">
+          <span class="logo" aria-hidden="true"><svg class="ik" style="stroke:#1D272F"><use href="#i-y"/></svg></span>
+          <span class="znacka-text"><b>YeY</b><span>Kancelář pro řemeslníky</span></span>
+        </a>
+        <p style="margin:0;max-width:28em">Kalkulace, nabídky, protokoly a faktury pro řemeslníky. V prohlížeči, na mobilu i v počítači.</p>
+      </div>
+      <div><h4>Aplikace</h4><ul>
+        <li><a href="yey.html" data-app>Otevřít YeY</a></li><li><a href="#funkce">Co umí</a></li><li><a href="#cenik">Ceník</a></li><li><a href="#faq">Otázky</a></li></ul></div>
+      <div><h4>Kontakt</h4><ul>
+        <li><a id="pata-mail" href="#"></a></li><li><a href="#koupit">Koupit licenci</a></li><li><a href="obchodni-podminky.html">Obchodní podmínky</a></li></ul></div>
+    </div>
+    <div class="pata-spodek"><span>© <span id="rok">2026</span> YeY – Kancelář pro řemeslníky</span><span>Ceny materiálu jsou orientační.</span></div>
   </div>
 </footer>
+
+<div class="mob-cta" id="mob-cta">
+  <a class="btn btn-metr" href="yey.html" data-app>Vyzkoušet zdarma</a>
+  <a class="btn" href="#cenik">Ceník</a>
+</div>
 
 <script>
 //---------------------------------------------------------------------
@@ -2713,6 +2980,24 @@ async function doSchranky(t) {
 }
 
 /* =====================================================================
+   MENU A MOBILNÍ VÝZVA
+   ===================================================================== */
+(function () {
+  const h = $('#hlava'), b = $('#menu-btn');
+  const nastav = o => { h.classList.toggle('otevreno', o); b.setAttribute('aria-expanded', o); b.innerHTML = `<svg class="ik"><use href="#i-${o ? 'zavrit' : 'menu'}"/></svg>`; };
+  b.addEventListener('click', () => nastav(!h.classList.contains('otevreno')));
+  $('#menu').addEventListener('click', e => { if (e.target.closest('a')) nastav(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') nastav(false); });
+  // plovoucí tlačítka na mobilu zmizí v úvodu, u nákupu a v patičce
+  const cta = $('#mob-cta'), skryj = new Set();
+  const io = new IntersectionObserver(zaznamy => {
+    zaznamy.forEach(z => z.isIntersecting ? skryj.add(z.target) : skryj.delete(z.target));
+    cta.classList.toggle('pryc', skryj.size > 0);
+  }, { threshold: 0.05 });
+  ['.hero', '#koupit', 'footer', '.vyzva'].forEach(s => { const el = $(s); if (el) io.observe(el); });
+})();
+
+/* =====================================================================
    CENÍK
    ===================================================================== */
 let TARIFY = VYCHOZI_TARIFY;
@@ -2724,7 +3009,7 @@ function vykresliTarify() {
     return `<div class="tarif${dop ? ' doporuc' : ''}">
       ${dop ? '<span class="stitek">Nejvýhodnější</span>' : ''}
       <h3>${esc(t.nazev)}</h3>
-      <div class="cena-cislo">${kc(t.cena)} <small>${t.dni ? '/ ' + (t.dni >= 360 ? 'rok' : t.dni + ' dní') : 'jednorázově'}</small></div>
+      <div class="cena-cislo">${kc(t.cena)} <small>${t.dni ? '/ ' + (t.dni >= 360 ? 'rok' : t.dni + ' dní') : 'jednou provždy'}</small></div>
       <p>${esc(t.popis || '')}${naMesic ? ` <br><small style="color:var(--ocel)">vychází na ${kc(naMesic)} měsíčně</small>` : ''}</p>
       <a class="btn${dop ? ' btn-metr' : ''}" href="#koupit" data-tarif="${esc(k)}">Koupit</a></div>`;
   }).join('');
@@ -2738,7 +3023,7 @@ $('#tarify').addEventListener('click', e => { const b = e.target.closest('[data-
 function krok(n) {
   ['k0', 'k1', 'k2', 'k3'].forEach((id, i) => $('#' + id).classList.toggle('skryt', i !== n));
   document.querySelectorAll('[data-krok]').forEach(s => s.classList.toggle('akt', Number(s.dataset.krok) === n));
-  if (krok.uz && (n === 2 || n === 3)) { const k = $('#koupit'); const y = k.getBoundingClientRect().top + scrollY - 70; scrollTo({ top: y, behavior: 'smooth' }); }
+  if (krok.uz && (n === 2 || n === 3)) { const k = $('#koupit'); const y = k.getBoundingClientRect().top + scrollY - 76; scrollTo({ top: y, behavior: 'smooth' }); }
   krok.uz = true;
 }
 function zobrazChybu(el, t) { el.textContent = t; el.classList.toggle('skryt', !t); }
@@ -2822,7 +3107,8 @@ document.addEventListener('click', async e => {
    ===================================================================== */
 (async function start() {
   document.querySelectorAll('[data-app]').forEach(a => a.href = APP_URL);
-  ['#kontakt-mail', '#pata-mail'].forEach(s => { const a = $(s); a.href = 'mailto:' + KONTAKT; a.textContent = KONTAKT; });
+  ['#kontakt-mail', '#pata-mail', '#faq-mail'].forEach(s => { const a = $(s); if (a) { a.href = 'mailto:' + KONTAKT; a.textContent = KONTAKT; } });
+  $('#rok').textContent = new Date().getFullYear();
   vykresliTarify();
   const ulozena = cti();
   if (ulozena && ulozena.id) { ulozena.hotovo ? sleduj(ulozena) : ukazPlatbu(ulozena); }

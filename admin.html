@@ -179,7 +179,8 @@ async function open(d,k){
 }
 async function loadVyber(){
   const rows=await rpc('kalk_feed',{p_druh:cur.druh});
-  vyber=rows.filter(r=>r.klic===cur.klic).sort((a,b)=>a.poradi-b.poradi).map(r=>({cislo:r.cislo,nazev:r.nazev,mj:r.mj,cena_bez_dph:r.cena_bez_dph,zasoba_malesice:r.zasoba_malesice,zasoba_liben:r.zasoba_liben,foto:r.foto,skupina:r.skupina,podskupina:r.podskupina,vychozi:r.vychozi,schvaleno:r.schvaleno}));
+  const seen=new Set();
+  vyber=rows.filter(r=>r.klic===cur.klic&&!seen.has(r.cislo)&&seen.add(r.cislo)).sort((a,b)=>a.poradi-b.poradi).map(r=>({cislo:r.cislo,nazev:r.nazev,mj:r.mj,cena_bez_dph:r.cena_bez_dph,zasoba_malesice:r.zasoba_malesice,zasoba_liben:r.zasoba_liben,foto:r.foto,skupina:r.skupina,podskupina:r.podskupina,vychozi:r.vychozi,schvaleno:r.schvaleno}));
   $('#schv').checked=vyber.length>0&&vyber.every(v=>v.schvaleno);
   renderVyber();
 }
@@ -293,7 +294,7 @@ function renderKand(rows,title){
   const b=$('#kand'); if(!b)return;
   if(!rows.length){b.innerHTML='<div class="hint">Nic neodpovídá. Zkus ubrat slova nebo filtr.</div>';return}
   b.innerHTML=`<div class="hint" style="margin-bottom:6px">${esc(title)}</div><table><tr><th></th><th>Produkt</th><th>MJ</th><th class="num">Cena bez DPH</th><th>Sklad</th><th></th></tr>${rows.map(p=>prodRow(p,'k')).join('')}</table>`;
-  b.querySelectorAll('[data-add]').forEach(x=>x.onclick=()=>{const p=rows.find(r=>r.cislo===x.dataset.add);vyber.push({...p,vychozi:!vyber.length});renderVyber();refreshKand()});
+  b.querySelectorAll('[data-add]').forEach(x=>x.onclick=()=>{const p=rows.find(r=>r.cislo===x.dataset.add);if(!p||vyber.some(v=>v.cislo===p.cislo))return;vyber.push({...p,vychozi:!vyber.length});renderVyber();refreshKand()});
 }
 const refreshKand=()=>renderKand(lastKand,$('#kand .hint')?.textContent||'');
 

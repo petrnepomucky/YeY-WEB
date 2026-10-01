@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>YeY – Ladění kalkulaček</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dark:#1E272E; --dark2:#28333c; --yellow:#EAB940; --tick:#7a6128;
+  --bg:#f3f1ec; --card:#fff; --line:#dedad2; --text:#1E272E; --muted:#6b7280;
+  --ok:#2f855a; --warn:#b7791f; --bad:#c0392b;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.4 Barlow,system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{background:var(--dark);color:#fff;display:flex;align-items:center;gap:16px;padding:10px 18px}
+header .logo{font:700 34px/1 "Barlow Condensed";color:var(--yellow);letter-spacing:.5px}
+header h1{font:600 22px/1 "Barlow Condensed";margin:0}
+header .sp{flex:1}
+.tape{height:14px;background:var(--yellow) repeating-linear-gradient(90deg,var(--tick) 0 2px,transparent 2px 12px);
+  background-size:12px 6px;background-repeat:repeat-x;position:relative}
+.tape::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,var(--tick) 0 2px,transparent 2px 60px);background-size:60px 10px;background-repeat:repeat-x}
+button{font:600 13px Barlow;border:1px solid var(--line);background:#fff;color:var(--text);padding:6px 11px;border-radius:7px;cursor:pointer}
+button:hover{border-color:var(--dark)}
+button.pri{background:var(--dark);color:var(--yellow);border-color:var(--dark)}
+button.yel{background:var(--yellow);border-color:var(--yellow)}
+button.ghost{background:transparent;color:#fff;border-color:#4b5863}
+button:disabled{opacity:.5;cursor:default}
+input,select,textarea{font:14px Barlow;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:#fff;color:var(--text);width:100%}
+textarea{resize:vertical;min-height:54px}
+label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin:0 0 3px}
+#login{max-width:380px;margin:80px auto;background:var(--card);padding:24px;border-radius:12px;border:1px solid var(--line)}
+#login h2{font:700 26px "Barlow Condensed";margin:0 0 12px}
+#app{display:none;grid-template-columns:320px 1fr;height:calc(100vh - 68px)}
+#side{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:#faf9f6}
+#side .flt{padding:10px;display:grid;gap:6px;border-bottom:1px solid var(--line)}
+#list{overflow:auto;flex:1}
+.grp{font:700 15px "Barlow Condensed";text-transform:uppercase;letter-spacing:.6px;padding:10px 12px 4px;color:var(--muted)}
+.it{padding:7px 12px;cursor:pointer;border-left:4px solid transparent;display:flex;gap:8px;align-items:flex-start}
+.it:hover{background:#efece5}
+.it.on{background:#fff;border-left-color:var(--yellow)}
+.it .t{flex:1;min-width:0}
+.it .n{font-weight:600}
+.it .v{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:4px;flex:none}
+.s-k_kontrole{background:var(--warn)} .s-spatne{background:var(--bad)} .s-hotovo{background:var(--ok)} .s-vypnuto{background:#aaa}
+#main{overflow:auto;padding:16px 20px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card h3{font:700 20px "Barlow Condensed";margin:0 0 10px;display:flex;align-items:center;gap:10px}
+.card h3 small{font:400 13px Barlow;color:var(--muted)}
+.g{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
+.cil{background:#fff8e5;border:1px solid #f0dca4}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.chip{background:var(--dark);color:#fff;border-radius:20px;padding:2px 9px;font-size:12px;display:inline-flex;gap:6px;align-items:center}
+.chip b{cursor:pointer;color:var(--yellow)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse}
+td,th{padding:6px 6px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td.num{text-align:right;white-space:nowrap}
+.pn{font-weight:600}
+.meta{font-size:11.5px;color:var(--muted)}
+img.th{width:40px;height:40px;object-fit:contain;background:#fff;border:1px solid #eee;border-radius:6px}
+.star{cursor:pointer;font-size:18px;color:#ccc;background:none;border:0;padding:0}
+.star.on{color:var(--yellow);text-shadow:0 0 1px var(--tick)}
+.sk{font-size:12px;font-weight:600}
+.sk.y{color:var(--ok)} .sk.n{color:var(--muted)}
+tr.sel{background:#fffbef}
+.hint{font-size:12px;color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:9px 16px;border-radius:8px;display:none;z-index:9}
+#toast.err{background:var(--bad)}
+.tabs{display:flex;gap:4px;margin-bottom:8px}
+.tabs button.on{background:var(--dark);color:var(--yellow)}
+@media (max-width:900px){#app{grid-template-columns:1fr;height:auto}#side{max-height:40vh}.g2,.g3,.g4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">YeY</span><h1>Ladění kalkulaček – vyhledávání materiálu</h1>
+  <span class="sp"></span>
+  <button class="ghost" id="bOdhlas" style="display:none">Odhlásit</button>
+</header>
+<div class="tape"></div>
+
+<div id="login">
+  <h2>Admin přístup</h2>
+  <label for="klic">Admin klíč</label>
+  <input id="klic" type="password" placeholder="YEY-XXXX-XXXX-XXXX" autocomplete="current-password">
+  <div class="row" style="margin-top:12px"><button class="pri" id="bLogin">Přihlásit</button><span class="hint" id="loginMsg"></span></div>
+</div>
+
+<div id="app">
+  <aside id="side">
+    <div class="flt">
+      <input id="fText" placeholder="Filtrovat pravidla…">
+      <div class="g g2">
+        <select id="fDruh"><option value="">Všechny kalkulačky</option></select>
+        <select id="fStav">
+          <option value="">Všechny stavy</option>
+          <option value="k_kontrole">K kontrole</option>
+          <option value="spatne">Špatně</option>
+          <option value="hotovo">Hotovo</option>
+          <option value="vypnuto">Vypnuto</option>
+        </select>
+      </div>
+      <div class="hint" id="souhrn"></div>
+    </div>
+    <div id="list"></div>
+  </aside>
+  <main id="main"><div class="empty">Vyber vlevo pravidlo, které chceš doladit.</div></main>
+</div>
+<div id="toast"></div>
+
+<script>
+const SB='https://fvrpuddkarujfttoaavb.supabase.co';
+const KEY='sb_publishable_1Y5nEfLwKmJxlnbkLmZgMg_Rzs7WQQG';
+const DRUHY={sdk:'Sádrokarton (SDK)',fasada:'Fasáda / zateplení',hydro:'Hydroizolace',malba:'Malba',nivelace:'Nivelace',objem:'Beton / objem',omitka:'Omítky',plocha:'Obklady a dlažby',podlaha:'Plovoucí podlaha',zdivo:'Zdivo'};
+const STAVY={k_kontrole:'K kontrole',spatne:'Špatně',hotovo:'Hotovo',vypnuto:'Vypnuto'};
+let AK='', PR=[], CIS=null, cur=null, vyber=[], tab='pravidlo', tmr=null;
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const kc=n=>n==null?'–':Number(n).toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' Kč';
+function toast(t,err){const e=$('#toast');e.textContent=t;e.className=err?'err':'';e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',err?5000:2200)}
+function ss(k,v){try{v===undefined?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}}
+function sg(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
+
+async function rpc(fn,args){
+  const r=await fetch(SB+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify(args)});
+  const t=await r.text(); let j=null; try{j=t?JSON.parse(t):null}catch(e){}
+  if(!r.ok) throw new Error((j&&(j.message||j.hint))||t||r.statusText);
+  return j;
+}
+
+/* ---------- přihlášení ---------- */
+async function login(k){
+  try{
+    PR=await rpc('kalk_admin_pravidla',{p_klic:k});
+    AK=k; ss('kalk_ak',k);
+    CIS=await rpc('kalk_admin_ciselniky',{p_klic:k});
+    $('#login').style.display='none'; $('#app').style.display='grid'; $('#bOdhlas').style.display='';
+    const fd=$('#fDruh'); [...new Set(PR.map(p=>p.druh))].forEach(d=>fd.insertAdjacentHTML('beforeend',`<option value="${d}">${esc(DRUHY[d]||d)}</option>`));
+    renderList();
+  }catch(e){ $('#loginMsg').textContent=e.message; ss('kalk_ak'); }
+}
+$('#bLogin').onclick=()=>login($('#klic').value.trim());
+$('#klic').onkeydown=e=>{if(e.key==='Enter')$('#bLogin').click()};
+$('#bOdhlas').onclick=()=>{ss('kalk_ak');location.reload()};
+
+/* ---------- seznam ---------- */
+['#fText','#fDruh','#fStav'].forEach(s=>$(s).addEventListener('input',renderList));
+function renderList(){
+  const q=$('#fText').value.toLowerCase(), d=$('#fDruh').value, st=$('#fStav').value;
+  const f=PR.filter(p=>(!d||p.druh===d)&&(!st||p.stav===st)&&(!q||[p.klic,p.nazev,p.cil,p.vychozi_nazev,(p.slova||[]).join(' ')].join(' ').toLowerCase().includes(q)));
+  const cnt=s=>PR.filter(p=>p.stav===s).length;
+  $('#souhrn').textContent=`${PR.length} pravidel · hotovo ${cnt('hotovo')} · ke kontrole ${cnt('k_kontrole')} · špatně ${cnt('spatne')}`;
+  let h='',last='';
+  f.forEach(p=>{
+    if(p.druh!==last){h+=`<div class="grp">${esc(DRUHY[p.druh]||p.druh)}</div>`;last=p.druh}
+    h+=`<div class="it ${cur&&cur.druh===p.druh&&cur.klic===p.klic?'on':''}" data-d="${p.druh}" data-k="${p.klic}">
+      <span class="dot s-${p.stav}" title="${STAVY[p.stav]||p.stav}"></span>
+      <div class="t"><div class="n">${esc(p.nazev||p.klic)}</div><div class="v">${p.vychozi_nazev?'★ '+esc(p.vychozi_nazev):'<i>bez výchozího produktu</i>'}</div></div>
+      <span class="meta">${p.n_vybrano}</span></div>`;
+  });
+  $('#list').innerHTML=h||'<div class="empty">Nic nenalezeno</div>';
+  $('#list').querySelectorAll('.it').forEach(e=>e.onclick=()=>open(e.dataset.d,e.dataset.k));
+}
+
+/* ---------- detail ---------- */
+async function open(d,k){
+  cur=JSON.parse(JSON.stringify(PR.find(p=>p.druh===d&&p.klic===k)));
+  ['slova','tema','skupina','podskupina'].forEach(x=>cur[x]=cur[x]||[]);
+  renderList(); renderDetail();
+  await loadVyber(); nahled();
+}
+async function loadVyber(){
+  const rows=await rpc('kalk_feed',{p_druh:cur.druh});
+  vyber=rows.filter(r=>r.klic===cur.klic).sort((a,b)=>a.poradi-b.poradi).map(r=>({cislo:r.cislo,nazev:r.nazev,mj:r.mj,cena_bez_dph:r.cena_bez_dph,zasoba_malesice:r.zasoba_malesice,zasoba_liben:r.zasoba_liben,foto:r.foto,skupina:r.skupina,podskupina:r.podskupina,vychozi:r.vychozi,schvaleno:r.schvaleno}));
+  $('#schv').checked=vyber.length>0&&vyber.every(v=>v.schvaleno);
+  renderVyber();
+}
+
+function opts(list,sel){return '<option value="">+ přidat…</option>'+list.filter(x=>!sel.includes(x)).map(x=>`<option>${esc(x)}</option>`).join('')}
+function chips(arr,key){return `<div class="chips">${arr.map((x,i)=>`<span class="chip">${esc(x)}<b data-k="${key}" data-i="${i}">×</b></span>`).join('')}</div>`}
+
+function renderDetail(){
+  const c=cur;
+  const sk=CIS.skupina.filter(x=>!c.tema.length||c.tema.includes(x.t)).map(x=>x.s);
+  const psk=CIS.podskupina.filter(x=>!c.skupina.length||c.skupina.includes(x.s)).map(x=>x.p);
+  $('#main').innerHTML=`
+  <div class="card">
+    <h3>${esc(DRUHY[c.druh]||c.druh)} › ${esc(c.nazev||c.klic)} <small>klíč v kódu: <code>${esc(c.druh)}.${esc(c.klic)}</code></small></h3>
+    <div class="g g2">
+      <div><label>Název položky v kalkulačce</label><input id="i_nazev" value="${esc(c.nazev)}"></div>
+      <div class="g g2">
+        <div><label>Stav</label><select id="i_stav">${Object.entries(STAVY).map(([k,v])=>`<option value="${k}" ${c.stav===k?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div><label>Počet návrhů</label><input id="i_pocet" type="number" min="1" max="30" value="${c.pocet}"></div>
+      </div>
+    </div>
+    <div style="margin-top:10px"><label>🎯 Co je cílem najít (popis pro tebe – podle toho kontroluj výsledky)</label>
+      <textarea id="i_cil" class="cil">${esc(c.cil)}</textarea></div>
+  </div>
+
+  <div class="card">
+    <h3>Vyhledávací pravidlo <small>změny se hned promítnou do náhledu</small></h3>
+    <div class="g g2">
+      <div><label>Hledaná slova (všechna musí být v textu, stačí začátek slova; odděl čárkou)</label>
+        <input id="i_slova" value="${esc(c.slova.join(', '))}" placeholder="např. sroub, tn"></div>
+      <div><label>Vyloučit (slova oddělená | , regulární výraz)</label>
+        <input id="i_vyl" value="${esc(c.vyloucit)}" placeholder="např. samovrt|zh"></div>
+    </div>
+    <div class="g g3" style="margin-top:10px">
+      <div><label>Téma</label><select data-add="tema">${opts(CIS.tema,c.tema)}</select>${chips(c.tema,'tema')}</div>
+      <div><label>Skupina</label><select data-add="skupina">${opts([...new Set(sk)],c.skupina)}</select>${chips(c.skupina,'skupina')}</div>
+      <div><label>Podskupina</label><select data-add="podskupina">${opts([...new Set(psk)],c.podskupina)}</select>${chips(c.podskupina,'podskupina')}</div>
+    </div>
+    <div class="g g4" style="margin-top:10px;align-items:end">
+      <div><label>Měrná jednotka</label><select id="i_mj"><option value="">libovolná</option>${CIS.mj.map(m=>`<option ${c.mj===m?'selected':''}>${esc(m)}</option>`).join('')}</select></div>
+      <div><label><input type="checkbox" id="i_sklad" style="width:auto" ${c.jen_skladem?'checked':''}> jen skladem (Malešice/Libeň)</label></div>
+      <div><label><input type="checkbox" id="i_akt" style="width:auto" ${c.aktivni?'checked':''}> aktivní</label></div>
+      <div></div>
+    </div>
+    <div style="margin-top:10px"><label>Poznámka</label><input id="i_pozn" value="${esc(c.poznamka)}"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="pri" id="bUloz">Uložit pravidlo</button>
+      <button id="bGen" title="Smaže neschválený výběr a naplní ho prvními návrhy podle uloženého pravidla">Uložit a naplnit výběr automaticky</button>
+      <span class="hint">Tip: filtr podle podskupiny bývá přesnější než slova.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Produkty v kalkulačce <small>★ = výchozí, pořadí = pořadí variant pro uživatele</small></h3>
+    <div id="vyber"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="yel" id="bVyber">Uložit výběr</button>
+      <label style="margin:0"><input type="checkbox" id="schv" style="width:auto"> schváleno (ruční výběr, automatika ho nepřepíše)</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs"><button data-t="pravidlo" class="${tab==='pravidlo'?'on':''}">Návrhy podle pravidla</button><button data-t="hledat" class="${tab==='hledat'?'on':''}">Ruční hledání v katalogu</button></div>
+    <div id="hledBox" style="display:${tab==='hledat'?'block':'none'};margin-bottom:8px"><input id="i_hledat" placeholder="Hledej název, číslo nebo EAN (Enter)…"></div>
+    <div id="kand"><div class="hint">Načítám…</div></div>
+  </div>`;
+
+  const upd=()=>{readForm();clearTimeout(tmr);tmr=setTimeout(nahled,350)};
+  ['#i_slova','#i_vyl','#i_mj','#i_sklad'].forEach(s=>$(s).addEventListener('input',upd));
+  $('#main').querySelectorAll('select[data-add]').forEach(s=>s.onchange=()=>{if(s.value){readForm();cur[s.dataset.add].push(s.value);renderKeep();nahled()}});
+  $('#main').querySelectorAll('.chip b').forEach(b=>b.onclick=()=>{readForm();cur[b.dataset.k].splice(+b.dataset.i,1);renderKeep();nahled()});
+  $('#bUloz').onclick=()=>ulozPravidlo();
+  $('#bGen').onclick=gen;
+  $('#bVyber').onclick=ulozVyber;
+  $('#main').querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;readForm();renderKeep();tab==='pravidlo'?nahled():($('#i_hledat').focus(),$('#kand').innerHTML='<div class="hint">Zadej hledaný text.</div>')});
+  $('#i_hledat').onkeydown=e=>{if(e.key==='Enter')hledat()};
+}
+function renderKeep(){const s=$('#schv').checked;renderDetail();$('#schv').checked=s;renderVyber()}
+function readForm(){
+  if(!$('#i_nazev'))return;
+  Object.assign(cur,{nazev:$('#i_nazev').value.trim(),cil:$('#i_cil').value.trim(),stav:$('#i_stav').value,pocet:+$('#i_pocet').value||8,
+    slova:$('#i_slova').value.split(',').map(s=>s.trim()).filter(Boolean),vyloucit:$('#i_vyl').value.trim(),
+    mj:$('#i_mj').value,jen_skladem:$('#i_sklad').checked,aktivni:$('#i_akt').checked,poznamka:$('#i_pozn').value.trim()});
+}
+const param=()=>({slova:cur.slova,vyloucit:cur.vyloucit,tema:cur.tema,skupina:cur.skupina,podskupina:cur.podskupina,mj:cur.mj,jen_skladem:cur.jen_skladem});
+
+/* ---------- tabulky produktů ---------- */
+function prodRow(p,mode,i){
+  const sk=(+p.zasoba_malesice||0)+(+p.zasoba_liben||0);
+  const inSel=vyber.some(v=>v.cislo===p.cislo);
+  const img=p.foto?`<img class="th" loading="lazy" src="${esc(p.foto)}" alt="">`:'<span class="th"></span>';
+  const info=`<div class="pn">${esc(p.nazev)}</div><div class="meta">${esc(p.cislo)} · ${esc([p.skupina,p.podskupina].filter(Boolean).join(' › ')||'bez kategorie')}</div>`;
+  const zas=`<span class="sk ${sk>0?'y':'n'}">M ${+p.zasoba_malesice||0} · L ${+p.zasoba_liben||0}</span>`;
+  if(mode==='sel') return `<tr><td><button class="star ${p.vychozi?'on':''}" data-star="${i}" title="Nastavit jako výchozí">★</button></td><td>${img}</td><td>${info}</td><td>${esc(p.mj)}</td><td class="num">${kc(p.cena_bez_dph)}</td><td>${zas}</td>
+    <td class="num"><button data-up="${i}" ${i===0?'disabled':''}>↑</button> <button data-dn="${i}" ${i===vyber.length-1?'disabled':''}>↓</button> <button data-rm="${i}">✕</button></td></tr>`;
+  return `<tr class="${inSel?'sel':''}"><td>${img}</td><td>${info}</td><td>${esc(p.mj)}</td><td class="num">${kc(p.cena_bez_dph)}</td><td>${zas}</td>
+    <td class="num">${inSel?'<span class="meta">ve výběru</span>':`<button data-add="${esc(p.cislo)}">+ Přidat</button>`}</td></tr>`;
+}
+function renderVyber(){
+  const b=$('#vyber'); if(!b)return;
+  if(!vyber.length){b.innerHTML='<div class="hint">Zatím žádné produkty. Přidej je z návrhů níže nebo z ručního hledání.</div>';return}
+  b.innerHTML=`<table><tr><th></th><th></th><th>Produkt</th><th>MJ</th><th class="num">Cena bez DPH</th><th>Sklad</th><th></th></tr>${vyber.map((p,i)=>prodRow(p,'sel',i)).join('')}</table>`;
+  b.querySelectorAll('[data-star]').forEach(x=>x.onclick=()=>{vyber.forEach((v,i)=>v.vychozi=i===+x.dataset.star);renderVyber()});
+  b.querySelectorAll('[data-up]').forEach(x=>x.onclick=()=>{const i=+x.dataset.up;[vyber[i-1],vyber[i]]=[vyber[i],vyber[i-1]];renderVyber()});
+  b.querySelectorAll('[data-dn]').forEach(x=>x.onclick=()=>{const i=+x.dataset.dn;[vyber[i+1],vyber[i]]=[vyber[i],vyber[i+1]];renderVyber()});
+  b.querySelectorAll('[data-rm]').forEach(x=>x.onclick=()=>{vyber.splice(+x.dataset.rm,1);if(vyber.length&&!vyber.some(v=>v.vychozi))vyber[0].vychozi=true;renderVyber();refreshKand()});
+}
+let lastKand=[];
+function renderKand(rows,title){
+  lastKand=rows;
+  const b=$('#kand'); if(!b)return;
+  if(!rows.length){b.innerHTML='<div class="hint">Nic neodpovídá. Zkus ubrat slova nebo filtr.</div>';return}
+  b.innerHTML=`<div class="hint" style="margin-bottom:6px">${esc(title)}</div><table><tr><th></th><th>Produkt</th><th>MJ</th><th class="num">Cena bez DPH</th><th>Sklad</th><th></th></tr>${rows.map(p=>prodRow(p,'k')).join('')}</table>`;
+  b.querySelectorAll('[data-add]').forEach(x=>x.onclick=()=>{const p=rows.find(r=>r.cislo===x.dataset.add);vyber.push({...p,vychozi:!vyber.length});renderVyber();refreshKand()});
+}
+const refreshKand=()=>renderKand(lastKand,$('#kand .hint')?.textContent||'');
+
+async function nahled(){
+  if(!cur||tab!=='pravidlo')return;
+  try{const r=await rpc('kalk_admin_nahled',{p_klic:AK,p_druh:cur.druh,p_kl:cur.klic,p_param:param()});
+    renderKand(r,`${r.length>=60?'60+':r.length} produktů odpovídá pravidlu (skladem a nejprodávanější nahoře)`);
+  }catch(e){toast(e.message,1)}
+}
+async function hledat(){
+  const q=$('#i_hledat').value.trim(); if(!q)return;
+  try{const r=await rpc('kalk_admin_hledej',{p_klic:AK,p_dotaz:q,p_druh:cur.druh,p_kl:cur.klic});renderKand(r,`${r.length} výsledků pro „${q}“`)}catch(e){toast(e.message,1)}
+}
+
+/* ---------- ukládání ---------- */
+async function ulozPravidlo(tichy){
+  readForm();
+  try{
+    await rpc('kalk_admin_uloz_pravidlo',{p_klic:AK,p:{druh:cur.druh,klic:cur.klic,nazev:cur.nazev,cil:cur.cil,slova:cur.slova,vyloucit:cur.vyloucit,tema:cur.tema,skupina:cur.skupina,podskupina:cur.podskupina,mj:cur.mj,jen_skladem:cur.jen_skladem,pocet:cur.pocet,aktivni:cur.aktivni,stav:cur.stav,poznamka:cur.poznamka}});
+    await reloadPR(); if(!tichy)toast('Pravidlo uloženo'); return true;
+  }catch(e){toast(e.message,1);return false}
+}
+async function gen(){
+  if(!await ulozPravidlo(true))return;
+  try{const n=await rpc('kalk_admin_pregeneruj',{p_klic:AK,p_druh:cur.druh,p_kl:cur.klic});await loadVyber();await reloadPR();nahled();toast(`Výběr naplněn (${n} produktů)`)}catch(e){toast(e.message,1)}
+}
+async function ulozVyber(){
+  const schv=$('#schv').checked;
+  if(vyber.length&&!vyber.some(v=>v.vychozi))vyber[0].vychozi=true;
+  try{
+    await rpc('kalk_admin_uloz_vyber',{p_klic:AK,p_druh:cur.druh,p_kl:cur.klic,p_cisla:vyber.map(v=>v.cislo),p_vychozi:(vyber.find(v=>v.vychozi)||{}).cislo||null,p_schvaleno:schv});
+    await reloadPR(); await loadVyber(); if(schv){cur.stav='hotovo';$('#i_stav').value='hotovo'}
+    toast(schv?'Výběr uložen a schválen':'Výběr uložen');
+  }catch(e){toast(e.message,1)}
+}
+async function reloadPR(){
+  PR=await rpc('kalk_admin_pravidla',{p_klic:AK});
+  const p=PR.find(p=>p.druh===cur.druh&&p.klic===cur.klic); if(p)cur.stav=p.stav;
+  renderList();
+}
+
+const saved=sg('kalk_ak'); if(saved)login(saved);
+</script>
+</body>
+</html>

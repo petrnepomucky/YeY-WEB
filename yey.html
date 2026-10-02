@@ -388,6 +388,7 @@ nav.tabs{background:#fff;border-bottom:1px solid var(--line);padding:0 .6rem;ove
   position:sticky;top:0;z-index:40;box-shadow:0 2px 6px rgba(29,39,47,.06);scroll-behavior:smooth}
 @media print{ nav.tabs{display:none!important} }
 body:has(#panel-kalkulacky.active) .tips-card,body:has(#panel-kalkulacky.active) .tips-fab{display:none!important}
+body:has(#onboard:not([style*="none"])) .tips-card,body:has(#onboard:not([style*="none"])) .tips-fab{display:none!important}
 body:has(#panel-kalkulacky.active) .toast{bottom:8rem}
 nav.tabs::-webkit-scrollbar{display:none}
 nav.tabs button{font-size:1.12rem;color:var(--ocel);padding:.75rem 1rem;border-bottom:4px solid transparent;white-space:nowrap}
@@ -481,9 +482,10 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
     <span class="pill"><span class="dot" id="storeDot"></span><span id="storeLabel">Načítám…</span></span>
     <span class="savestate" id="saveState"></span>
     <div class="head-spacer"></div>
+    <button class="btn gold sm" id="btnObnovit" style="display:none">🔄 Obnovit spojení</button>
     <button class="btn ghost sm" id="btnFolder">📁 Pracovní složka</button>
     <button class="btn ghost sm" id="btnConnect">Datový soubor…</button>
-    <button class="btn ghost sm" id="btnBackup">Stáhnout zálohu</button>
+    <button class="btn ghost sm" id="btnBackup">Uložit zálohu</button>
     <button class="btn ghost sm" id="btnRestore">Obnovit ze zálohy</button>
   </div>
   <div class="licbar" id="licBar" style="display:none">🔒 <b>Neregistrovaná verze</b> — doklady jsou označené jako ukázka. <a href="https://yey.cz/#cenik" style="color:inherit;font-weight:700">Koupit licenci</a> nebo vložte klíč v Nastavení → Licence.</div>
@@ -920,6 +922,28 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
       </div>
     </div>
     <div class="modal-foot"><button class="btn" type="button" onclick="tiskRezimZavri()">Zrušit</button></div>
+  </div>
+</div>
+<div class="backdrop" id="ulozisteModal" style="z-index:1000">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><h3>Kam ukládat data</h3><button class="x" type="button" onclick="zavriUloziste()">×</button></div>
+    <div class="modal-body">
+      <p class="muted small" id="ulozisteStav" style="margin:0 0 12px"></p>
+      <div id="ulozisteFsa" style="display:grid;gap:10px">
+        <button class="btn gold" type="button" onclick="connectFolder()" style="text-align:left;padding:12px 14px"><b>📁 Pracovní složka (doporučeno)</b><br><span class="small">Vyberte vlastní složku, např. OneDrive\YeY. Vytvoří se v ní datový soubor a podsložky na přílohy. Plochu, Dokumenty ani Stažené soubory přímo vybrat nejde – vytvořte v nich podsložku.</span></button>
+        <button class="btn" type="button" onclick="createFile()" style="text-align:left;padding:12px 14px"><b>➕ Nový datový soubor</b><br><span class="small">Jen soubor s daty, bez příloh.</span></button>
+        <button class="btn" type="button" onclick="openFile()" style="text-align:left;padding:12px 14px"><b>📂 Otevřít existující datový soubor</b><br><span class="small">Soubor yey_odhad_data.json z jiného počítače nebo z OneDrivu.</span></button>
+        <button class="btn" type="button" id="ulozisteOdpojit" onclick="disconnectFile();zavriUloziste()" style="text-align:left;padding:12px 14px"><b>Odpojit od souboru</b><br><span class="small">Data zůstanou v prohlížeči.</span></button>
+      </div>
+      <div id="ulozisteBez" style="display:none">
+        <p id="ulozisteBezText" class="small" style="margin:0 0 12px"></p>
+        <div style="display:grid;gap:10px">
+          <button class="btn gold" type="button" onclick="backupDownload()" style="text-align:left;padding:12px 14px"><b>💾 Uložit zálohu</b><br><span class="small">Celá data do jednoho souboru – v telefonu ho můžete poslat na Disk, OneDrive nebo e-mailem.</span></button>
+          <button class="btn" type="button" onclick="restoreClick();zavriUloziste()" style="text-align:left;padding:12px 14px"><b>📥 Obnovit ze zálohy</b><br><span class="small">Načte zálohu z jiného zařízení (nahradí současná data).</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" type="button" onclick="zavriUloziste()">Zavřít</button></div>
   </div>
 </div>
 <div class="backdrop" id="nbTableModal">
@@ -4072,6 +4096,12 @@ async function nactiSVzKatalogu(sv) {
       try { nal = await A.hledej(q, 80, { nazev: 'Suchá výstavba', slova: ['sucha vystav', 'sadrokart', 'sdk'] }, 'vse') || []; } catch (e) { nal = []; }
       nal.forEach(x => { if (x && x.kod && !vid.has(x.kod)) { vid.add(x.kod); vsech.push(x); } });
     }
+    if (A.schvalene && A.podleKodu) {
+      try {
+        const sch = await A.schvalene(S.druh), kody = Object.values(sch).flat().map(x => x.kod).filter(k => !vid.has(k));
+        (await A.podleKodu(kody)).forEach(x => { if (x && x.kod && !vid.has(x.kod)) { vid.add(x.kod); vsech.push(x); } });
+      } catch (e) {}
+    }
     const out = vsech.map(x => parsujSV({ kod: x.kod, nazev: x.nazev, mj: SV_MJ[String(x.mj || '').toUpperCase()] || mjN(x.mj) || 'ks',
       cena: x.cena, skladem: 1, ean: x.ean || '', foto: x.foto || '', tema: x.tema || '', skupina: x.podskupina || x.skupina || '',
       podskupina: x.podskupina || '', znacka: x.znacka || '' })).filter(p => f(p, a));
@@ -4177,8 +4207,13 @@ async function vyberSV(r, filtr) {
   await nactiZasoby(kand.map(p => p.kod));
   const znameZasoby = kand.some(p => R.zas[p.kod]);
   const ok = znameZasoby ? kand.filter(p => projdeFiltrem(R.zas[p.kod], efFiltr(filtr))) : kand;
-  const serazeno = seraditSV(ok.length ? ok : kand, r);
-  const m = serazeno[0].m;
+  let pool = ok.length ? ok : kand;
+  const sch = A.schvalene ? ((await A.schvalene(S.druh))[r.klic] || []) : [];
+  if (sch.length) { const kody = new Set(sch.map(x => x.kod)); const jenSch = pool.filter(p => kody.has(p.kod)); if (jenSch.length) pool = jenSch; }
+  const serazeno = seraditSV(pool, r);
+  const vych = new Set(sch.filter(x => x.vychozi).map(x => x.kod));
+  const iV = serazeno.findIndex(x => vych.has(x.p.kod) && x.nast === serazeno[0].nast);
+  const m = serazeno[iV > 0 ? iV : 0].m;
   if (znameZasoby && !ok.length) m.mimoSklad = true;
   return m;
 }
@@ -4650,7 +4685,7 @@ function vykresliRadky() {
   if (A.bezStavimexu) {
     info.innerHTML = !A.katalogDostupny() ? 'Katalog materiálů není připojený – materiál vybereš z ceníku, nebo vložíš jen množství.'
       : R.vybiram ? '<span class="kk-spinner" aria-hidden="true"></span> Vybírám zboží z katalogu…'
-      : 'Materiál vybírám z katalogu podle ceny. Ceny jsou orientační, bez DPH – jen pro hrubý odhad.';
+      : 'Materiál vybírám přednostně ze schváleného sortimentu, jinak z katalogu podle ceny. Ceny jsou orientační, bez DPH – jen pro hrubý odhad.';
   } else info.innerHTML = !A.katalogDostupny() ? 'Katalog materiálů není připojený – materiál vybereš z ceníku, nebo vložíš jen množství.'
     : R.vybiram ? '<span class="kk-spinner" aria-hidden="true"></span> Vybírám zboží ze Stavimexu podle zásob a ceny…'
     : { malesice: 'Vybírám zboží skladem v prodejně Stavimex Malešice.',
@@ -4785,7 +4820,16 @@ async function predvyber(znovu) {
     const sort = sortRadku(r.klic);
     const zc = !r.sv && A.cenik().find(c => slova.every(w => bezDia(c.nazev).includes(w)));
     if (r.sv && A.svZKatalogu) await nactiSVzKatalogu(r.sv);
-    if (r.sv && svKandidati(r.sv).length) {
+    let schM = null;
+    if (!r.sv && A.schvalene && A.podleKodu) {
+      try {
+        const sch = ((await A.schvalene(druh))[r.klic] || []).slice().sort((a, b) => (b.vychozi - a.vychozi) || (a.poradi - b.poradi));
+        if (sch.length) { const rows = await A.podleKodu(sch.map(x => x.kod)); const p = sch.map(x => rows.find(y => y.kod === x.kod)).find(Boolean);
+          if (p) schM = zKatalogu(p); }
+      } catch (e) { schM = null; }
+    }
+    if (schM) m = schM;
+    else if (r.sv && svKandidati(r.sv).length) {
       try { m = await vyberSV(r, S.filtr); } catch (e) { m = null; }
     } else if (zc) m = zCeniku(zc);
     else {
@@ -5441,13 +5485,33 @@ async function idbDel(k){const db=await idbOpen();return new Promise((res,rej)=>
   const t=db.transaction(IDB_STORE,'readwrite');t.objectStore(IDB_STORE).delete(k);
   t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});}
 
-const FSA = ('showOpenFilePicker' in window) && ('showSaveFilePicker' in window);
+const FSA_OPEN = 'showOpenFilePicker' in window, FSA_SAVE = 'showSaveFilePicker' in window, FSA_DIR = 'showDirectoryPicker' in window;
+const FSA = FSA_OPEN && FSA_SAVE;
+const MOBIL = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'') || (navigator.maxTouchPoints>1 && /Macintosh/.test(navigator.userAgent||''));
+let CEKA_HANDLE = null;        // uložené spojení se souborem/složkou, které po načtení stránky čeká na povolení
+/** Srozumitelná hláška k chybě při práci se souborem. */
+function chybaSouboru(e, co){
+  const n=(e&&e.name)||'', m=(e&&e.message)||'';
+  if(n==='AbortError') return null;
+  if(n==='SecurityError' && /gesture|activation/i.test(m)) return co+': prohlížeč nepovolil otevřít výběr souboru. Klikněte prosím na tlačítko znovu.';
+  if(n==='SecurityError' || n==='NotAllowedError' || /system files|systémov/i.test(m))
+    return co+': tuto složku prohlížeč nepovoluje (Plocha, Dokumenty, Stažené soubory, kořen disku ani systémové složky). Vytvořte si vlastní podsložku, např. Dokumenty\\YeY nebo OneDrive\\YeY, a vyberte ji.';
+  if(n==='NoModificationAllowedError' || n==='InvalidStateError') return co+': soubor je jen pro čtení nebo ho má otevřený jiný program (OneDrive se možná právě synchronizuje). Zkuste to za chvíli znovu.';
+  if(n==='TypeError') return co+': tento prohlížeč práci se soubory nepodporuje. Použijte Chrome nebo Edge na počítači, nebo zálohy.';
+  if(n==='SyntaxError') return co+': soubor není platný datový soubor YeY (JSON).';
+  return co+': nepovedlo se ('+(n||'chyba')+(m?' – '+m:'')+').';
+}
+function hlaskaNepodporuje(){
+  return MOBIL ? 'V telefonu prohlížeče neumí zapisovat do souborů ve složkách. Data se ukládají v telefonu (v prohlížeči) – pravidelně si ukládejte zálohu tlačítkem „Uložit zálohu“ (můžete ji poslat na Disk, OneDrive nebo e-mailem).'
+               : 'Tento prohlížeč neumí zapisovat do souborů (umí to Chrome a Edge na počítači; Firefox, Safari ani Brave ne). Data se ukládají v prohlížeči – pravidelně si ukládejte zálohu.';
+}
 
 /* ---------- Práce se souborem ---------- */
-async function verifyPermission(handle, write){
+async function verifyPermission(handle, write, jenZjistit){
   const opts={mode: write?'readwrite':'read'};
   try{
     if(await handle.queryPermission(opts)==='granted') return true;
+    if(jenZjistit) return false;
     if(await handle.requestPermission(opts)==='granted') return true;
   }catch(e){}
   return false;
@@ -5488,6 +5552,7 @@ function markDirty(){
   saveTimer=setTimeout(saveNow, 700);
 }
 async function saveNow(){
+  try{ DB._ulozeno=new Date().toISOString(); }catch(e){}
   lsSave(); // vždy záložní kopie do prohlížeče
   if(fileHandle){
     try{
@@ -5495,6 +5560,7 @@ async function saveNow(){
       dirty=false; setSaveState('Uloženo ✓', 'ok');
     }catch(e){
       setSaveState('Chyba zápisu do souboru — data jsou v prohlížeči', 'warn');
+      if(!saveNow._hlaseno){ saveNow._hlaseno=true; const h=chybaSouboru(e,'Ukládání do souboru'); if(h) showToast(h,true); }
     }
   }else{
     dirty=false; setSaveState('Uloženo v prohlížeči ✓', 'ok');
@@ -5507,50 +5573,82 @@ function setSaveState(txt, kind){
 }
 
 /* ---------- Indikátor stavu úložiště ---------- */
+function otevriUloziste(){
+  const umi=FSA_OPEN||FSA_SAVE||FSA_DIR;
+  document.getElementById('ulozisteFsa').style.display=umi?'grid':'none';
+  document.getElementById('ulozisteBez').style.display=umi?'none':'block';
+  document.getElementById('ulozisteBezText').textContent=hlaskaNepodporuje();
+  document.getElementById('ulozisteOdpojit').style.display=(fileHandle||dirHandle)?'':'none';
+  document.getElementById('ulozisteStav').textContent='Teď: '+document.getElementById('storeLabel').textContent+'.';
+  document.getElementById('ulozisteModal').classList.add('show');
+}
+function zavriUloziste(){ const m=document.getElementById('ulozisteModal'); if(m) m.classList.remove('show'); }
 function updateStoreUI(){
   const dot=document.getElementById('storeDot');
   const lbl=document.getElementById('storeLabel');
   dot.className='dot';
   if(dirHandle){ dot.classList.add('file'); lbl.textContent='Pracovní složka: '+dirHandle.name; }
   else if(fileHandle){ dot.classList.add('file'); lbl.textContent='Datový soubor: '+fileHandle.name; }
-  else{ dot.classList.add('local'); lbl.textContent='Jen v prohlížeči (bez souboru)'; }
+  else if(CEKA_HANDLE){ dot.classList.add('local'); lbl.textContent='Čeká na obnovení spojení: '+CEKA_HANDLE.h.name; }
+  else{ dot.classList.add('local'); lbl.textContent=MOBIL?'Uloženo v tomto telefonu':'Jen v prohlížeči (bez souboru)'; }
+  const bo=document.getElementById('btnObnovit'); if(bo) bo.style.display=(CEKA_HANDLE && !fileHandle)?'':'none';
+  const umi=FSA_OPEN||FSA_SAVE||FSA_DIR;
+  const bf=document.getElementById('btnFolder'); if(bf) bf.style.display=FSA_DIR?'':'none';
+  const bc=document.getElementById('btnConnect'); if(bc) bc.textContent=umi?'Datový soubor…':'Úložiště…';
 }
 
 /* ---------- Start ---------- */
 async function boot(){
-  // 1) zkus obnovit dřívější handle
-  if(FSA){
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}   // ať prohlížeč data sám nesmaže
+  // 1) dřívější spojení se složkou / souborem (povolení se tu jen zjišťuje, žádost musí přijít z kliknutí)
+  if(FSA_OPEN || FSA_DIR){
     try{
       const sdir=await idbGet('dirHandle');
-      if(sdir && await verifyPermission(sdir,true)){
-        dirHandle=sdir; fileHandle=await sdir.getFileHandle('yey_odhad_data.json',{create:true});
-        DB=await readFile(fileHandle); afterLoad(); return;
-      }
       const saved=await idbGet('fileHandle');
-      if(saved && await verifyPermission(saved,true)){
+      if(sdir && await verifyPermission(sdir,true,true)){
+        dirHandle=sdir; fileHandle=await sdir.getFileHandle('yey_odhad_data.json',{create:true});
+        const v=vyberData(await readFile(fileHandle), lsLoad()); DB=v.db; afterLoad(); if(v.zapsat) markDirty(); return;
+      }
+      if(!sdir && saved && await verifyPermission(saved,true,true)){
         fileHandle=saved;
-        DB=await readFile(fileHandle);
-        afterLoad(); return;
-      } else if(saved){
-        // handle je, ale bez povolení → nabídni obnovení
+        const v=vyberData(await readFile(fileHandle), lsLoad()); DB=v.db; afterLoad(); if(v.zapsat) markDirty(); return;
+      }
+      if(sdir || saved){
+        // spojení je uložené, ale prohlížeč chce znovu potvrdit povolení → tlačítko „Obnovit spojení“
+        CEKA_HANDLE = sdir ? {typ:'dir', h:sdir} : {typ:'file', h:saved};
         DB=lsLoad()||blankDB();
         afterLoad();
-        showToast('Klikněte na „Datový soubor…" pro obnovení spojení se souborem.');
+        showToast('Pro pokračování ve '+(sdir?'složce „':'souboru „')+CEKA_HANDLE.h.name+'“ klikněte nahoře na „🔄 Obnovit spojení“.');
         return;
       }
     }catch(e){}
   }
   // 2) localStorage?
   const ls=lsLoad();
-  if(ls && (ls.kontakty.length||ls.cenik.length||ls.faktury.length||ls.nabidky.length)){
+  if(maData(ls)){
     DB=ls; afterLoad(); return;
   }
   // 3) nic → onboarding
   DB=blankDB();
+  upravUvod();
   document.getElementById('onboard').style.display='block';
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelector('nav.tabs button[data-tab="kontakty"]').classList.remove('active');
   afterLoad(true);
+}
+/** Obnovení uloženého spojení jedním kliknutím (prohlížeč se zeptá na povolení). */
+async function obnovSpojeni(){
+  const c=CEKA_HANDLE; if(!c) return;
+  try{
+    if(!await verifyPermission(c.h,true)){ showToast('Bez povolení nelze do '+(c.typ==='dir'?'složky':'souboru')+' zapisovat. Zkuste to znovu, nebo vyberte složku/soubor znovu.',true); return; }
+    if(c.typ==='dir'){ dirHandle=c.h; fileHandle=await c.h.getFileHandle('yey_odhad_data.json',{create:true}); }
+    else fileHandle=c.h;
+    const v=vyberData(await readFile(fileHandle), DB);
+    DB=v.db; CEKA_HANDLE=null;
+    if(v.zapsat) await writeFile(fileHandle, DB);
+    updateStoreUI(); renderAll(); setSaveState('Uloženo ✓','ok');
+    showToast('Spojení obnoveno – data se zase ukládají do '+(c.typ==='dir'?'složky':'souboru')+'.');
+  }catch(e){ const h=chybaSouboru(e,'Obnovení spojení'); if(h) showToast(h,true); }
 }
 /* ===== VZHLED A ZNAČKA (white-label) ===== */
 const THEME_ACCENTS={yey:['#F2B705','#F7CD45','#8A6A00'],zlata:['#b0894e','#c9a468','#9a742a'],modra:['#2563eb','#3b82f6','#1d4ed8'],zelena:['#2f855a','#38a169','#276749'],vinova:['#a12f4f','#c04a68','#7d1f3a'],grafit:['#475569','#64748b','#334155'],oranzova:['#d97706','#f59e0b','#b45309'],tyrkys:['#0d9488','#14b8a6','#0f766e']};
@@ -5590,36 +5688,61 @@ function afterLoad(onboarding){
 }
 
 /* ---------- Datový soubor: vytvořit / otevřít / odpojit ---------- */
+function maData(d){ return !!(d && ((d.kontakty||[]).length||(d.cenik||[]).length||(d.faktury||[]).length||(d.nabidky||[]).length||(d.protokoly||[]).length)); }
+/** Rozhodne, která data použít, když jsou v prohlížeči i v souboru: novější, při pochybnosti se zeptá. */
+function vyberData(vSouboru, vProhlizeci){
+  if(!maData(vProhlizeci)) return {db:vSouboru, zapsat:false};
+  if(!maData(vSouboru)) return {db:vProhlizeci, zapsat:true};
+  if(JSON.stringify({...vSouboru,_ulozeno:0})===JSON.stringify({...vProhlizeci,_ulozeno:0})) return {db:vSouboru, zapsat:false};
+  const tS=Date.parse(vSouboru._ulozeno||'')||0, tP=Date.parse(vProhlizeci._ulozeno||'')||0;
+  const fmt=t=>t?new Date(t).toLocaleString('cs-CZ'):'neznámo';
+  const prohl=confirm('Data v souboru a v tomto prohlížeči se liší.\n\nV souboru: uloženo '+fmt(tS)+'\nV prohlížeči: uloženo '+fmt(tP)+(tP>tS?' (novější)':'')+
+    '\n\nOK = použít data z PROHLÍŽEČE a zapsat je do souboru\nZrušit = použít data ze SOUBORU\n\nTip: pro jistotu si předtím stáhněte zálohu.');
+  return prohl ? {db:vProhlizeci, zapsat:true} : {db:vSouboru, zapsat:false};
+}
 async function createFile(){
-  if(!FSA){ showToast('Váš prohlížeč neumí zapisovat do souboru. Použijte Edge nebo Chrome, nebo zálohujte tlačítkem „Stáhnout zálohu".', true); return; }
+  if(!FSA_SAVE){ showToast(hlaskaNepodporuje(), true); return; }
   try{
     const h=await window.showSaveFilePicker({
       suggestedName:'yey_odhad_data.json',
       types:[{description:'Datový soubor',accept:{'application/json':['.json']}}]
     });
-    fileHandle=h; await idbSet('fileHandle',h);
+    fileHandle=h; dirHandle=null; CEKA_HANDLE=null; await idbSet('fileHandle',h); await idbDel('dirHandle');
     await writeFile(h, DB);           // zapiš aktuální (i prázdná) data
-    hideOnboard(); updateStoreUI();
+    hideOnboard(); updateStoreUI(); zavriUloziste();
     setSaveState('Uloženo ✓','ok'); showToast('Datový soubor vytvořen. Data se teď ukládají automaticky.');
-  }catch(e){ if(e.name!=='AbortError') showToast('Nepodařilo se vytvořit soubor.',true); }
+  }catch(e){ const hl=chybaSouboru(e,'Vytvoření souboru'); if(hl) showToast(hl,true); }
 }
 async function openFile(){
-  if(!FSA){ showToast('Váš prohlížeč neumí otevřít soubor pro zápis. Použijte Edge/Chrome, nebo „Obnovit ze zálohy".', true); return; }
+  if(!FSA_OPEN){ showToast(hlaskaNepodporuje()+' Data z jiného zařízení načtete tlačítkem „Obnovit ze zálohy“.', true); return; }
   try{
     const [h]=await window.showOpenFilePicker({
       types:[{description:'Datový soubor',accept:{'application/json':['.json']}}]
     });
     if(!await verifyPermission(h,true)){ showToast('Bez povolení k zápisu nelze soubor použít.',true); return; }
-    fileHandle=h; await idbSet('fileHandle',h);
-    DB=await readFile(h);
-    hideOnboard(); updateStoreUI(); renderAll();
+    const v=vyberData(await readFile(h), DB);
+    fileHandle=h; dirHandle=null; CEKA_HANDLE=null; await idbSet('fileHandle',h); await idbDel('dirHandle');
+    DB=v.db; if(v.zapsat) await writeFile(h, DB);
+    hideOnboard(); updateStoreUI(); renderAll(); zavriUloziste();
     setSaveState('Uloženo ✓','ok'); showToast('Datový soubor připojen.');
-  }catch(e){ if(e.name!=='AbortError') showToast('Nepodařilo se otevřít soubor.',true); }
+  }catch(e){ const hl=chybaSouboru(e,'Otevření souboru'); if(hl) showToast(hl,true); }
 }
 async function disconnectFile(){
   fileHandle=null; dirHandle=null; await idbDel('fileHandle'); await idbDel('dirHandle');
   updateStoreUI(); lsSave(); setSaveState('Uloženo v prohlížeči ✓','ok');
   showToast('Odpojeno od souboru. Data zůstávají v prohlížeči.');
+}
+function upravUvod(){
+  const umi=FSA_OPEN||FSA_SAVE||FSA_DIR;
+  ['obFolder'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=FSA_DIR?'':'none'; });
+  ['obNew'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=FSA_SAVE?'':'none'; });
+  ['obOpen'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=FSA_OPEN?'':'none'; });
+  if(!umi){
+    const p=document.querySelector('#onboard > p'); if(p) p.textContent=hlaskaNepodporuje();
+    const t=document.querySelector('#obSkip .t'), d=document.querySelector('#obSkip .d');
+    if(t) t.textContent=MOBIL?'Začít – data budou v tomto telefonu':'Začít – data budou v tomto prohlížeči';
+    if(d) d.innerHTML='Nezapomínejte na <b>zálohy</b> (tlačítko „Uložit zálohu“ nahoře). Data z počítače sem dostanete tlačítkem „Obnovit ze zálohy“.';
+  }
 }
 function hideOnboard(){
   document.getElementById('onboard').style.display='none';
@@ -5628,13 +5751,20 @@ function hideOnboard(){
 }
 
 /* ---------- Záloha / obnova ---------- */
-function backupDownload(){
+async function backupDownload(){
   const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+  const nazev='yey_odhad_zaloha_'+stamp+'.json';
   const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  if(MOBIL && navigator.canShare){
+    try{
+      const f=new File([blob], nazev, {type:'application/json'});
+      if(navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:'Záloha YeY'}); showToast('Záloha předána – uložte ji např. na Disk nebo do OneDrivu.'); return; }
+    }catch(e){ if(e && e.name==='AbortError') return; }
+  }
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='yey_odhad_zaloha_'+stamp+'.json';
-  a.click(); URL.revokeObjectURL(a.href);
-  showToast('Záloha stažena.');
+  a.href=URL.createObjectURL(blob); a.download=nazev;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  showToast('Záloha uložena do Stažených souborů ('+nazev+').');
 }
 function restoreClick(){ document.getElementById('restoreInput').click(); }
 document.getElementById('restoreInput').addEventListener('change', async e=>{
@@ -5901,14 +6031,8 @@ document.getElementById('cenikFilter').onchange=renderCenik;
 // úložiště
 document.getElementById('btnBackup').onclick=backupDownload;
 document.getElementById('btnRestore').onclick=restoreClick;
-document.getElementById('btnConnect').onclick=()=>{
-  const opts=[]; 
-  const msg='Datový soubor:\n\n1 = Vytvořit nový\n2 = Otevřít existující'+(fileHandle?'\n3 = Odpojit od souboru':'')+'\n\nZadejte číslo:';
-  const c=prompt(msg,'1');
-  if(c==='1') createFile();
-  else if(c==='2') openFile();
-  else if(c==='3'&&fileHandle) disconnectFile();
-};
+document.getElementById('btnConnect').onclick=otevriUloziste;
+document.getElementById('btnObnovit').onclick=obnovSpojeni;
 document.getElementById('obNew').onclick=createFile;
 document.getElementById('obOpen').onclick=openFile;
 document.getElementById('obSkip').onclick=()=>{ hideOnboard(); markDirty(); showToast('Pracujete jen v prohlížeči. Nezapomínejte na zálohy.'); };
@@ -6719,21 +6843,18 @@ document.getElementById('ns_podpisClear').onclick=()=>{ DB.dodavatel=DB.dodavate
    PRACOVNÍ SLOŽKA + PŘÍLOHY
    ============================================================ */
 async function connectFolder(){
-  if(!FSA){ showToast('Váš prohlížeč nepodporuje složky. Použijte Edge nebo Chrome.',true); return; }
+  if(!FSA_DIR){ showToast(hlaskaNepodporuje(), true); return; }
   try{
-    const dir=await window.showDirectoryPicker({mode:'readwrite'});
+    const dir=await window.showDirectoryPicker({mode:'readwrite', id:'yey-data'});
     if(!await verifyPermission(dir,true)){ showToast('Bez oprávnění ke složce.',true); return; }
-    dirHandle=dir; await idbSet('dirHandle',dir);
-    fileHandle=await dir.getFileHandle('yey_odhad_data.json',{create:true}); await idbSet('fileHandle',fileHandle);
-    const existing=await readFile(fileHandle);
-    const hasNew = DB && (DB.kontakty.length||DB.cenik.length||DB.faktury.length||DB.nabidky.length||DB.protokoly.length);
-    const fileEmpty = !(existing.kontakty.length||existing.cenik.length||existing.faktury.length||existing.nabidky.length||existing.protokoly.length);
-    if(fileEmpty && hasNew){ await writeFile(fileHandle, DB); }
-    else { DB=existing; }
-    hideOnboard(); updateStoreUI(); renderAll();
+    const fh=await dir.getFileHandle('yey_odhad_data.json',{create:true});
+    const v=vyberData(await readFile(fh), DB);
+    dirHandle=dir; fileHandle=fh; CEKA_HANDLE=null; await idbSet('dirHandle',dir); await idbSet('fileHandle',fh);
+    DB=v.db; if(v.zapsat) await writeFile(fh, DB);
+    hideOnboard(); updateStoreUI(); renderAll(); zavriUloziste();
     setSaveState('Uloženo ✓','ok');
-    showToast('Pracovní složka připojena — přílohy se ukládají do podsložek vedle datového souboru.');
-  }catch(e){ if(e.name!=='AbortError') showToast('Složku se nepodařilo připojit.',true); }
+    showToast('Pracovní složka „'+dir.name+'“ připojena — přílohy se ukládají do podsložek vedle datového souboru.');
+  }catch(e){ const hl=chybaSouboru(e,'Připojení složky'); if(hl) showToast(hl,true); }
 }
 async function getSubdir(subname){ if(!dirHandle) return null; return await dirHandle.getDirectoryHandle(subname,{create:true}); }
 async function saveAttachment(subname, file, savedName){
@@ -7019,7 +7140,7 @@ window.addEventListener('beforeunload',e=>{ if(dirty){ e.preventDefault(); e.ret
 
 
 /* ===== Postranní tipy / nápověda ===== */
-const TIPS=[{"i": "📁", "t": "Data se ukládají sama", "x": "Připojte pracovní složku (ideálně v OneDrivu). Aplikace do ní ukládá průběžně sama — nemusíte nic „ukládat“ ručně."}, {"i": "⬆️", "t": "Ceník rychle z Excelu", "x": "V záložce Ceník zvolte Import a načtěte tabulku se sloupci Kód, Kategorie, Název, MJ a Cena. Stovky položek máte za pár vteřin."}, {"i": "🏷️", "t": "Kategorie se tvoří samy", "x": "Při importu z Excelu se z neznámých názvů ve sloupci Kategorie automaticky založí nové kategorie. Upravit je můžete v Nastavení."}, {"i": "🎨", "t": "Přizpůsobte si vzhled", "x": "V Nastavení → Vzhled a značka změníte barvu zvýraznění, pozadí, písmo, logo i text pod názvem. Nástroj sladíte se svou firmou."}, {"i": "🔄", "t": "Z nabídky rovnou faktura", "x": "U hotové nabídky stačí jedno kliknutí a vznikne faktura se všemi položkami i kategoriemi. Nic nepřepisujete."}, {"i": "📄", "t": "Faktura → předávací protokol", "x": "Z faktury vytvoříte předávací protokol jedním tlačítkem. Hodí se k převzetí díla zákazníkem."}, {"i": "📱", "t": "QR platba automaticky", "x": "Na faktuře se sám vygeneruje QR kód pro platbu. Zákazník zaplatí telefonem během chvilky."}, {"i": "🧾", "t": "Přenesená daňová povinnost", "x": "U stavebních prací zvolte režim PDP (§92e). Faktura pak správně uvede „daň odvede zákazník“ a sazbu 0 %."}, {"i": "#️⃣", "t": "Číselné řady podle sebe", "x": "Formát čísel nastavíte maskou: {RRRR} rok, {RR} rok dvojmístně, {MM} měsíc, {NNNN} pořadí. Například {RRRR}-{NNN}."}, {"i": "🔎", "t": "IČ doplní zbytek", "x": "U kontaktu zadejte IČ a údaje z rejstříku (ARES) se doplní samy — adresa i DIČ. Ušetříte opisování."}, {"i": "📎", "t": "Přílohy u dokladů", "x": "K nabídce i faktuře přiložíte soubory (objednávku, fotky). Ukládají se do podsložek ve vaší pracovní složce."}, {"i": "👁️", "t": "Náhled kliknutím na řádek", "x": "Kliknutím na řádek v seznamu dokladů otevřete náhled s tlačítky Upravit a Tisk."}, {"i": "🖨️", "t": "Tisk do PDF", "x": "Doklad vytisknete tlačítkem Tisk nebo Ctrl+P a uložíte jako PDF. Rozvržení je připravené na formát A4."}, {"i": "💾", "t": "Zálohujte pravidelně", "x": "Tlačítko Stáhnout zálohu uloží všechna data do jednoho souboru. Obnovit je lze kdykoli přes Obnovit ze zálohy."}, {"i": "↕️", "t": "Pořadí kategorií", "x": "V Nastavení → Kategorie položek je přejmenujete, přidáte, odeberete i přeuspořádáte šipkami. Pořadí se promítne do dokladů."}];
+const TIPS=[{"i": "📁", "t": "Data se ukládají sama", "x": "Na počítači v Chrome nebo Edge připojte pracovní složku (ideálně v OneDrivu) – aplikace do ní ukládá průběžně sama. V telefonu se data ukládají v telefonu, tak si občas uložte zálohu."}, {"i": "⬆️", "t": "Ceník rychle z Excelu", "x": "V záložce Ceník zvolte Import a načtěte tabulku se sloupci Kód, Kategorie, Název, MJ a Cena. Stovky položek máte za pár vteřin."}, {"i": "🏷️", "t": "Kategorie se tvoří samy", "x": "Při importu z Excelu se z neznámých názvů ve sloupci Kategorie automaticky založí nové kategorie. Upravit je můžete v Nastavení."}, {"i": "🎨", "t": "Přizpůsobte si vzhled", "x": "V Nastavení → Vzhled a značka změníte barvu zvýraznění, pozadí, písmo, logo i text pod názvem. Nástroj sladíte se svou firmou."}, {"i": "🔄", "t": "Z nabídky rovnou faktura", "x": "U hotové nabídky stačí jedno kliknutí a vznikne faktura se všemi položkami i kategoriemi. Nic nepřepisujete."}, {"i": "📄", "t": "Faktura → předávací protokol", "x": "Z faktury vytvoříte předávací protokol jedním tlačítkem. Hodí se k převzetí díla zákazníkem."}, {"i": "📱", "t": "QR platba automaticky", "x": "Na faktuře se sám vygeneruje QR kód pro platbu. Zákazník zaplatí telefonem během chvilky."}, {"i": "🧾", "t": "Přenesená daňová povinnost", "x": "U stavebních prací zvolte režim PDP (§92e). Faktura pak správně uvede „daň odvede zákazník“ a sazbu 0 %."}, {"i": "#️⃣", "t": "Číselné řady podle sebe", "x": "Formát čísel nastavíte maskou: {RRRR} rok, {RR} rok dvojmístně, {MM} měsíc, {NNNN} pořadí. Například {RRRR}-{NNN}."}, {"i": "🔎", "t": "IČ doplní zbytek", "x": "U kontaktu zadejte IČ a údaje z rejstříku (ARES) se doplní samy — adresa i DIČ. Ušetříte opisování."}, {"i": "📎", "t": "Přílohy u dokladů", "x": "K nabídce i faktuře přiložíte soubory (objednávku, fotky). Ukládají se do podsložek ve vaší pracovní složce."}, {"i": "👁️", "t": "Náhled kliknutím na řádek", "x": "Kliknutím na řádek v seznamu dokladů otevřete náhled s tlačítky Upravit a Tisk."}, {"i": "🖨️", "t": "Tisk do PDF", "x": "Doklad vytisknete tlačítkem Tisk nebo Ctrl+P a uložíte jako PDF. Rozvržení je připravené na formát A4."}, {"i": "💾", "t": "Zálohujte pravidelně", "x": "Tlačítko Uložit zálohu uloží všechna data do jednoho souboru (v telefonu ho můžete poslat na Disk nebo OneDrive). Obnovit je lze kdykoli přes Obnovit ze zálohy."}, {"i": "↕️", "t": "Pořadí kategorií", "x": "V Nastavení → Kategorie položek je přejmenujete, přidáte, odeberete i přeuspořádáte šipkami. Pořadí se promítne do dokladů."}];
 let tipIdx=Math.floor(Math.random()*Math.max(TIPS.length,1));
 function tipShow(){ const t=TIPS[tipIdx%TIPS.length]||{}; document.getElementById('tipIco').textContent=t.i||'💡'; document.getElementById('tipTit').textContent=t.t||''; document.getElementById('tipTxt').textContent=t.x||''; document.getElementById('tipDots').textContent='Tip '+((tipIdx%TIPS.length)+1)+' / '+TIPS.length; }
 function tipNextFn(){ tipIdx=(tipIdx+1)%TIPS.length; tipShow(); }
@@ -7625,10 +7746,11 @@ async function katTemata(){
 }
 const KAT_TAB_SLOUPCE='kod,nazev,ean,foto_url,mj,mj_v_bal,jednotek_v_baleni,mj_v_pal,hmotnost_zmj,velikost,tloustka_mm,sazba_dph,pc_s_dph,cena_bez_dph,tema,skupina,podskupina_nazev';
 async function katTabulka(o){ return upravRadky(await katTabulkaSurove(o)); }
-async function katTabulkaSurove({slova,temata,skupina,pocet,stavimex}){
+async function katTabulkaSurove({slova,temata,skupina,pocet,stavimex,kody}){
   const c=katCfg(); const u=new URLSearchParams();
   u.append('select',KAT_TAB_SLOUPCE);
   const qs=v=>'"'+String(v).replace(/"/g,'')+'"';
+  if(kody&&kody.length) u.append('kod','in.('+kody.map(qs).join(',')+')');
   if(temata&&temata.length) u.append('tema','in.('+temata.map(qs).join(',')+')');
   if(skupina) u.append('or','(skupina.eq.'+qs(skupina)+',podskupina_nazev.eq.'+qs(skupina)+')');
   norm(slova||'').replace(/[%()*,"\\]/g,' ').split(' ').filter(w=>w.length>=2).slice(0,6).forEach(w=>u.append('hledat','ilike.*'+w+'*'));
@@ -7696,6 +7818,25 @@ const kalkAdapter={
     return rows.filter(r=>!r.neaktivni).map(katProKalk);
   },
   zasoby: null,
+  /** Schválený materiál z administrace kalkulaček (kalk_feed) – jen schválené položky. {klic:[{kod,vychozi,poradi}]} */
+  _schv:{},
+  async schvalene(druh){
+    if(!druh || !katOn()) return {};
+    if(!this._schv[druh]) this._schv[druh]=(async()=>{
+      try{
+        const res=await katRpcSurove('kalk_feed',{p_druh:druh});
+        const v={};
+        (Array.isArray(res)?res:[]).filter(r=>r.schvaleno && r.kat_kod).forEach(r=>{ (v[r.klic]=v[r.klic]||[]).push({kod:r.kat_kod, vychozi:!!r.vychozi, poradi:r.poradi||100}); });
+        return v;
+      }catch(e){ return {}; }
+    })();
+    return this._schv[druh];
+  },
+  /** Položky katalogu podle kódu (pro schválený materiál). */
+  async podleKodu(kody){
+    kody=[...new Set((kody||[]).filter(Boolean))]; if(!kody.length) return [];
+    try{ return (await katTabulka({kody, pocet:kody.length})).filter(r=>!r.neaktivni).map(katProKalk); }catch(e){ return []; }
+  },
   async _zasoby(kody){
     await stxNacti(kody);
     const v={};

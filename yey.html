@@ -776,7 +776,7 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
           <div id="prPickChips" class="chips"></div>
           <input class="search" id="prPickSearch" placeholder="Hledat v ceníku…" style="width:100%">
           <div id="prPickList" style="margin-top:10px;max-height:220px;overflow:auto"></div></div>
-        <div style="overflow:auto"><table class="items"><thead><tr><th style="width:24px">#</th><th>Popis</th><th style="width:80px">MJ</th><th style="width:100px">Množství</th><th style="width:30px"></th></tr></thead><tbody id="prItemsBody"></tbody></table></div>
+        <div style="overflow:auto"><table class="items"><thead><tr><th style="width:24px">#</th><th>Popis</th><th style="width:150px">Kategorie</th><th style="width:80px">MJ</th><th style="width:100px">Množství</th><th style="width:30px"></th></tr></thead><tbody id="prItemsBody"></tbody></table></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
         <button class="btn danger sm" id="btnPrDelete" type="button" style="display:none">Smazat protokol</button>
@@ -909,6 +909,19 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
 </div>
 <button id="tipsFab" class="tips-fab" style="display:none">💡 Tipy</button>
 
+<div class="backdrop" id="tiskRezimModal" style="z-index:1000">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head"><h3 id="tiskRezimTitle">Verze k tisku</h3><button class="x" type="button" onclick="tiskRezimZavri()">×</button></div>
+    <div class="modal-body">
+      <p class="muted small" style="margin:0 0 12px">Jak se mají položky na dokladu vytisknout?</p>
+      <div style="display:grid;gap:10px">
+        <button class="btn gold" type="button" id="tiskKat" onclick="tiskRezim('kat')" style="text-align:left;padding:12px 14px"><b>Po kategoriích</b><br><span class="small">Jeden řádek za každou kategorii (Materiál, Práce…), bez konkrétních položek.</span></button>
+        <button class="btn" type="button" id="tiskPol" onclick="tiskRezim('pol')" style="text-align:left;padding:12px 14px"><b>Položkově</b><br><span class="small">Každá položka na samostatném řádku s množstvím.</span></button>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" type="button" onclick="tiskRezimZavri()">Zrušit</button></div>
+  </div>
+</div>
 <div class="backdrop" id="nbTableModal">
   <div class="modal" style="max-width:760px">
     <div class="modal-head"><h3>Nahrát položky z tabulky</h3><button class="x" data-close>×</button></div>
@@ -3553,6 +3566,7 @@ function prepocet(q, mjZ, m) {
   const z = mjN(mjZ), na = mjN(m.mj);
   if (!z || !na || z === na || !(q > 0)) return null;
   const del = (d, popis) => ({ mnozstvi: nahoru(q / d), popis });
+  if (m.velJed > 0 && m.mjKat && z === mjN(m.mjKat)) return del(m.velJed, `${f3(q)} ${mjHezky(z)} ÷ ${f3(m.velJed)} ${mjHezky(z)} ${m.velKde || ''}`.trim());
   if (na === 'bal' && m.vBaleni > 0) return del(m.vBaleni, `${f3(q)} ${mjHezky(z)} ÷ ${f3(m.vBaleni)} v balení`);
   if ((na === 'bal' || na === 'ks') && z === 'ks' && !(m.vBaleni > 1)) { const n = zNazvu(m.nazev, 'ks'); if (n > 1) return del(n, `${f3(q)} ks ÷ ${f3(n)} ks v balení`); }
   if (na === 'ks' || na === 'bal' || na === 'rol' || na === 'sada') {
@@ -4127,7 +4141,17 @@ function mnozstviPro(r, m) {
   if (pr) return { nejde: true };
   return null;
 }
+/** Zboží ze sortimentu suché výstavby v prodejní jednotce: desky na kusy (Stavimex prodává SDK desky na ks),
+    profily a pásky na kusy / role podle délky. Cena za kus = cena za m² × plocha desky, resp. za bm × délka. */
 function zSortimentu(p) {
+  const m = zSortimentuSurove(p), mj = mjN(m.mj);
+  if (mj === 'm²' && m.plocha > 0)
+    return { ...m, mj: 'ks', mjKat: 'm²', velJed: m.plocha, velKde: 'v desce', nakup: m.nakup != null ? zaok(Number(m.nakup) * m.plocha) : null };
+  if (mj === 'm' && m.delka > 0 && m.delka <= 100)
+    return { ...m, mj: 'ks', mjKat: 'm', velJed: m.delka, velKde: 'v kusu', nakup: m.nakup != null ? zaok(Number(m.nakup) * m.delka) : null };
+  return m;
+}
+function zSortimentuSurove(p) {
   return { src: 'katalog', sv: true, kod: p.kod, nazev: p.nazev, mj: p.mj, nakup: p.cena, ean: p.ean || '', foto: '',
     tema: p.tema, skupina: p.skupina, podskupina: p.podskupina, znacka: p.znacka, rozmer: p.rozmer || '',
     delka: p.delka || null, plocha: p.plocha || null, vBaleni: p.vBaleni || null, hmotnost: p.hmotnost || null, skladem: p.skladem };
@@ -4322,7 +4346,38 @@ async function hledejSeSkladem(q, pocet, sort, filtr) {
 function zCeniku(c) {
   return { src: 'cenik', cenikId: c.id, kod: c.kod || null, nazev: c.nazev, mj: c.mj || 'ks', cenaCenik: Number(c.cena) || 0 };
 }
+/** Prodejní jednotka zboží, které katalog vede v m² nebo bm (desky, izolace, profily, lišty):
+    kus podle rozměru / délky v názvu, nebo balení podle katalogu (MJ v balení). */
+function prodejniJednotka(m) {
+  const z = mjN(m.mj);
+  if (z !== 'm²' && z !== 'm') return null;
+  const t = bezDia(m.nazev).replace(/²/g, '2').replace(/(\d),(\d)/g, '$1.$2');
+  const bal = Number(m.vBaleni) > 0 ? Number(m.vBaleni) : null;
+  if (z === 'm²') {
+    const br = t.match(/\[\s*(\d+(?:\.\d+)?)\s*m2\s*\]/);
+    if (br && +br[1] > 0) return { mj: 'ks', vel: +br[1], z, kde: 'v kusu' };
+    if (bal && bal >= 0.3 && bal <= 60) return { mj: 'bal', vel: bal, z, kde: 'v balení' };
+    const d = t.match(/(\d{3,4}(?:\.\d+)?)\s*[x×*]\s*(\d{3,4}(?:\.\d+)?)\s*(?:[x×*]\s*\d+(?:\.\d+)?\s*)?mm/);
+    if (d && +d[1] >= 300 && +d[2] >= 300) { const a = zaok(+d[1] * +d[2] / 1e6 * 1000) / 1000; if (a > 0) return { mj: 'ks', vel: a, z, kde: 'v kusu' }; }
+    return null;
+  }
+  const l = zNazvu(m.nazev, 'm');
+  if (l > 0 && l <= 6.5) return { mj: 'ks', vel: l, z, kde: 'v kusu' };
+  if (bal && bal > 6.5 && bal <= 30) return { mj: 'bal', vel: bal, z, kde: 'v balení' };
+  return null;
+}
+/** Převede zboží z m² / bm na prodejní jednotku (cena a hmotnost za kus / balení). */
+function naProdejniMj(m) {
+  const pj = prodejniJednotka(m);
+  if (!pj) return m;
+  return { ...m, mj: pj.mj, mjKat: pj.z, velJed: pj.vel, velKde: pj.kde,
+    nakup: m.nakup != null ? zaok(Number(m.nakup) * pj.vel) : null,
+    hmotnost: m.hmotnost > 0 ? Math.round(m.hmotnost * pj.vel * 1000) / 1000 : null, vBaleni: null };
+}
 function zKatalogu(p) {
+  return naProdejniMj(zKataloguSurove(p));
+}
+function zKataloguSurove(p) {
   return { src: 'katalog', kod: p.kod, nazev: p.nazev, mj: (p.mj || 'ks'), nakup: p.cena != null ? Number(p.cena) : null,
     hmotnost: p.hmotnost || null, naPalete: p.naPalete || null, vBaleni: p.vBaleni || null, foto: p.foto || '', ean: p.ean || '',
     tema: p.tema || '', skupina: p.skupina || '', podskupina: p.podskupina || '', rozmer: p.rozmer || '' };
@@ -5997,7 +6052,21 @@ function autoAddToCenik(polozky){
   });
   if(added){ renderCenik(); showToast(added+(added===1?' nová položka přidána':' nových položek přidáno')+' do ceníku.'); }
 }
-function nbAddFromCenik(c){ if(!c) return; NB.polozky.push({nazev:c.nazev,mj:c.mj,mnozstvi:1,cena:priceForAdd(c.cena,val('nbKontakt'),c.nazev),sleva:0,kat:katFromCenik(c.kategorie),...(c.katKod?{katKod:c.katKod}:{})}); renderNbItems(); }
+/* Stejná položka (stejný kód z katalogu, jinak stejný název) se stejnou MJ se přičte k existujícímu řádku. */
+function sectiPolozku(arr, p){
+  const n=norm(p&&p.nazev); if(!n) return null;
+  const mj=norm(p.mj);
+  const r=arr.find(x=>norm(x.mj)===mj && ((p.katKod && x.katKod) ? x.katKod===p.katKod : norm(x.nazev)===n));
+  if(!r) return null;
+  r.mnozstvi=Math.round(((Number(r.mnozstvi)||0)+(Number(p.mnozstvi)||0))*1000)/1000;
+  return r;
+}
+function pridejPolozku(arr, p, upozornit){
+  const r=sectiPolozku(arr, p);
+  if(r){ if(upozornit) showToast('„'+r.nazev+'“ už v dokladu je – množství navýšeno na '+fmtNum(r.mnozstvi)+' '+(r.mj||'')+'.'); return false; }
+  arr.push(p); return true;
+}
+function nbAddFromCenik(c){ if(!c) return; pridejPolozku(NB.polozky, {nazev:c.nazev,mj:c.mj,mnozstvi:1,cena:priceForAdd(c.cena,val('nbKontakt'),c.nazev),sleva:0,kat:katFromCenik(c.kategorie),...(c.katKod?{katKod:c.katKod}:{})}, true); renderNbItems(); }
 function nbAddEmpty(){ NB.polozky.push({nazev:'',mj:'ks',mnozstvi:1,cena:0,sleva:0,kat:'prace'}); renderNbItems(); }
 function nbDelRow(i){ NB.polozky.splice(i,1); renderNbItems(); }
 
@@ -6190,7 +6259,7 @@ function faRecalc(){
   if(FA.rezim==='neplatce') h+='<div class="small muted" style="text-align:right;margin-top:6px">Dodavatel není plátcem DPH.</div>';
   h+='</div>'; box.innerHTML=h;
 }
-function faAddFromCenik(c){ if(!c) return; FA.polozky.push({nazev:c.nazev,mj:c.mj,mnozstvi:1,cena:priceForAdd(c.cena,val('faKontakt'),c.nazev),sleva:0,sazba:21,kat:katFromCenik(c.kategorie),...(c.katKod?{katKod:c.katKod}:{})}); renderFaItems(); }
+function faAddFromCenik(c){ if(!c) return; pridejPolozku(FA.polozky, {nazev:c.nazev,mj:c.mj,mnozstvi:1,cena:priceForAdd(c.cena,val('faKontakt'),c.nazev),sleva:0,sazba:21,kat:katFromCenik(c.kategorie),...(c.katKod?{katKod:c.katKod}:{})}, true); renderFaItems(); }
 function faAddEmpty(){ FA.polozky.push({nazev:'',mj:'ks',mnozstvi:1,cena:0,sleva:0,sazba:21,kat:'prace'}); renderFaItems(); }
 function faDelRow(i){ FA.polozky.splice(i,1); renderFaItems(); }
 function faPickRender(){
@@ -6250,14 +6319,20 @@ function spaydQR(rec, celkem){
   try{ const qr=qrcode(0,'M'); qr.addData(parts.join('*')); qr.make(); return qr.createDataURL(4,8); }catch(e){ return ''; }
 }
 
-function faDocHtml(rec){
+function faDocHtml(rec, rezim){
   const d=DB.dodavatel||{}; const k=DB.kontakty.find(x=>x.id===rec.kontaktId)||{};
   const bezna=rec.rezim==='bezna'; const t=faTotalsOf(rec);
   const adr=[esc(k.ulice||''), esc([k.psc,k.mesto].filter(Boolean).join(' '))].filter(Boolean).join('<br>');
   const _kg=groupByKat(rec.polozky);
   const _catSazba=(arr)=>{ if(rec.rezim==='pdp') return '0 %'; if(rec.rezim==='neplatce') return '—'; const set=[...new Set(arr.map(x=>Number(x.sazba)||0))]; return set.length===1?set[0]+' %':'—'; };
   let rows=''; let _i=0;
-  LINE_KAT_ORDER.forEach(k=>{ const arr=_kg[k]; if(!arr.length) return; _i++;
+  if(rezim==='pol') (rec.polozky||[]).filter(p=>(p.nazev||'').trim()).forEach(p=>{ _i++;
+    const zaklad=rowTotal(p), sazba=Number(p.sazba)||0;
+    const jc=(Number(p.mnozstvi)||0) ? zaklad/(Number(p.mnozstvi)||1) : (Number(p.cena)||0);
+    const celk = bezna ? zaklad*(1+sazba/100) : zaklad;
+    rows+='<tr><td class="c">'+_i+'</td><td>'+esc(p.nazev)+'</td><td class="r">'+fmtNum(p.mnozstvi)+'</td><td class="c">'+esc(p.mj||'')+'</td><td class="r">'+fmtCena(jc)+'</td><td class="r">'+fmtCena(zaklad)+'</td><td class="r">'+_catSazba([p])+'</td><td class="r">'+fmtCena(celk)+'</td></tr>';
+  });
+  else LINE_KAT_ORDER.forEach(k=>{ const arr=_kg[k]; if(!arr.length) return; _i++;
     const zaklad=arr.reduce((s,p)=>s+rowTotal(p),0);
     const celk = bezna ? arr.reduce((s,p)=>s+rowTotal(p)*(1+(Number(p.sazba)||0)/100),0) : zaklad;
     rows+='<tr><td class="c">'+_i+'</td><td>'+LINE_KAT_LABEL[k]+'</td><td class="r">1</td><td class="c">ks</td><td class="r">'+fmtCena(zaklad)+'</td><td class="r">'+fmtCena(zaklad)+'</td><td class="r">'+_catSazba(arr)+'</td><td class="r">'+fmtCena(celk)+'</td></tr>';
@@ -6302,7 +6377,24 @@ function faDocHtml(rec){
   H.push('</div>');
   return H.join('');
 }
-function printFaktura(rec){ _savedTitle=document.title; document.title=saveTitle('Faktura',rec.cislo,rec.kontaktId); document.getElementById('printArea').innerHTML=faDocHtml(rec); document.body.classList.add('printing'); window.print(); }
+/* Volba verze k tisku: po kategoriích / položkově (pamatuje si poslední volbu u každého typu dokladu). */
+let _tiskCb=null;
+function vyberRezimTisku(typ, cb){
+  const m=document.getElementById('tiskRezimModal');
+  document.getElementById('tiskRezimTitle').textContent='Verze k tisku – '+(typ==='faktura'?'faktura':'předávací protokol');
+  m.dataset.typ=typ; _tiskCb=cb; m.classList.add('show');
+  let posl='kat'; try{ posl=localStorage.getItem('yeyTiskRezim:'+typ)||'kat'; }catch(e){}
+  const b=document.getElementById(posl==='pol'?'tiskPol':'tiskKat'); if(b) setTimeout(()=>b.focus(),30);
+}
+function tiskRezimZavri(){ document.getElementById('tiskRezimModal').classList.remove('show'); _tiskCb=null; }
+function tiskRezim(rezim){
+  const m=document.getElementById('tiskRezimModal'), cb=_tiskCb;
+  try{ localStorage.setItem('yeyTiskRezim:'+m.dataset.typ, rezim); }catch(e){}
+  tiskRezimZavri();
+  if(cb) setTimeout(()=>cb(rezim),60);
+}
+function printFaktura(rec){ vyberRezimTisku('faktura', r=>printFakturaRezim(rec, r)); }
+function printFakturaRezim(rec, rezim){ _savedTitle=document.title; document.title=saveTitle('Faktura',rec.cislo,rec.kontaktId); document.getElementById('printArea').innerHTML=faDocHtml(rec, rezim); document.body.classList.add('printing'); window.print(); }
 
 // wiring faktur
 document.getElementById('btnAddFaktura').onclick=()=>faOpenEditor(null);
@@ -6364,14 +6456,20 @@ function renderPrItems(){
   b.innerHTML=PR.polozky.map((p,i)=>'<tr>'+
     '<td class="c">'+(i+1)+'</td>'+
     '<td><input value="'+esc(p.nazev)+'" data-idx="'+i+'" data-field="nazev" oninput="prCell(this)"></td>'+
+    '<td>'+katOptions(prKat(p),'prCell',i)+'</td>'+
     '<td><input value="'+esc(p.mj)+'" data-idx="'+i+'" data-field="mj" oninput="prCell(this)" style="text-align:center"></td>'+
     '<td><input value="'+esc(p.mnozstvi)+'" data-idx="'+i+'" data-field="mnozstvi" oninput="prCell(this)" inputmode="decimal" style="text-align:right"></td>'+
     '<td class="c"><button class="icon-btn" type="button" title="Odebrat" onclick="prDelRow('+i+')">✕</button></td></tr>').join('');
-  if(!PR.polozky.length) b.innerHTML='<tr><td colspan="5" class="muted small" style="padding:16px;text-align:center">Zatím žádné položky — přidejte je z ceníku nebo prázdným řádkem.</td></tr>';
+  if(!PR.polozky.length) b.innerHTML='<tr><td colspan="6" class="muted small" style="padding:16px;text-align:center">Zatím žádné položky — přidejte je z ceníku nebo prázdným řádkem.</td></tr>';
+}
+function prKat(p){
+  if(p.kat) return normKatLine(p.kat);
+  const c=p.nazev ? DB.cenik.find(x=>norm(x.nazev)===norm(p.nazev)) : null;
+  return c ? katFromCenik(c.kategorie) : normKatLine('');
 }
 function prCell(el){ const i=+el.dataset.idx,f=el.dataset.field; let v=el.value; if(f==='mnozstvi') v=parseFloat((''+v).replace(',','.'))||0; PR.polozky[i][f]=v; }
-function prAddFromCenik(c){ if(!c) return; PR.polozky.push({nazev:c.nazev,mj:c.mj,mnozstvi:1}); renderPrItems(); }
-function prAddEmpty(){ PR.polozky.push({nazev:'',mj:'ks',mnozstvi:1}); renderPrItems(); }
+function prAddFromCenik(c){ if(!c) return; pridejPolozku(PR.polozky, {nazev:c.nazev,mj:c.mj,mnozstvi:1,kat:katFromCenik(c.kategorie),...(c.katKod?{katKod:c.katKod}:{})}, true); renderPrItems(); }
+function prAddEmpty(){ PR.polozky.push({nazev:'',mj:'ks',mnozstvi:1,kat:'prace'}); renderPrItems(); }
 function prDelRow(i){ PR.polozky.splice(i,1); renderPrItems(); }
 function prPickRender(){
   document.getElementById('prPickChips').innerHTML=pickChips(prPickKat,'setPrPickKat');
@@ -6412,7 +6510,7 @@ function protokolFromFaktura(id){
   const rec={ id:uid(), cislo:nextProtokolCislo(), kontaktId:f.kontaktId, datumPredani:today(), misto,
     odkaz:'Faktura č. '+(f.cislo||''), predmet:f.akce||'', stavDila:'bez', vady:'', zaruka:'24 měsíců', predano:'', pozn:'',
     zFaktury:f.id, zNabidky:f.zNabidky||'',
-    polozky:(f.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi})) };
+    polozky:(f.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,kat:x.kat})) };
   prOpenEditor(rec,true);
   showToast('Protokol vytvořen z faktury — zkontrolujte a uložte.');
 }
@@ -6428,7 +6526,7 @@ function protokolFromNabidka(id){
   const rec={ id:uid(), cislo:nextProtokolCislo(), kontaktId:n.kontaktId, datumPredani:today(), misto,
     odkaz:'Nabídka č. '+(n.cislo||''), predmet:n.predmet||'', stavDila:'bez', vady:'', zaruka:'24 měsíců', predano:'', pozn:'',
     zNabidky:n.id,
-    polozky:(n.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi})) };
+    polozky:(n.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,kat:x.kat})) };
   prOpenEditor(rec,true);
   showToast('Protokol vytvořen z nabídky — zkontrolujte a uložte.');
 }
@@ -6450,11 +6548,18 @@ function krokFaktury(f){
   return '<button class="btn sm gold krok-btn" title="Vytvořit předávací protokol k této faktuře" onclick="event.stopPropagation();protokolFromFaktura(\''+f.id+'\')">📋 Předávací protokol</button>';
 }
 
-function printProtokol(rec){
+function printProtokol(rec){ vyberRezimTisku('protokol', r=>printProtokolRezim(rec, r)); }
+function printProtokolRezim(rec, rezim){
   _savedTitle=document.title; document.title=saveTitle('Předávací protokol',rec.cislo,rec.kontaktId);
   const d=DB.dodavatel||{}; const k=DB.kontakty.find(x=>x.id===rec.kontaktId)||{};
   const adr=[esc(k.ulice||''),esc([k.psc,k.mesto].filter(Boolean).join(' '))].filter(Boolean).join('<br>');
-  const rows=(rec.polozky||[]).map((p,i)=>'<tr><td class="c">'+(i+1)+'</td><td>'+esc(p.nazev)+'</td><td class="c">'+esc(p.mj)+'</td><td class="r">'+fmtNum(p.mnozstvi)+'</td></tr>').join('');
+  // jako u faktury: bez konkrétních položek, jeden řádek za každou kategorii
+  const _kg=groupByKat((rec.polozky||[]).filter(p=>(p.nazev||'').trim()).map(p=>({...p, kat:prKat(p)})));
+  let rows='', _i=0;
+  if(rezim==='pol') (rec.polozky||[]).filter(p=>(p.nazev||'').trim()).forEach(p=>{ _i++;
+    rows+='<tr><td class="c">'+_i+'</td><td>'+esc(p.nazev)+'</td><td class="c">'+esc(p.mj||'')+'</td><td class="r">'+fmtNum(p.mnozstvi)+'</td></tr>'; });
+  else LINE_KAT_ORDER.forEach(kk=>{ if(!_kg[kk].length) return; _i++;
+    rows+='<tr><td class="c">'+_i+'</td><td>'+esc(LINE_KAT_LABEL[kk])+'</td><td class="c">ks</td><td class="r">1</td></tr>'; });
   const declare = rec.stavDila==='vyhrady' ? '<b>Objednatel dílo převzal s výhradami</b> uvedenými níže.' : '<b>Objednatel dílo převzal bez vad a nedodělků.</b>';
   const H=[];
   H.push('<div class="doc">');
@@ -6715,7 +6820,7 @@ function nbTablePreview(items){
   sum.innerHTML='Nalezeno <b>'+items.length+'</b> položek.';
   box.innerHTML=html; document.getElementById('nbTableAdd').style.display='';
 }
-function nbTableAdd(){ if(!nbTableItems.length) return; nbTableItems.forEach(it=>NB.polozky.push(it)); document.getElementById('nbTableModal').classList.remove('show'); renderNbItems(); markDirty(); showToast(nbTableItems.length+' položek přidáno do nabídky.'); }
+function nbTableAdd(){ if(!nbTableItems.length) return; nbTableItems.forEach(it=>pridejPolozku(NB.polozky, it)); document.getElementById('nbTableModal').classList.remove('show'); renderNbItems(); markDirty(); showToast(nbTableItems.length+' položek přidáno do nabídky.'); }
 document.getElementById('btnNbTable').onclick=nbTableOpen;
 document.getElementById('nbTablePick').onclick=()=>document.getElementById('nbTableFile').click();
 document.getElementById('nbTableFile').onchange=e=>{ const f=e.target.files[0]; if(f) nbTableFile(f); e.target.value=''; };
@@ -6938,21 +7043,11 @@ function katCfg(){
   return { url:(n.url||k.url||'').trim(), key:(n.key||k.key||'').trim() };
 }
 function katOn(){ const c=katCfg(); return !!(c.url && c.key); }
-/* =====================================================================
-   ORIENTAČNÍ CENY – yey.html slouží jen k hrubému odhadu.
-   Každá cena z katalogu se posune o několik až desítky procent nahoru nebo dolů.
-   Posun se počítá z kódu zboží, takže stejná položka má pořád stejnou cenu.
-   ===================================================================== */
-const CENY_ODCHYLKA = { min: 3, max: 15 };        // o kolik % (od–do) se cena posune; směr +/- podle kódu
 function kodHash(s){ let h=2166136261; s=String(s); for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0)/4294967296; }
 function upravCenu(kod, c){
   const x=Number(c); if(c==null || !(x>0) || !kod) return c;
-  const u=kodHash(kod+'|velikost'), smer=kodHash(kod+'|smer')<0.5?-1:1;
-  const pct=(CENY_ODCHYLKA.min+(CENY_ODCHYLKA.max-CENY_ODCHYLKA.min)*u)*smer;
-  let v=x*(1+pct/100);
-  const krok = v<10 ? 0.1 : v<100 ? 1 : v<1000 ? 5 : 10;      // zaokrouhlení podle velikosti ceny
-  v=Math.max(krok, Math.round(v/krok)*krok);
-  return Math.round(v*100)/100;
+  const v=x*(1-0.03*kodHash(kod+'|velikost'));
+  return Math.max(Math.floor(v*100+1e-6), Math.ceil(x*97-1e-6))/100;
 }
 function upravRadky(res){
   const f=r=>{ if(r && typeof r==='object' && r.kod && !r._upr){
@@ -7545,6 +7640,23 @@ async function katTabulkaSurove({slova,temata,skupina,pocet,stavimex}){
   if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
 }
+/** Výsledky fulltextu nemají údaje o balení a hmotnosti – doplní je z katalog_verejny (bez ceny). */
+async function katDoplnBaleni(rows){
+  const kody=rows.filter(r=>r && r.kod && !('mj_v_bal' in r)).map(r=>r.kod);
+  if(!kody.length) return rows;
+  const c=katCfg(), h={apikey:c.key, Authorization:'Bearer '+c.key}, mapa={};
+  try{
+    for(let i=0;i<kody.length;i+=80){
+      const u=new URLSearchParams();
+      u.append('select','kod,mj_v_bal,jednotek_v_baleni,mj_v_pal,hmotnost_zmj,velikost,tloustka_mm,podskupina_nazev');
+      u.append('kod','in.('+kody.slice(i,i+80).map(k=>'"'+String(k).replace(/"/g,'')+'"').join(',')+')');
+      const r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/katalog_verejny?'+u.toString(),{headers:h});
+      if(!r.ok) break;
+      (await r.json()).forEach(d=>{ mapa[d.kod]=d; });
+    }
+  }catch(e){}
+  return rows.map(r=>mapa[r.kod] ? {...mapa[r.kod], ...r} : r);
+}
 function katProKalk(r){
   const sazba=Number(r.sazba_dph??21);
   const cena=r.cena_bez_dph!=null?Number(r.cena_bez_dph):(r.pc_s_dph!=null?Math.round(Number(r.pc_s_dph)/(1+sazba/100)*100)/100:null);
@@ -7577,6 +7689,7 @@ const kalkAdapter={
       if(a.status==='fulfilled' && Array.isArray(a.value)) rows=rows.concat(a.value);
       if(b.status==='fulfilled' && Array.isArray(b.value)) rows=rows.concat(b.value);
       const vid=new Set(); rows=rows.filter(r=>r && r.kod && !vid.has(r.kod) && vid.add(r.kod));
+      rows=await katDoplnBaleni(rows);
     } else if(temata.length || (sort&&sort.skupina)){
       try{ rows=await katTabulka({temata,skupina:sort.skupina,pocet:Math.max(pocet,120)}); }catch(e){ rows=[]; }
     }
@@ -7595,7 +7708,7 @@ const kalkAdapter={
   async doDokladu(radky, meta){
     if(!nbEditorOtevreny()) nbOpenEditor(null);
     const prace=LINE_KAT_ORDER.indexOf('prace')>=0?'prace':LINE_KAT_ORDER[0];
-    let nove=0;
+    let nove=0, secteno=0;
     radky.forEach(r=>{
       let c=null;
       if(r.typ==='material' && r.katKod){
@@ -7608,12 +7721,12 @@ const kalkAdapter={
           DB.cenik.push(c); nove++;
         }
       } else if(r.cenikId) c=DB.cenik.find(x=>x.id===r.cenikId)||null;
-      NB.polozky.push({ nazev:r.nazev, mj:r.mj, mnozstvi:r.mnozstvi, cena:Number(r.cena)||0, sleva:0,
-        kat: r.typ==='prace' ? prace : (c ? c.kategorie : katMaterialKey()), ...(r.katKod?{katKod:r.katKod}:{}) });
+      if(!pridejPolozku(NB.polozky, { nazev:r.nazev, mj:r.mj, mnozstvi:r.mnozstvi, cena:Number(r.cena)||0, sleva:0,
+        kat: r.typ==='prace' ? prace : (c ? c.kategorie : katMaterialKey()), ...(r.katKod?{katKod:r.katKod}:{}) })) secteno++;
     });
     if(nove){ renderCenik(); markDirty(); }
     renderNbItems(); prepniNaNabidky();
-    showToast('Do nabídky vloženo '+radky.length+' položek'+(nove?', do ceníku přibylo '+nove:'')+'. Zkontroluj odběratele a ulož.');
+    showToast('Do nabídky vloženo '+radky.length+' položek'+(secteno?' ('+secteno+' přičteno k existujícím řádkům)':'')+(nove?', do ceníku přibylo '+nove:'')+'. Zkontroluj odběratele a ulož.');
   }
 };
 YeyKalk.init(kalkAdapter, document.getElementById('kk-root'));

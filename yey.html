@@ -3660,7 +3660,7 @@ const KALK = {
       if (h.vyztuz > 0) {
         let bm = 0;
         h.useky.forEach(u => { if (u.d > 0 && u.v > 0) bm += Math.ceil(Math.floor(u.v * 100 / (h.tv || 25)) / h.vyztuz) * u.d; });
-        if (bm > 0) r.push({ klic: 'vyztuz', nazev: 'Výztuž do ložné spáry', mnozstvi: nahoru(bm * 1.05), mj: 'bm', q: 'vyztuz zdiv', zaklad: `každá ${f3(h.vyztuz)}. řada, +5 % přesahy` });
+        if (bm > 0) r.push({ klic: 'vyztuz', nazev: 'Výztuž do ložné spáry', mnozstvi: nahoru(bm * 1.05), mj: 'bm', q: 'murfor', zaklad: `každá ${f3(h.vyztuz)}. řada, +5 % přesahy` });
       }
       if (h.preklady && h.otvoryN) {
         const delky = h.otvory.filter(o => o.s > 0 && o.n > 0).map(o => `${o.n}× ${f3(zaok(o.s + 0.5))} m`);
@@ -3695,9 +3695,11 @@ const KALK = {
       { id: 'prorez', popis: 'Prořez desek', mj: '%', v: '10', profi: P },
       { id: 'kotveni', popis: 'Kotvení profilů každých', mj: 'm', v: '0,8', profi: P, ukaz: h => h.konstrukce !== 'podhled', tip: 'UW do podlahy a stropu, krajní CW do zdi. Max. 1 m, min. 3 kotvy na profil.' },
       { id: 'izolace', popis: 'Izolace do dutiny', typ: 'ano', v: '1' },
+      { id: 'finalni', popis: 'Finální stěrka (Q3)', typ: 'ano', v: '1', tip: 'Celoplošné přestěrkování pohledové plochy pod malbu.' },
+      { id: 'spFinal', popis: 'Spotřeba finální stěrky', mj: 'kg/m²', v: '0,6', profi: P, ukaz: h => !!h.finalni, tip: 'Tenká vrstva cca 1 mm ≈ 0,6 kg/m², silnější 1 kg/m².' },
       { id: 'vyztuzotvoru', popis: 'Vyztužit otvory UA', typ: 'ano', v: '1', ukaz: h => h.konstrukce !== 'podhled', tip: 'Kolem dveří UA profily na celou výšku s připojovacími úhelníky, aby konstrukce nepracovala.' }
     ],
-    jak: 'Plocha = součet stěn − otvory.\nDesky: plocha × strany × záklop + prořez, zaokrouhleno na celé desky vybraného formátu (prodej v m²).\nCW: délka ÷ osová vzdálenost + 1 na každou stěnu; délku profilu volím nejkratší, která pokryje výšku stěny (prodej v m).\nUW: 2 × délka − dveře + nadpraží (šířka + 0,5 m), zaokrouhleno na celé kusy.\nUA: 2 stojky na otvor na celou výšku + 4 připojovací úhelníky.\nKotvy: obvod konstrukce ÷ rozteč kotvení.\nŠrouby: pohledová vrstva 25 ks/m² (u 2 desek delší TN 35), spodní 12 ks/m² TN 25; zaokrouhleno na balení.\nTmel 0,4 kg/m², páska 1,2 bm/m² pohledové plochy, těsnění = obvod podle šířky profilu.\nPodhled: CD = (šířka ÷ rozteč + 1) × délka, UD = obvod, přímý závěs každých 0,9 m, 1 stropní kotva na závěs.',
+    jak: 'Plocha = součet stěn − otvory.\nDesky: plocha × strany × záklop + prořez, zaokrouhleno na celé desky vybraného formátu (prodej v m²).\nCW: délka ÷ osová vzdálenost + 1 na každou stěnu; délku profilu volím nejkratší, která pokryje výšku stěny (prodej v m).\nUW: 2 × délka − dveře + nadpraží (šířka + 0,5 m), zaokrouhleno na celé kusy.\nUA: 2 stojky na otvor na celou výšku + 4 připojovací úhelníky.\nKotvy: obvod konstrukce ÷ rozteč kotvení.\nŠrouby: pohledová vrstva 25 ks/m² (u 2 desek delší TN 35), spodní 12 ks/m² TN 25; zaokrouhleno na balení.\nTmel 0,4 kg/m², páska 1,2 bm/m² pohledové plochy, finální stěrka (Q3) 0,6 kg/m² pohledové plochy, těsnění = obvod podle šířky profilu.\nPodhled: CD = (šířka ÷ rozteč + 1) × délka, UD = obvod, přímý závěs každých 0,9 m, 1 stropní kotva na závěs.',
     spocitej(h) {
       const A = h.plocha;
       if (!A) return null;
@@ -3749,13 +3751,16 @@ const KALK = {
       }
       r.push({ klic: 'tmel', nazev: 'Tmel na spáry', mnozstvi: nahoru(pohled * 0.4), mj: 'kg', sv: 'tmel', q: 'tmel sadrokart', zaklad: '0,4 kg/m² pohledové plochy' });
       r.push({ klic: 'paska', nazev: 'Výztužná páska do spár', mnozstvi: nahoru(pohled * 1.2), mj: 'bm', jed: 'metry', sv: 'paska', q: 'pask spar', zaklad: '1,2 bm/m² pohledové plochy' });
+      if (h.finalni) r.push({ klic: 'sterka', nazev: 'Finální stěrka', mnozstvi: nahoru(pohled * (h.spFinal || 0.6)), mj: 'kg', q: 'sterk final', vyloucit: 'fasad|lepic|cement|podlah|samoniv',
+        zaklad: `${f3(h.spFinal || 0.6)} kg/m² pohledové plochy (${f3(zaok(pohled))} m²)` });
       // „akusti“ najde Akustik i Akustic (Isover, Knauf Insulation…); desky a sádrokarton se nevybírají
       if (h.izolace) r.push({ klic: 'izolace', nazev: 'Akustická izolace do dutiny', mnozstvi: zaok(A * 1.03), mj: 'm²', q: 'akusti', vyloucit: 'desk|sadrokart|profil|tmel', tlMax: podhled ? null : Number(h.profil),
         zaklad: `plocha +3 %, tloušťka do profilu ${podhled ? 'podle podhledu' : h.profil + ' mm'}` });
       r.push({ klic: 'tesneni', nazev: 'Těsnění pod profily', mnozstvi: zaok(h.obvod), mj: 'bm', jed: 'metry', sv: 'tesneni:' + (podhled ? 30 : h.profil), q: 'tesneni penove', zaklad: 'obvod konstrukce' });
       return { radky: r, prace: [
         { klic: 'montaz', nazev: 'Montáž SDK konstrukce', mj: 'm²', mnozstvi: zaok(A) },
-        { klic: 'tmeleni', nazev: 'Tmelení a broušení Q2', mj: 'm²', mnozstvi: zaok(pohled) }] };
+        { klic: 'tmeleni', nazev: 'Tmelení a broušení Q2', mj: 'm²', mnozstvi: zaok(pohled) }]
+        .concat(h.finalni ? [{ klic: 'sterkovani', nazev: 'Finální stěrkování Q3', mj: 'm²', mnozstvi: zaok(pohled) }] : []) };
     }
   },
 
@@ -3962,7 +3967,7 @@ const KALK = {
       let m2 = zaok(sPr), zakl = `${f3(zaok(A))} m² + prořez ${f3(h.prorez || 0)} %`;
       if (h.baleniM2 > 0) { const b = nahoru(sPr / h.baleniM2); m2 = zaok(b * h.baleniM2); zakl += ` = ${b} balení`; }
       const r = [{ klic: 'podlaha', nazev: 'Podlaha', mnozstvi: m2, mj: 'm²', q: null, zaklad: zakl }];
-      if (h.podlozka) r.push({ klic: 'podlozka', nazev: 'Podložka pod podlahu', mnozstvi: nahoru(A * 1.05), mj: 'm²', q: 'podlozk podlah', zaklad: 'plocha + 5 %' });
+      if (h.podlozka) r.push({ klic: 'podlozka', nazev: 'Podložka pod podlahu', mnozstvi: nahoru(A * 1.05), mj: 'm²', q: 'mirelon', zaklad: 'plocha + 5 %' });
       if (h.folie) r.push({ klic: 'folie', nazev: 'PE fólie parozábrana', mnozstvi: nahoru(A * 1.15), mj: 'm²', q: 'folie pe', zaklad: 'plocha + 15 % přesahy' });
       const lista = Math.max(0, (h.obvod || 0) - 0.9 * (h.dvere || 0));
       if (h.sokl && lista) r.push({ klic: 'sokl', nazev: 'Soklová lišta', mnozstvi: nahoru(lista * 1.05), mj: 'bm', q: 'soklov list', zaklad: 'obvod bez dveří + 5 %' });
@@ -4037,7 +4042,7 @@ const KALK = {
         { klic: 'omitka', nazev: 'Fasádní omítka', mnozstvi: nahoru(A * (h.omitka || 2.5)), mj: 'kg', q: 'omitka silikon', zaklad: `${f3(h.omitka || 2.5)} kg/m²` }
       ];
       if (h.lista && h.delka) r.push({ klic: 'lista', nazev: 'Zakládací lišta', mnozstvi: nahoru(Math.max(0, h.delka - h.sirkaDveri) * 1.05), mj: 'bm', q: 'zakladac', zaklad: 'délka fasády bez dveří' });
-      if (rohy) r.push({ klic: 'rohovnik', nazev: 'Rohovník s perlinkou', mnozstvi: nahoru(rohy * 1.05), mj: 'bm', q: 'rohovnik perlink', zaklad: 'ostění + nároží' });
+      if (rohy) r.push({ klic: 'rohovnik', nazev: 'Rohovník s perlinkou', mnozstvi: nahoru(rohy * 1.05), mj: 'bm', q: 'rohov s tkan', zaklad: 'ostění + nároží' });
       if (h.otvoryN) {
         const apu = h.otvory.reduce((s, o) => s + (2 * (o.v || 0) + (o.s || 0)) * (o.n || 0), 0);
         r.push({ klic: 'apu', nazev: 'Okenní APU lišta', mnozstvi: nahoru(apu), mj: 'bm', q: 'apu list', zaklad: 'napojení na okna' });
@@ -4127,8 +4132,9 @@ const SV_PRAVIDLA = {
     && !/(vrtac|vrtn|antikoro|xtn|umn|habito|aquapanel|diamant|brio|black|\blb\b|\bln\b|\bfn\b|\bsn\b|tex|tun)/.test(p.n) && (p.vBaleni > 0 || p.mj === 'ks'),
   tmel: p => p.skupina === 'Tmely' && /tmel/.test(p.n) && p.hmotnost >= 4
     && !/(finish|finaln|lepic|aquapanel|jet|trennwand|kitt|rifix|\bf plus|glet|imprag)/.test(p.n),
-  paska: p => /(pask|mrizk|bandaz)/.test(p.n) && p.delka > 0 && (p.skupina === 'Pásky a mřížky' || !p.skupina)
-    && !/(rohov|strait|krep|maskov|tesnic|aquapanel|habito|kotvic|zaplat)/.test(p.n),
+  paska: p => /(pask|mrizk|bandaz)/.test(p.n) && p.delka > 0
+    && (p.skupina === 'Pásky a mřížky' || p.tema === 'Suchá výstavba' || /(sadrokart|sdk|spar|vyztuz|skeln)/.test(p.n))
+    && !/(rohov|strait|krep|maskov|tesnic|aquapanel|habito|kotvic|zaplat|teflon|izolacni|elektr|kobercov|oboustr|vyznac|alu|hlinik|kaucuk)/.test(p.n),
   tesneni: (p, a) => /(tesneni|pask[a-z]* tesnic)/.test(p.n) && p.delka > 0 && p.sirkaMm >= Number(a[0]) - 12 && p.sirkaMm <= Number(a[0]) + 2
 };
 function svKandidati(sv) {
@@ -4685,7 +4691,7 @@ function vykresliRadky() {
   if (A.bezStavimexu) {
     info.innerHTML = !A.katalogDostupny() ? 'Katalog materiálů není připojený – materiál vybereš z ceníku, nebo vložíš jen množství.'
       : R.vybiram ? '<span class="kk-spinner" aria-hidden="true"></span> Vybírám zboží z katalogu…'
-      : 'Materiál vybírám přednostně ze schváleného sortimentu, jinak z katalogu podle ceny. Ceny jsou orientační, bez DPH – jen pro hrubý odhad.';
+      : 'Materiál vybírám z katalogu podle ceny. Ceny jsou orientační, bez DPH – jen pro hrubý odhad.';
   } else info.innerHTML = !A.katalogDostupny() ? 'Katalog materiálů není připojený – materiál vybereš z ceníku, nebo vložíš jen množství.'
     : R.vybiram ? '<span class="kk-spinner" aria-hidden="true"></span> Vybírám zboží ze Stavimexu podle zásob a ceny…'
     : { malesice: 'Vybírám zboží skladem v prodejně Stavimex Malešice.',
@@ -7220,7 +7226,7 @@ async function katNsTest(){
   DB.nastaveni.katalog={url, key}; setVal('ns_katUrl', url); markDirty();
   say('Ověřuji připojení…');
   try{
-    const r=await katRpc('katalog_hledat', {dotaz:'cihla', pocet:3});
+    const r=await katRpc('katalog_hledat_vse', {dotaz:'cihla', pocet:3});
     say('✓ Připojeno – katalog odpovídá'+(Array.isArray(r)&&r.length?' (např. „'+r[0].nazev+'“)':'')+'.', true);
   }catch(e){ say('Uloženo, ale připojení selhalo: '+katChyba(e)+'.', false); }
   renderCenik();
@@ -7399,7 +7405,7 @@ async function katHledejVse(pf, q, pocet){
   if(f.tema || f.skupina){
     rows=await katTabulka({slova:slovo?q:'', temata:f.tema?[f.tema]:[], skupina:f.skupina||null, pocet:Math.max(pocet,120)});
   } else {
-    const res=await katRpc('katalog_hledat',{dotaz:q, pocet:Math.max(pocet,80)});
+    const res=await katRpc('katalog_hledat_vse',{dotaz:q, pocet:Math.max(pocet,80)});
     rows=Array.isArray(res)?res:[];
   }
   const vid=new Set();
@@ -7481,7 +7487,7 @@ async function katSync(){
     const eany=[...new Set(kand.map(c=>c.ean).filter(e=>e && /^\d{8,14}$/.test(e)))];
     const res=[];
     for(let i=0;i<Math.max(kody.length,eany.length);i+=500){
-      const part=await katRpc('katalog_podle_kodu', {kody:kody.slice(i,i+500), eany:eany.slice(i,i+500)});
+      const part=await katRpc('katalog_podle_kodu_vse', {kody:kody.slice(i,i+500), eany:eany.slice(i,i+500)});
       if(Array.isArray(part)) res.push(...part);
     }
     const byKod={}, byEan={};
@@ -7618,7 +7624,7 @@ function stxPoptavka(pf){
   if(!doc || !(doc.polozky||[]).length){ showToast('Doklad zatím nemá žádné položky.', true); return; }
   const radky=doc.polozky.map((p,i)=>({i, p, katKod:popKatKod(p)})).filter(r=>(r.p.nazev||'').trim());
   radky.forEach(r=>{ r.sel=popJeMaterial(r.p); const c=DB.cenik.find(x=>r.katKod && x.katKod===r.katKod); r.ean=(c&&c.ean)||''; });
-  setVal('stxEmail', (DB.nastaveni&&DB.nastaveni.poptavkaEmail)||'');
+  setVal('stxEmail', (DB.nastaveni&&DB.nastaveni.poptavkaEmail)||'malesice@stavimex.cz');   // výchozí: Stavimex Malešice
   setVal('stxPozn',''); setVal('popHledat','');
   const posl=(doc.poptavky||[]).slice(-1)[0];
   document.getElementById('stxMsg').textContent= posl ? 'Naposledy odesláno '+fmtDatumKat(posl.datum)+(posl.email?' ('+posl.email+')':'')+'.' : '';
@@ -7740,7 +7746,7 @@ function prepniNaNabidky(){
 let KAT_TEMATA=null;
 async function katTemata(){
   if(KAT_TEMATA) return KAT_TEMATA;
-  try{ const r=await katRpc('katalog_temata_verejne',{}); KAT_TEMATA=(Array.isArray(r)?r:[]).map(x=>x.tema_nazev||x.tema).filter(Boolean); }
+  try{ const r=await katRpc('katalog_temata_vse',{}); KAT_TEMATA=(Array.isArray(r)?r:[]).map(x=>x.tema_nazev||x.tema).filter(Boolean); }
   catch(e){ KAT_TEMATA=[]; }
   return KAT_TEMATA;
 }
@@ -7757,8 +7763,8 @@ async function katTabulkaSurove({slova,temata,skupina,pocet,stavimex,kody}){
   if(stavimex) u.append('stavimex_priorita','gt.0');
   u.append('order','stavimex_priorita.desc,nazev.asc'); u.append('limit',String(pocet||80));
   const h={apikey:c.key, Authorization:'Bearer '+c.key};
-  let r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/katalog_verejny?'+u.toString(),{headers:h});
-  if(!r.ok){ u.delete('order'); r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/katalog_verejny?'+u.toString(),{headers:h}); }
+  let r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/katalog_vse?'+u.toString(),{headers:h});
+  if(!r.ok){ u.delete('order'); r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/katalog_vse?'+u.toString(),{headers:h}); }
   if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
 }
@@ -7772,7 +7778,7 @@ async function katDoplnBaleni(rows){
       const u=new URLSearchParams();
       u.append('select','kod,mj_v_bal,jednotek_v_baleni,mj_v_pal,hmotnost_zmj,velikost,tloustka_mm,podskupina_nazev');
       u.append('kod','in.('+kody.slice(i,i+80).map(k=>'"'+String(k).replace(/"/g,'')+'"').join(',')+')');
-      const r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/katalog_verejny?'+u.toString(),{headers:h});
+      const r=await fetch(c.url.replace(/\/+$/,'')+'/rest/v1/katalog_vse?'+u.toString(),{headers:h});
       if(!r.ok) break;
       (await r.json()).forEach(d=>{ mapa[d.kod]=d; });
     }
@@ -7805,7 +7811,7 @@ const kalkAdapter={
     let rows=[];
     if(q && q.trim().length>=2){
       const [a,b]=await Promise.allSettled([
-        katRpc('katalog_hledat',{dotaz:q, pocet:Math.max(pocet,60)}),
+        katRpc('katalog_hledat_vse',{dotaz:q, pocet:Math.max(pocet,60)}),
         temata.length ? katTabulka({slova:q, temata, pocet}) : Promise.resolve([])
       ]);
       if(a.status==='fulfilled' && Array.isArray(a.value)) rows=rows.concat(a.value);
@@ -7818,25 +7824,6 @@ const kalkAdapter={
     return rows.filter(r=>!r.neaktivni).map(katProKalk);
   },
   zasoby: null,
-  /** Schválený materiál z administrace kalkulaček (kalk_feed) – jen schválené položky. {klic:[{kod,vychozi,poradi}]} */
-  _schv:{},
-  async schvalene(druh){
-    if(!druh || !katOn()) return {};
-    if(!this._schv[druh]) this._schv[druh]=(async()=>{
-      try{
-        const res=await katRpcSurove('kalk_feed',{p_druh:druh});
-        const v={};
-        (Array.isArray(res)?res:[]).filter(r=>r.schvaleno && r.kat_kod).forEach(r=>{ (v[r.klic]=v[r.klic]||[]).push({kod:r.kat_kod, vychozi:!!r.vychozi, poradi:r.poradi||100}); });
-        return v;
-      }catch(e){ return {}; }
-    })();
-    return this._schv[druh];
-  },
-  /** Položky katalogu podle kódu (pro schválený materiál). */
-  async podleKodu(kody){
-    kody=[...new Set((kody||[]).filter(Boolean))]; if(!kody.length) return [];
-    try{ return (await katTabulka({kody, pocet:kody.length})).filter(r=>!r.neaktivni).map(katProKalk); }catch(e){ return []; }
-  },
   async _zasoby(kody){
     await stxNacti(kody);
     const v={};

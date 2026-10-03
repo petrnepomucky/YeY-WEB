@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>YeY – Správa databáze</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dark:#1E272E; --dark2:#28333c; --yellow:#EAB940; --tick:#7a6128;
+  --bg:#f3f1ec; --card:#fff; --line:#dedad2; --text:#1E272E; --muted:#6b7280;
+  --ok:#2f855a; --warn:#b7791f; --bad:#c0392b; --hl:#fffbef;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:14px/1.4 Barlow,system-ui,sans-serif;background:var(--bg);color:var(--text)}
+code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+header{background:var(--dark);color:#fff;display:flex;align-items:center;gap:14px;padding:10px 18px;flex-wrap:wrap}
+header .logo{font:700 34px/1 "Barlow Condensed";color:var(--yellow);letter-spacing:.5px}
+header h1{font:600 22px/1 "Barlow Condensed";margin:0}
+header .sp{flex:1}
+header select{width:auto;background:var(--dark2);color:#fff;border-color:#4b5863}
+.tape{height:14px;background:var(--yellow) repeating-linear-gradient(90deg,var(--tick) 0 2px,transparent 2px 12px);
+  background-size:12px 6px;background-repeat:repeat-x;position:relative}
+.tape::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,var(--tick) 0 2px,transparent 2px 60px);background-size:60px 10px;background-repeat:repeat-x}
+button{font:600 13px Barlow;border:1px solid var(--line);background:#fff;color:var(--text);padding:6px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+button:hover{border-color:var(--dark)}
+button.pri{background:var(--dark);color:var(--yellow);border-color:var(--dark)}
+button.yel{background:var(--yellow);border-color:var(--yellow)}
+button.del{color:var(--bad);border-color:#e9b9b3}
+button.del:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
+button.ghost{background:transparent;color:#fff;border-color:#4b5863}
+button.sm{padding:3px 8px;font-size:12px}
+button:disabled{opacity:.45;cursor:default}
+input,select,textarea{font:14px Barlow;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:#fff;color:var(--text);width:100%}
+textarea{resize:vertical;min-height:54px}
+input[type=checkbox]{width:auto}
+label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin:0 0 3px}
+#login{max-width:400px;margin:80px auto;background:var(--card);padding:24px;border-radius:12px;border:1px solid var(--line)}
+#login h2{font:700 26px "Barlow Condensed";margin:0 0 12px}
+#app{display:none;grid-template-columns:290px 1fr;height:calc(100vh - 68px)}
+#side{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:#faf9f6}
+#side .flt{padding:10px;border-bottom:1px solid var(--line);display:grid;gap:6px}
+#list{overflow:auto;flex:1}
+.it{padding:7px 12px;cursor:pointer;border-left:4px solid transparent;display:flex;gap:8px;align-items:center}
+.it:hover{background:#efece5}
+.it.on{background:#fff;border-left-color:var(--yellow)}
+.it .t{flex:1;min-width:0}
+.it .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .v{font-size:12px;color:var(--muted)}
+.badge{font-size:10.5px;font-weight:700;border-radius:10px;padding:1px 7px;background:#eee;color:var(--muted);white-space:nowrap}
+.badge.bad{background:#fbe3df;color:var(--bad)} .badge.ok{background:#e1f3e8;color:var(--ok)} .badge.warn{background:#fdf0d5;color:var(--warn)}
+#main{overflow:auto;padding:14px 20px 60px;min-width:0}
+.tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.tabs button.on{background:var(--dark);color:var(--yellow);border-color:var(--dark)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card h3{font:700 20px "Barlow Condensed";margin:0 0 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card h3 small{font:400 13px Barlow;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>.grow{flex:1;min-width:160px}
+.hint{font-size:12px;color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.gridw{overflow:auto;max-height:calc(100vh - 260px);border:1px solid var(--line);border-radius:8px;background:#fff}
+table{width:100%;border-collapse:collapse}
+td,th{padding:5px 8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;background:#faf9f6;position:sticky;top:0;z-index:1;white-space:nowrap}
+th.sort{cursor:pointer} th.sort:hover{color:var(--text)}
+.grid td{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid tbody tr{cursor:pointer}
+.grid tbody tr:hover{background:var(--hl)}
+.grid tr.sel{background:#fff3cf}
+.grid td.cb,.grid th.cb{width:28px;cursor:default}
+td.num,th.num{text-align:right;white-space:nowrap}
+.nul{color:#b3b3b3;font-style:italic;font-size:12px}
+.pk{color:var(--tick);font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stat b{display:block;font:700 26px "Barlow Condensed"}
+.stat span{font-size:12px;color:var(--muted)}
+.msg{padding:6px 10px;border-radius:7px;margin-bottom:5px;font-size:13px}
+.msg.chyba{background:#fbe3df} .msg.varovani{background:#fdf0d5} .msg.info{background:#eef1f4}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:9px 16px;border-radius:8px;display:none;z-index:50;max-width:90vw}
+#toast.err{background:var(--bad)}
+#modal{position:fixed;inset:0;background:rgba(30,39,46,.55);display:none;align-items:flex-start;justify-content:center;z-index:40;overflow:auto;padding:30px 12px}
+#modal .box{background:var(--card);border-radius:12px;width:min(820px,100%);padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+#modal h3{font:700 22px "Barlow Condensed";margin:0 0 12px;display:flex;gap:10px;align-items:center}
+#modal h3 .sp{flex:1}
+.fld{display:grid;grid-template-columns:200px 1fr;gap:10px;padding:7px 0;border-bottom:1px solid #f0eee9;align-items:start}
+.fld .nm{font-weight:600;word-break:break-all}
+.fld .ty{font-size:11.5px;color:var(--muted)}
+.fld .ctl{display:flex;gap:8px;align-items:flex-start}
+.fld .ctl>*:first-child{flex:1}
+.fld .nl{font-size:12px;color:var(--muted);white-space:nowrap;display:flex;gap:4px;align-items:center;margin-top:7px}
+.fld.chg{background:var(--hl)}
+#sqlIn{min-height:150px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+pre.def{white-space:pre-wrap;margin:0;background:#faf9f6;border:1px solid #eee;border-radius:6px;padding:6px 8px}
+.okc{color:var(--ok);font-weight:700} .badc{color:var(--bad);font-weight:700}
+@media (max-width:900px){#app{grid-template-columns:1fr;height:auto}#side{max-height:38vh}.fld{grid-template-columns:1fr}.gridw{max-height:none}}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">YeY</span><h1>Správa databáze</h1>
+  <span class="sp"></span>
+  <select id="proj" style="display:none" title="Databáze"></select>
+  <button class="ghost" id="bOdhlas" style="display:none">Odhlásit</button>
+</header>
+<div class="tape"></div>
+
+<div id="login">
+  <h2>Admin přístup</h2>
+  <label for="klic">Admin klíč databáze</label>
+  <input id="klic" type="password" placeholder="YEYDB-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="current-password">
+  <div class="row" style="margin-top:12px"><button class="pri" id="bLogin">Přihlásit</button><span class="hint" id="loginMsg"></span></div>
+  <p class="hint" style="margin-top:14px">Klíč dává plný přístup k databázi včetně SQL konzole. Ukládá se jen v této záložce prohlížeče a po zavření se zapomene.</p>
+</div>
+
+<div id="app">
+  <aside id="side">
+    <div class="flt">
+      <input id="fText" placeholder="Filtrovat tabulky…">
+      <div class="hint" id="souhrn"></div>
+    </div>
+    <div id="list"></div>
+  </aside>
+  <main id="main"></main>
+</div>
+<div id="modal"><div class="box" id="mbox"></div></div>
+<div id="toast"></div>
+
+<script>
+const PROJ={
+  material:{nazev:'Stavební materiál',url:'https://fvrpuddkarujfttoaavb.supabase.co',key:'sb_publishable_1Y5nEfLwKmJxlnbkLmZgMg_Rzs7WQQG'},
+  office:{nazev:'YeY – Online Office',url:'https://hkzhjoveiqadezmvksdz.supabase.co',key:'sb_publishable_WUy9urfE9n5O2SelitV6FA_mhzCUrM_'}
+};
+let AK='', P='', OK=[], INFO=null, T=null, S=null, tab='data', D={radky:[],celkem:0}, sel=new Set();
+let Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:50,offset:0};
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=n=>n==null?'–':Number(n).toLocaleString('cs-CZ');
+const vel=b=>{if(b==null)return'–';const u=['B','kB','MB','GB','TB'];let i=0;b=+b;while(b>=1024&&i<u.length-1){b/=1024;i++}return b.toLocaleString('cs-CZ',{maximumFractionDigits:i?1:0})+' '+u[i]};
+const cas=t=>t?new Date(t).toLocaleString('cs-CZ',{dateStyle:'short',timeStyle:'short'}):'–';
+function toast(t,err){const e=$('#toast');e.textContent=t;e.className=err?'err':'';e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',err?6000:2500)}
+function ss(k,v){try{v===undefined?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}}
+function sg(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
+function ls(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+
+async function rpc(fn,args,proj){
+  const p=PROJ[proj||P];
+  const r=await fetch(p.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:p.key,Authorization:'Bearer '+p.key,'Content-Type':'application/json'},body:JSON.stringify({p_klic:AK,...args})});
+  const t=await r.text(); let j=null; try{j=t?JSON.parse(t):null}catch(e){}
+  if(!r.ok){
+    if(r.status===404&&/function/i.test(t)) throw new Error(`Funkce ${fn} není v databázi „${p.nazev}“ nasazená – spusť supabase/db_admin_doplnek.sql v SQL Editoru.`);
+    throw new Error((j&&[j.message,j.details,j.hint].filter(Boolean).join(' – '))||t||r.statusText);
+  }
+  return j;
+}
+
+/* ================= přihlášení a projekty ================= */
+async function login(k){
+  AK=k; $('#loginMsg').textContent='Ověřuji…';
+  const res=await Promise.allSettled(Object.keys(PROJ).map(p=>rpc('db_admin_info',{},p)));
+  OK=Object.keys(PROJ).filter((p,i)=>res[i].status==='fulfilled');
+  if(!OK.length){AK='';ss('dba_k');$('#loginMsg').textContent=res[0].reason?.message||'Přihlášení selhalo';return}
+  ss('dba_k',k);
+  $('#login').style.display='none'; $('#app').style.display='grid'; $('#bOdhlas').style.display='';
+  const ps=$('#proj'); ps.innerHTML=OK.map(p=>`<option value="${p}">${esc(PROJ[p].nazev)}</option>`).join(''); ps.style.display='';
+  const nedost=Object.keys(PROJ).filter(p=>!OK.includes(p));
+  if(nedost.length) toast('Nedostupné: '+nedost.map(p=>PROJ[p].nazev).join(', ')+' – '+res[Object.keys(PROJ).indexOf(nedost[0])].reason?.message,1);
+  const last=sg('dba_p'); prepni(OK.includes(last)?last:OK[0]);
+}
+$('#bLogin').onclick=()=>login($('#klic').value.trim());
+$('#klic').onkeydown=e=>{if(e.key==='Enter')$('#bLogin').click()};
+$('#bOdhlas').onclick=()=>{ss('dba_k');ss('dba_p');location.reload()};
+$('#proj').onchange=e=>prepni(e.target.value);
+
+async function prepni(p){
+  P=p; ss('dba_p',p); $('#proj').value=p; T=null; S=null;
+  await nactiInfo();
+  if(tab==='data'||tab==='struktura') tab='prehled';
+  render();
+}
+async function nactiInfo(){
+  try{INFO=await rpc('db_admin_info',{})}catch(e){toast(e.message,1);INFO={tabulky:[]}}
+  renderList();
+}
+
+/* ================= seznam tabulek ================= */
+$('#fText').addEventListener('input',renderList);
+function renderList(){
+  const q=$('#fText').value.toLowerCase();
+  const f=INFO.tabulky.filter(t=>!q||(t.nazev+' '+(t.komentar||'')).toLowerCase().includes(q));
+  $('#souhrn').textContent=`${INFO.tabulky.length} objektů · ${vel(INFO.velikost)} · PostgreSQL ${INFO.verze||''}`;
+  $('#list').innerHTML=f.map(t=>`<div class="it ${T===t.nazev?'on':''}" data-t="${esc(t.nazev)}" title="${esc(t.komentar||'')}">
+    <div class="t"><div class="n">${esc(t.nazev)}</div><div class="v">${t.typ==='tabulka'?num(t.radku)+' řádků':esc(t.typ)} · ${vel(t.velikost)}</div></div>
+    ${t.typ!=='tabulka'?'':t.rls?(t.politik?`<span class="badge ok" title="RLS zapnuté, ${t.politik} politik">RLS</span>`:'<span class="badge" title="RLS zapnuté bez politik – přístup jen přes funkce">RLS</span>'):'<span class="badge bad" title="RLS vypnuté!">bez RLS</span>'}
+  </div>`).join('')||'<div class="empty">Nic nenalezeno</div>';
+  $('#list').querySelectorAll('.it').forEach(e=>e.onclick=()=>otevri(e.dataset.t));
+}
+
+async function otevri(nazev){
+  T=nazev; S=null; sel.clear(); Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:Q.limit||50,offset:0};
+  if(!['data','struktura'].includes(tab)) tab='data';
+  renderList(); render();
+  try{S=await rpc('db_admin_struktura',{p_tabulka:nazev})}catch(e){toast(e.message,1);return}
+  render(); if(tab==='data') nactiData();
+}
+
+/* ================= hlavní plocha ================= */
+function render(){
+  const tb=[];
+  if(T){tb.push(['data','Data: '+T],['struktura','Struktura'])}
+  tb.push(['prehled','Přehled'],['sql','SQL konzole'],['udrzba','Údržba']);
+  let h=`<div class="tabs">${tb.map(([k,v])=>`<button data-tab="${k}" class="${tab===k?'on':''}">${esc(v)}</button>`).join('')}
+    <span style="flex:1"></span><span class="hint">${esc(PROJ[P].nazev)}</span></div><div id="obsah"></div>`;
+  $('#main').innerHTML=h;
+  $('#main').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();if(tab==='data')nactiData()});
+  ({data:renderData,struktura:renderStruktura,prehled:renderPrehled,sql:renderSql,udrzba:renderUdrzba})[tab]();
+}
+
+/* ---------- přehled ---------- */
+function renderPrehled(){
+  const tabs=INFO.tabulky.filter(t=>t.typ==='tabulka');
+  $('#obsah').innerHTML=`
+  <div class="stats">
+    <div class="stat"><b>${vel(INFO.velikost)}</b><span>velikost databáze</span></div>
+    <div class="stat"><b>${tabs.length}</b><span>tabulek</span></div>
+    <div class="stat"><b>${num(tabs.reduce((a,t)=>a+(+t.radku||0),0))}</b><span>řádků celkem (odhad)</span></div>
+    <div class="stat"><b>${tabs.filter(t=>!t.rls).length}</b><span>tabulek bez RLS</span></div>
+  </div>
+  <div class="card"><h3>Tabulky a pohledy <small>klikni pro otevření</small></h3>
+  <div class="gridw"><table class="grid"><thead><tr><th>Název</th><th>Typ</th><th class="num">Řádků</th><th class="num">Velikost</th><th>Primární klíč</th><th>RLS</th><th>Popis</th></tr></thead><tbody>
+  ${INFO.tabulky.map(t=>`<tr data-t="${esc(t.nazev)}"><td><b>${esc(t.nazev)}</b></td><td>${esc(t.typ)}</td><td class="num">${t.typ==='tabulka'?num(t.radku):''}</td><td class="num">${vel(t.velikost)}</td>
+    <td>${t.pk.length?esc(t.pk.join(', ')):'<span class="nul">žádný</span>'}</td><td>${t.typ!=='tabulka'?'':t.rls?`<span class="okc">✓</span> ${t.politik} pol.`:'<span class="badc">✗</span>'}</td><td title="${esc(t.komentar||'')}">${esc(t.komentar||'')}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+  $('#obsah').querySelectorAll('tr[data-t]').forEach(r=>r.onclick=()=>otevri(r.dataset.t));
+}
+
+/* ---------- data ---------- */
+function bunka(v){
+  if(v===null||v===undefined) return '<span class="nul">NULL</span>';
+  if(typeof v==='boolean') return v?'<span class="okc">✓ true</span>':'<span class="badc">✗ false</span>';
+  if(typeof v==='object') v=JSON.stringify(v);
+  v=String(v); return esc(v.length>160?v.slice(0,160)+'…':v);
+}
+async function nactiData(){
+  if(!T)return;
+  const o=$('#gridBox'); if(o) o.style.opacity=.5;
+  try{
+    D=await rpc('db_admin_radky',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:Q.limit,p_offset:Q.offset});
+    sel.clear();
+  }catch(e){toast(e.message,1);D={radky:[],celkem:0}}
+  if(tab==='data') renderData();
+}
+function renderData(){
+  const ob=$('#obsah');
+  if(!S){ob.innerHTML='<div class="empty">Načítám…</div>';return}
+  const cols=S.sloupce.map(c=>c.nazev), upr=S.upravitelna, maCtid=D.radky.length&&'_ctid' in D.radky[0];
+  const od=D.celkem?Q.offset+1:0, do_=Math.min(Q.offset+Q.limit,D.celkem);
+  ob.innerHTML=`
+  <div class="card" style="padding:10px 12px">
+    <div class="row">
+      <input class="grow" id="dHledat" placeholder="Hledat v ${Q.sloupec?'sloupci '+esc(Q.sloupec):'celém řádku'}… (Enter)" value="${esc(Q.hledat)}">
+      <select id="dSloupec" style="width:auto"><option value="">všechny sloupce</option>${cols.map(c=>`<option ${Q.sloupec===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+      <button id="dHledej">Hledat</button>
+      <span style="flex:1"></span>
+      ${upr?'<button class="pri" id="dNovy">+ Nový řádek</button>':''}
+      ${upr&&maCtid?`<button class="del" id="dSmaz" ${sel.size?'':'disabled'}>Smazat vybrané (${sel.size})</button>`:''}
+      <button id="dExport">Export CSV</button>
+      ${upr?'<button id="dImport">Import CSV</button>':''}
+      <button id="dReload" title="Načíst znovu">⟳</button>
+    </div>
+  </div>
+  <div class="row" style="margin-bottom:8px">
+    <span class="hint">${num(od)}–${num(do_)} z ${num(D.celkem)} řádků${Q.razeni?` · řazeno podle <b>${esc(Q.razeni)}</b> ${Q.sestupne?'↓':'↑'}`:''}${upr?'':' · <b>jen pro čtení</b> (pohled)'}</span>
+    <span style="flex:1"></span>
+    <select id="dLimit" style="width:auto">${[25,50,100,250,500].map(n=>`<option ${Q.limit===n?'selected':''}>${n}</option>`).join('')}</select>
+    <button id="dPrev" ${Q.offset?'':'disabled'}>‹ Předchozí</button>
+    <button id="dNext" ${Q.offset+Q.limit<D.celkem?'':'disabled'}>Další ›</button>
+  </div>
+  <div class="gridw" id="gridBox"><table class="grid"><thead><tr>
+    ${upr&&maCtid?'<th class="cb"><input type="checkbox" id="dAll"></th>':''}
+    ${S.sloupce.map(c=>`<th class="sort" data-s="${esc(c.nazev)}" title="${esc(c.typ)}${c.komentar?' – '+esc(c.komentar):''}">${S.pk.includes(c.nazev)?'<span class="pk">🔑</span> ':''}${esc(c.nazev)}${Q.razeni===c.nazev?(Q.sestupne?' ↓':' ↑'):''}</th>`).join('')}
+  </tr></thead><tbody>
+    ${D.radky.map((r,i)=>`<tr data-i="${i}" class="${sel.has(i)?'sel':''}">${upr&&maCtid?`<td class="cb"><input type="checkbox" data-cb="${i}" ${sel.has(i)?'checked':''}></td>`:''}${cols.map(c=>`<td>${bunka(r[c])}</td>`).join('')}</tr>`).join('')}
+  </tbody></table>${D.radky.length?'':'<div class="empty">Žádné řádky</div>'}</div>`;
+
+  const hl=()=>{Q.hledat=$('#dHledat').value.trim();Q.sloupec=$('#dSloupec').value;Q.offset=0;nactiData()};
+  $('#dHledat').onkeydown=e=>{if(e.key==='Enter')hl()};
+  $('#dHledej').onclick=hl;
+  $('#dSloupec').onchange=()=>{if($('#dHledat').value.trim())hl()};
+  $('#dLimit').onchange=e=>{Q.limit=+e.target.value;Q.offset=0;nactiData()};
+  $('#dPrev').onclick=()=>{Q.offset=Math.max(0,Q.offset-Q.limit);nactiData()};
+  $('#dNext').onclick=()=>{Q.offset+=Q.limit;nactiData()};
+  $('#dReload').onclick=nactiData;
+  $('#dExport').onclick=exportTabulky;
+  if($('#dNovy')) $('#dNovy').onclick=()=>editor(null);
+  if($('#dImport')) $('#dImport').onclick=importDialog;
+  if($('#dSmaz')) $('#dSmaz').onclick=smazVybrane;
+  ob.querySelectorAll('th.sort').forEach(th=>th.onclick=()=>{const s=th.dataset.s;if(Q.razeni===s){if(Q.sestupne){Q.razeni='';Q.sestupne=false}else Q.sestupne=true}else{Q.razeni=s;Q.sestupne=false}Q.offset=0;nactiData()});
+  ob.querySelectorAll('tbody tr').forEach(tr=>tr.onclick=e=>{if(e.target.closest('.cb'))return;editor(D.radky[+tr.dataset.i])});
+  ob.querySelectorAll('[data-cb]').forEach(cb=>cb.onchange=()=>{const i=+cb.dataset.cb;cb.checked?sel.add(i):sel.delete(i);renderData()});
+  if($('#dAll')){$('#dAll').checked=D.radky.length&&sel.size===D.radky.length;$('#dAll').onchange=e=>{sel=new Set(e.target.checked?D.radky.map((_,i)=>i):[]);renderData()}}
+}
+
+async function smazVybrane(){
+  const rows=[...sel].map(i=>D.radky[i]);
+  if(!rows.length||!confirm(`Opravdu trvale smazat ${rows.length} řádků z tabulky ${T}?`))return;
+  try{const n=await rpc('db_admin_smaz',{p_tabulka:T,p_radky:rows});toast(`Smazáno ${n} řádků`);nactiData();nactiInfo()}catch(e){toast(e.message,1)}
+}
+
+/* ---------- editor řádku ---------- */
+const jeJson=c=>/^json/.test(c.typ)||/\[\]$/.test(c.typ);
+const jeBool=c=>c.typ==='boolean';
+function naText(v,c){if(v===null||v===undefined)return'';if(typeof v==='object')return JSON.stringify(v,null,jeJson(c)&&JSON.stringify(v).length>60?2:0);return String(v)}
+function zText(s,c){
+  if(jeBool(c)) return s==='true'?true:s==='false'?false:null;
+  if(jeJson(c)){if(s.trim()==='')return null; if(/^json/.test(c.typ)||/^\s*\[/.test(s)){try{return JSON.parse(s)}catch(e){throw new Error(`Sloupec ${c.nazev}: neplatný JSON (${e.message})`)}} return s}
+  return s;
+}
+function editor(r){
+  const novy=!r, upr=S.upravitelna, cols=S.sloupce;
+  $('#mbox').innerHTML=`<h3>${novy?'Nový řádek':'Řádek'} <small class="hint">${esc(T)}</small><span class="sp"></span><button id="mX">✕</button></h3>
+    ${novy?'<p class="hint">Prázdná pole se nevyplní – použije se výchozí hodnota sloupce.</p>':''}
+    <div id="mF">${cols.map((c,i)=>{
+      const v=r?r[c.nazev]:undefined, txt=naText(v,c), dis=!upr||c.generovany;
+      const isNull=r&&v===null;
+      let ctl;
+      if(jeBool(c)) ctl=`<select data-f="${i}" ${dis?'disabled':''}><option value="">${novy?'(výchozí)':'NULL'}</option><option value="true" ${v===true?'selected':''}>true</option><option value="false" ${v===false?'selected':''}>false</option></select>`;
+      else if(jeJson(c)||txt.length>70||/^text$/.test(c.typ)&&txt.includes('\n')) ctl=`<textarea data-f="${i}" class="mono" rows="${Math.min(12,Math.max(2,txt.split('\n').length))}" ${dis?'disabled':''}>${esc(txt)}</textarea>`;
+      else ctl=`<input data-f="${i}" value="${esc(txt)}" ${dis?'disabled':''} placeholder="${esc(novy&&c.default?'výchozí: '+c.default:'')}">`;
+      return `<div class="fld" data-r="${i}"><div><div class="nm">${S.pk.includes(c.nazev)?'🔑 ':''}${esc(c.nazev)}</div><div class="ty">${esc(c.typ)}${c.nullable?'':' · povinné'}${c.identity?' · auto':''}${c.generovany?' · generovaný':''}</div>${c.komentar?`<div class="ty">${esc(c.komentar)}</div>`:''}</div>
+        <div class="ctl">${ctl}${c.nullable&&!jeBool(c)&&!dis?`<label class="nl"><input type="checkbox" data-n="${i}" ${isNull?'checked':''}> NULL</label>`:''}</div></div>`;
+    }).join('')}</div>
+    <div class="row" style="margin-top:14px">
+      ${upr?`<button class="pri" id="mUloz">${novy?'Vložit':'Uložit změny'}</button>`:''}
+      ${upr&&!novy&&r._ctid?'<button class="del" id="mSmaz">Smazat řádek</button>':''}
+      ${!novy?'<button id="mKopie">Kopírovat jako nový</button><button id="mJson">Kopírovat JSON</button>':''}
+      <span style="flex:1"></span><button id="mZavri">Zavřít</button>
+    </div>`;
+  $('#modal').style.display='flex';
+  const zavri=()=>{$('#modal').style.display='none'};
+  $('#mX').onclick=zavri; $('#mZavri').onclick=zavri;
+  const zmena=i=>{$(`.fld[data-r="${i}"]`).classList.add('chg')};
+  $('#mF').querySelectorAll('[data-f]').forEach(el=>el.addEventListener('input',()=>{const n=$(`[data-n="${el.dataset.f}"]`);if(n&&el.value!=='')n.checked=false;zmena(el.dataset.f)}));
+  $('#mF').querySelectorAll('[data-n]').forEach(el=>el.onchange=()=>zmena(el.dataset.n));
+  if($('#mJson')) $('#mJson').onclick=()=>{const o={...r};delete o._ctid;navigator.clipboard?.writeText(JSON.stringify(o,null,2));toast('Zkopírováno')};
+  if($('#mKopie')) $('#mKopie').onclick=()=>{const o={...r};delete o._ctid;cols.forEach(c=>{if(c.identity||c.generovany||S.pk.includes(c.nazev)&&c.default)delete o[c.nazev]});editor(null);
+    cols.forEach((c,i)=>{const el=$(`[data-f="${i}"]`);if(el&&o[c.nazev]!==undefined&&o[c.nazev]!==null){el.value=naText(o[c.nazev],c);zmena(i)}})};
+  if($('#mSmaz')) $('#mSmaz').onclick=async()=>{
+    if(!confirm('Opravdu trvale smazat tento řádek?'))return;
+    try{await rpc('db_admin_smaz',{p_tabulka:T,p_radky:[r]});toast('Řádek smazán');zavri();nactiData();nactiInfo()}catch(e){toast(e.message,1)}
+  };
+  if($('#mUloz')) $('#mUloz').onclick=async()=>{
+    const data={};
+    try{
+      cols.forEach((c,i)=>{
+        const el=$(`[data-f="${i}"]`); if(!el||el.disabled)return;
+        const nc=$(`[data-n="${i}"]`), s=el.value;
+        let v;
+        if(nc&&nc.checked) v=null;
+        else if(novy&&s==='') return;
+        else if(!jeBool(c)&&s===''&&c.nullable&&!/char|text/.test(c.typ)) v=null;
+        else v=zText(s,c);
+        if(novy){data[c.nazev]=v;return}
+        const puv=r[c.nazev];
+        if(JSON.stringify(v)!==JSON.stringify(puv)&&!(typeof puv!=='object'&&puv!==null&&String(puv)===String(v))) data[c.nazev]=v;
+      });
+    }catch(e){toast(e.message,1);return}
+    if(!novy&&!Object.keys(data).length){toast('Žádné změny');return}
+    try{
+      await rpc('db_admin_uloz',novy?{p_tabulka:T,p_data:data}:{p_tabulka:T,p_data:data,p_ctid:r._ctid||null,p_puvodni:r});
+      toast(novy?'Řádek vložen':'Uloženo'); zavri(); nactiData(); if(novy)nactiInfo();
+    }catch(e){toast(e.message,1)}
+  };
+}
+$('#modal').addEventListener('mousedown',e=>{if(e.target.id==='modal')$('#modal').style.display='none'});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#modal').style.display='none'});
+
+/* ---------- CSV ---------- */
+function csvHodnota(v){if(v===null||v===undefined)return'';if(typeof v==='object')v=JSON.stringify(v);v=String(v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function stahni(nazev,text){const b=new Blob(['﻿'+text],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nazev;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function naCsv(cols,rows){return [cols.map(csvHodnota).join(';'),...rows.map(r=>cols.map(c=>csvHodnota(r[c])).join(';'))].join('\r\n')}
+async function exportTabulky(){
+  const cols=S.sloupce.map(c=>c.nazev);
+  if(D.celkem>200000&&!confirm(`Tabulka má ${num(D.celkem)} řádků. Export může trvat dlouho. Pokračovat?`))return;
+  const all=[]; const b=$('#dExport'); b.disabled=true;
+  try{
+    for(let off=0;off<D.celkem;off+=2000){
+      b.textContent=`Export ${Math.round(off/D.celkem*100)} %`;
+      const r=await rpc('db_admin_radky',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:2000,p_offset:off});
+      all.push(...r.radky); if(r.radky.length<2000)break;
+    }
+    stahni(`${T}_${new Date().toISOString().slice(0,10)}.csv`,naCsv(cols,all)); toast(`Exportováno ${num(all.length)} řádků`);
+  }catch(e){toast(e.message,1)}
+  b.disabled=false; b.textContent='Export CSV';
+}
+function parseCsv(text){
+  text=text.replace(/^﻿/,'');
+  const first=text.split(/\r?\n/,1)[0], d=[';',',','\t'].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"'&&f==='')q=true;
+    else if(c===d){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}
+    else f+=c;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  return {oddelovac:d,rows:rows.filter(r=>r.length>1||r[0]!=='')};
+}
+function importDialog(){
+  $('#mbox').innerHTML=`<h3>Import CSV do ${esc(T)}<span class="sp"></span><button id="mX">✕</button></h3>
+    <p class="hint">První řádek = názvy sloupců (stejně jako u exportu). Oddělovač se pozná automaticky (; , tab). Prázdná hodnota = NULL / výchozí. JSON a pole zapisuj jako JSON.</p>
+    <input type="file" id="iSoubor" accept=".csv,.txt,text/csv">
+    <div id="iNahled" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:12px">
+      <select id="iRezim" style="width:auto">
+        <option value="pridat">Přidat nové řádky</option>
+        <option value="upsert" ${S.pk.length?'':'disabled'}>Přidat nebo aktualizovat podle primárního klíče${S.pk.length?' ('+esc(S.pk.join(', '))+')':' (tabulka nemá PK)'}</option>
+        <option value="nahradit">Nahradit celý obsah tabulky</option>
+      </select>
+      <button class="pri" id="iStart" disabled>Importovat</button>
+      <span class="hint" id="iStav"></span>
+    </div>`;
+  $('#modal').style.display='flex';
+  $('#mX').onclick=()=>$('#modal').style.display='none';
+  let data=null;
+  $('#iSoubor').onchange=async e=>{
+    const f=e.target.files[0]; if(!f)return;
+    const p=parseCsv(await f.text()); const hdr=p.rows[0]||[]; const cols=S.sloupce.map(c=>c.nazev);
+    const ok=hdr.filter(h=>cols.includes(h)), nezn=hdr.filter(h=>!cols.includes(h));
+    const typy=Object.fromEntries(S.sloupce.map(c=>[c.nazev,c]));
+    try{
+      data=p.rows.slice(1).map((r,ri)=>{const o={};hdr.forEach((h,i)=>{if(!typy[h])return;const s=r[i]??'';const c=typy[h];
+        if(s===''){o[h]=null;return}
+        o[h]=jeBool(c)?(/^(true|t|1|ano|yes)$/i.test(s)?true:/^(false|f|0|ne|no)$/i.test(s)?false:s):jeJson(c)?zText(s,c):s});
+        return o});
+    }catch(err){$('#iNahled').innerHTML=`<div class="msg chyba">${esc(err.message)}</div>`;return}
+    // prázdné hodnoty u sloupců s výchozí hodnotou vynecháme, aby se použil default
+    const def=new Set(S.sloupce.filter(c=>c.default||c.identity).map(c=>c.nazev));
+    if(data.length&&[...def].some(h=>ok.includes(h)&&data.every(o=>o[h]===null))) data.forEach(o=>def.forEach(h=>{if(o[h]===null)delete o[h]}));
+    $('#iNahled').innerHTML=`<div class="msg ${ok.length?'info':'chyba'}">${num(data.length)} řádků · oddělovač „${p.oddelovac==='\t'?'tab':p.oddelovac}“ · sloupce: <b>${esc(ok.join(', ')||'žádný neodpovídá')}</b>${nezn.length?`<br>Ignorované sloupce: ${esc(nezn.join(', '))}`:''}</div>
+      <div class="gridw" style="max-height:220px"><table class="grid"><thead><tr>${ok.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${data.slice(0,5).map(o=>`<tr>${ok.map(h=>`<td>${bunka(o[h])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    $('#iStart').disabled=!ok.length||!data.length;
+  };
+  $('#iStart').onclick=async()=>{
+    const rez=$('#iRezim').value;
+    if(rez==='nahradit'&&prompt(`POZOR: všechny stávající řádky tabulky ${T} se smažou a nahradí ${data.length} řádky z CSV.\nPro potvrzení napiš název tabulky:`)!==T)return;
+    $('#iStart').disabled=true; let n=0;
+    try{
+      if(rez==='nahradit'){ $('#iStav').textContent='Importuji…'; n=await rpc('db_admin_import',{p_tabulka:T,p_radky:data,p_rezim:'nahradit'}) }
+      else for(let i=0;i<data.length;i+=500){
+        $('#iStav').textContent=`Importuji ${num(i)} / ${num(data.length)}…`;
+        n+=await rpc('db_admin_import',{p_tabulka:T,p_radky:data.slice(i,i+500),p_rezim:rez});
+      }
+      toast(`Importováno ${num(n)} řádků`); $('#modal').style.display='none'; nactiData(); nactiInfo();
+    }catch(e){$('#iStav').textContent='';toast(`Chyba po ${num(n)} řádcích: ${e.message}`,1);$('#iStart').disabled=false}
+  };
+}
+
+/* ---------- struktura ---------- */
+function renderStruktura(){
+  const ob=$('#obsah'); if(!S){ob.innerHTML='<div class="empty">Načítám…</div>';return}
+  ob.innerHTML=`
+  ${S.komentar?`<div class="card"><b>Popis:</b> ${esc(S.komentar)}</div>`:''}
+  <div class="card"><h3>Sloupce <small>${S.sloupce.length}</small></h3><div class="gridw"><table><thead><tr><th>#</th><th>Název</th><th>Typ</th><th>NULL</th><th>Výchozí hodnota</th><th>Popis</th></tr></thead><tbody>
+    ${S.sloupce.map((c,i)=>`<tr><td class="hint">${i+1}</td><td><b>${S.pk.includes(c.nazev)?'🔑 ':''}${esc(c.nazev)}</b></td><td class="mono">${esc(c.typ)}${c.identity?' <span class="badge">identity</span>':''}${c.generovany?' <span class="badge">generovaný</span>':''}</td>
+      <td>${c.nullable?'ano':'<b>ne</b>'}</td><td class="mono">${esc(c.default||'')}</td><td>${esc(c.komentar||'')}</td></tr>`).join('')}
+  </tbody></table></div></div>
+  <div class="card"><h3>Indexy <small>${S.indexy.length}</small></h3><table><thead><tr><th>Název</th><th>Definice</th><th class="num">Velikost</th><th class="num">Použití</th></tr></thead><tbody>
+    ${S.indexy.map(x=>`<tr><td><b>${esc(x.nazev)}</b></td><td><pre class="def">${esc(x.definice)}</pre></td><td class="num">${vel(x.velikost)}</td><td class="num">${num(x.pouziti)}</td></tr>`).join('')||'<tr><td colspan="4" class="hint">Žádné indexy</td></tr>'}
+  </tbody></table></div>
+  <div class="card"><h3>RLS politiky <small>${S.politiky.length}</small></h3><table><thead><tr><th>Název</th><th>Příkaz</th><th>Role</th><th>USING</th><th>WITH CHECK</th></tr></thead><tbody>
+    ${S.politiky.map(p=>`<tr><td><b>${esc(p.nazev)}</b></td><td>${esc(p.prikaz)}</td><td>${esc(p.role)}</td><td><pre class="def">${esc(p.using||'')}</pre></td><td><pre class="def">${esc(p.check||'')}</pre></td></tr>`).join('')||'<tr><td colspan="5" class="hint">Žádné politiky</td></tr>'}
+  </tbody></table></div>
+  ${S.cizi_klice.length?`<div class="card"><h3>Cizí klíče</h3><table><tbody>${S.cizi_klice.map(f=>`<tr><td><b>${esc(f.nazev)}</b></td><td class="mono">${esc(f.definice)}</td></tr>`).join('')}</tbody></table></div>`:''}
+  <div class="row"><button id="sDdl">Otevřít v SQL konzoli</button><button id="sAnalyze">ANALYZE</button></div>`;
+  $('#sDdl').onclick=()=>{tab='sql';render();$('#sqlIn').value=`select * from ${/^[a-z_][a-z0-9_]*$/.test(T)?T:'"'+T.replace(/"/g,'""')+'"'} limit 100;`};
+  $('#sAnalyze').onclick=()=>akce(T,'analyze');
+}
+
+/* ---------- SQL konzole ---------- */
+const VZORY={
+  'Největší tabulky':`select relname as tabulka, pg_size_pretty(pg_total_relation_size(relid)) as velikost, n_live_tup as radku, n_dead_tup as mrtve\nfrom pg_stat_user_tables order by pg_total_relation_size(relid) desc;`,
+  'Sloupce tabulky':`select column_name, data_type, is_nullable, column_default\nfrom information_schema.columns where table_schema = 'public' and table_name = 'NAZEV_TABULKY'\norder by ordinal_position;`,
+  'Funkce v public':`select p.proname as funkce, pg_get_function_arguments(p.oid) as argumenty, p.prosecdef as security_definer\nfrom pg_proc p join pg_namespace n on n.oid = p.pronamespace\nwhere n.nspname = 'public' order by 1;`,
+  'Nejpomalejší dotazy':`select round(mean_exec_time::numeric, 1) as prumer_ms, calls as volani, left(query, 200) as dotaz\nfrom extensions.pg_stat_statements order by mean_exec_time desc limit 20;`,
+  'Aktivní spojení':`select pid, usename, state, now() - query_start as trvani, left(query, 200) as dotaz\nfrom pg_stat_activity where datname = current_database() order by query_start;`,
+  'Cron úlohy':`select jobid, jobname, schedule, active, command from cron.job order by jobid;`
+};
+let sqlVysl=null;
+function renderSql(){
+  const hist=ls('dba_hist_'+P)||[];
+  $('#obsah').innerHTML=`
+  <div class="card">
+    <h3>SQL konzole <small>dotaz běží s plnými právy (role postgres) · limit 60 s · zobrazí max. 2000 řádků</small></h3>
+    <textarea id="sqlIn" spellcheck="false" placeholder="select * from …   (Ctrl+Enter = spustit)">${esc(sg('dba_sql_'+P)||'')}</textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="pri" id="sqlRun">Spustit (Ctrl+Enter)</button>
+      <select id="sqlVzor" style="width:auto"><option value="">Vzorové dotazy…</option>${Object.keys(VZORY).map(k=>`<option>${esc(k)}</option>`).join('')}</select>
+      <select id="sqlHist" style="width:auto;max-width:340px"><option value="">Historie (${hist.length})…</option>${hist.map((h,i)=>`<option value="${i}">${esc(h.replace(/\s+/g,' ').slice(0,90))}</option>`).join('')}</select>
+      <span style="flex:1"></span><span class="hint">Jeden příkaz najednou. VACUUM zde spustit nejde (běží automaticky).</span>
+    </div>
+  </div>
+  <div id="sqlOut"></div>`;
+  const inp=$('#sqlIn');
+  inp.oninput=()=>ss('dba_sql_'+P,inp.value);
+  inp.onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();spustSql()}
+    if(e.key==='Tab'){e.preventDefault();const s=inp.selectionStart;inp.setRangeText('  ',s,inp.selectionEnd,'end')}};
+  $('#sqlRun').onclick=spustSql;
+  $('#sqlVzor').onchange=e=>{if(e.target.value){inp.value=VZORY[e.target.value];ss('dba_sql_'+P,inp.value)}e.target.value=''};
+  $('#sqlHist').onchange=e=>{if(e.target.value!==''){inp.value=hist[+e.target.value];ss('dba_sql_'+P,inp.value)}e.target.value=''};
+  if(sqlVysl) vykresliSql(sqlVysl);
+}
+async function spustSql(){
+  const inp=$('#sqlIn'); let sql=inp.value;
+  if(inp.selectionEnd>inp.selectionStart) sql=inp.value.slice(inp.selectionStart,inp.selectionEnd);
+  if(!sql.trim())return;
+  if(/\b(drop|truncate|delete|update|alter|grant|revoke)\b/i.test(sql.replace(/--.*$/gm,''))&&!confirm(`Dotaz mění data nebo strukturu databáze „${PROJ[P].nazev}“.\nOpravdu spustit?`))return;
+  $('#sqlRun').disabled=true; $('#sqlOut').innerHTML='<div class="hint">Probíhá…</div>';
+  try{
+    sqlVysl=await rpc('db_admin_sql',{p_sql:sql}); sqlVysl.sql=sql;
+    const h=(ls('dba_hist_'+P)||[]).filter(x=>x!==sql); h.unshift(sql); ls('dba_hist_'+P,h.slice(0,30));
+    vykresliSql(sqlVysl);
+    if(sqlVysl.typ==='prikaz') nactiInfo();
+  }catch(e){sqlVysl=null;$('#sqlOut').innerHTML=`<div class="msg chyba"><b>Chyba:</b> ${esc(e.message)}</div>`}
+  $('#sqlRun').disabled=false;
+}
+function vykresliSql(v){
+  const o=$('#sqlOut'); if(!o)return;
+  if(v.typ==='prikaz'){o.innerHTML=`<div class="msg info">Hotovo · ovlivněno řádků: <b>${num(v.pocet)}</b> · ${v.ms} ms</div>`;return}
+  const cols=[...new Set(v.radky.flatMap(r=>Object.keys(r)))];
+  o.innerHTML=`<div class="row" style="margin-bottom:6px"><span class="hint">${num(v.pocet)} řádků${v.orezano?' (zobrazeno prvních 2000)':''} · ${v.ms} ms</span><span style="flex:1"></span>${v.radky.length?'<button id="sqlCsv">Export CSV</button>':''}</div>
+    <div class="gridw"><table class="grid"><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>
+    ${v.radky.map((r,i)=>`<tr data-i="${i}">${cols.map(c=>`<td>${bunka(r[c])}</td>`).join('')}</tr>`).join('')}</tbody></table>${v.radky.length?'':'<div class="empty">Žádné řádky</div>'}</div>`;
+  if($('#sqlCsv')) $('#sqlCsv').onclick=()=>stahni(`dotaz_${new Date().toISOString().slice(0,10)}.csv`,naCsv(cols,v.radky));
+  o.querySelectorAll('tbody tr').forEach(tr=>tr.onclick=()=>{const r=v.radky[+tr.dataset.i];
+    $('#mbox').innerHTML=`<h3>Řádek výsledku<span class="sp"></span><button id="mX">✕</button></h3><pre class="def" style="max-height:70vh;overflow:auto">${esc(JSON.stringify(r,null,2))}</pre>`;
+    $('#modal').style.display='flex'; $('#mX').onclick=()=>$('#modal').style.display='none'});
+}
+
+/* ---------- údržba ---------- */
+async function akce(t,a){
+  if(a==='reindex'&&!confirm(`REINDEX tabulky ${t} ji po dobu běhu zamkne pro zápis. Pokračovat?`))return;
+  toast(`${a.toUpperCase()} ${t}…`);
+  try{toast(await rpc('db_admin_akce',{p_tabulka:t,p_akce:a}));if(tab==='udrzba')renderUdrzba()}catch(e){toast(e.message,1)}
+}
+async function renderUdrzba(){
+  const ob=$('#obsah'); ob.innerHTML='<div class="empty">Načítám statistiky…</div>';
+  let U; try{U=await rpc('db_admin_udrzba',{})}catch(e){ob.innerHTML=`<div class="msg chyba">${esc(e.message)}</div>`;return}
+  if(tab!=='udrzba')return;
+  const mrtve=U.tabulky.reduce((a,t)=>a+(+t.mrtve||0),0), chyb=(U.cron_behy||[]).filter(b=>b.stav==='failed').length;
+  const pr=t=>{const c=(+t.zive||0)+(+t.mrtve||0);return c?Math.round(t.mrtve/c*100):0};
+  ob.innerHTML=`
+  <div class="stats">
+    <div class="stat"><b>${vel(U.velikost)}</b><span>velikost databáze</span></div>
+    <div class="stat"><b>${num(U.pripojeni)}</b><span>otevřených spojení</span></div>
+    <div class="stat"><b>${num(mrtve)}</b><span>mrtvých řádků (čeká na vacuum)</span></div>
+    <div class="stat"><b style="color:${U.bezpecnost.some(b=>b.uroven==='chyba')?'var(--bad)':'inherit'}">${U.bezpecnost.filter(b=>b.uroven!=='info').length}</b><span>bezpečnostních upozornění</span></div>
+    ${U.cron?`<div class="stat"><b style="color:${chyb?'var(--bad)':'inherit'}">${chyb}</b><span>chybných běhů cronu (posl. 40)</span></div>`:''}
+  </div>
+  <div class="card"><h3>Bezpečnost</h3>${U.bezpecnost.length?U.bezpecnost.sort((a,b)=>['chyba','varovani','info'].indexOf(a.uroven)-['chyba','varovani','info'].indexOf(b.uroven)).map(b=>`<div class="msg ${b.uroven}">${esc(b.text)}</div>`).join(''):'<div class="msg info">Žádné problémy nenalezeny.</div>'}</div>
+  <div class="card"><h3>Tabulky <small>seřazeno podle velikosti · VACUUM běží automaticky (autovacuum)</small></h3><div class="gridw"><table><thead><tr>
+    <th>Tabulka</th><th class="num">Živé řádky</th><th class="num">Mrtvé</th><th class="num">Celkem</th><th class="num">Data</th><th class="num">Indexy</th><th class="num">Seq / Idx scan</th><th>Poslední vacuum</th><th>Poslední analyze</th><th></th></tr></thead><tbody>
+    ${U.tabulky.map(t=>`<tr><td><b>${esc(t.nazev)}</b></td><td class="num">${num(t.zive)}</td><td class="num" style="color:${pr(t)>20?'var(--bad)':''}">${num(t.mrtve)}${pr(t)?` (${pr(t)} %)`:''}</td>
+      <td class="num">${vel(t.velikost)}</td><td class="num">${vel(t.data)}</td><td class="num">${vel(t.indexy)}</td><td class="num">${num(t.seq_scan)} / ${num(t.idx_scan)}</td>
+      <td>${cas(t.vacuum)}</td><td>${cas(t.analyze)}${t.zmeny>1000?` <span class="badge warn">${num(t.zmeny)} změn</span>`:''}</td>
+      <td class="num"><button class="sm" data-a="analyze" data-t="${esc(t.nazev)}">Analyze</button> <button class="sm" data-a="reindex" data-t="${esc(t.nazev)}">Reindex</button></td></tr>`).join('')}
+  </tbody></table></div></div>
+  ${U.nepouzite_indexy.length?`<div class="card"><h3>Nepoužívané indexy <small>od posledního resetu statistik nebyly ani jednou použity – kandidáti na odstranění</small></h3><table><thead><tr><th>Tabulka</th><th>Index</th><th class="num">Velikost</th></tr></thead><tbody>
+    ${U.nepouzite_indexy.map(x=>`<tr><td>${esc(x.tabulka)}</td><td class="mono">${esc(x.index)}</td><td class="num">${vel(x.velikost)}</td></tr>`).join('')}</tbody></table></div>`:''}
+  ${U.dlouhe_dotazy.length?`<div class="card"><h3>Dlouho běžící dotazy <small>&gt; 30 s</small></h3><table><thead><tr><th>PID</th><th>Uživatel</th><th>Stav</th><th class="num">Trvání</th><th>Dotaz</th></tr></thead><tbody>
+    ${U.dlouhe_dotazy.map(x=>`<tr><td>${x.pid}</td><td>${esc(x.uzivatel)}</td><td>${esc(x.stav)}</td><td class="num">${num(x.trvani_s)} s</td><td class="mono">${esc(x.dotaz)}</td></tr>`).join('')}</tbody></table>
+    <p class="hint">Ukončit lze v SQL konzoli: <code>select pg_cancel_backend(PID);</code></p></div>`:''}
+  ${U.cron?`<div class="card"><h3>Plánované úlohy (pg_cron)</h3><table><thead><tr><th>ID</th><th>Název</th><th>Plán</th><th>Aktivní</th><th>Příkaz</th></tr></thead><tbody>
+    ${U.cron.map(j=>`<tr><td>${j.id}</td><td><b>${esc(j.nazev||'')}</b></td><td class="mono">${esc(j.plan)}</td><td>${j.aktivni?'<span class="okc">✓</span>':'<span class="badc">✗</span>'}</td><td><pre class="def" style="max-height:90px;overflow:auto">${esc(j.prikaz.trim())}</pre></td></tr>`).join('')||'<tr><td colspan="5" class="hint">Žádné úlohy</td></tr>'}</tbody></table>
+    ${(U.cron_behy||[]).length?`<h3 style="margin-top:14px;font-size:17px">Poslední běhy</h3><div class="gridw" style="max-height:320px"><table><thead><tr><th>Začátek</th><th>Úloha</th><th>Stav</th><th class="num">Trvání</th><th>Zpráva</th></tr></thead><tbody>
+    ${U.cron_behy.map(b=>`<tr><td>${cas(b.zacatek)}</td><td>${esc(b.nazev||b.id)}</td><td>${b.stav==='succeeded'?'<span class="okc">OK</span>':b.stav==='failed'?'<span class="badc">chyba</span>':esc(b.stav)}</td><td class="num">${b.ms!=null?num(b.ms)+' ms':''}</td><td class="mono" title="${esc(b.zprava||'')}" style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.zprava||'')}</td></tr>`).join('')}</tbody></table></div>`:''}</div>`:''}`;
+  ob.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>akce(b.dataset.t,b.dataset.a));
+}
+
+const saved=sg('dba_k'); if(saved){$('#klic').value=saved;login(saved)}
+</script>
+</body>
+</html>

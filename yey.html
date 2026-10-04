@@ -3601,6 +3601,7 @@ function prepocet(q, mjZ, m) {
     if (z === 'ks' && m.vBaleni > 1) return del(m.vBaleni, `${f3(q)} ks ÷ ${f3(m.vBaleni)} ks v balení`);
   }
   if (na === 'kg' && z === 'ks' && m.hmotnost > 0) return { mnozstvi: zaok(q * m.hmotnost), popis: `${f3(q)} ks × ${f3(m.hmotnost)} kg` };
+  if (na === 't' && z === 'm³') return { mnozstvi: zaok(q * 1.6), popis: `${f3(q)} m³ × 1,6 t/m³ (kamenivo)` };
   if (na === 't' && z === 'kg') return { mnozstvi: zaok(q / 1000), popis: `${f3(q)} kg = ${f3(q / 1000)} t` };
   return { mnozstvi: null, popis: `${mjHezky(z)} → ${mjHezky(na)}` };
 }
@@ -3622,9 +3623,13 @@ const KALK = {
     sablony: [
       { n: 'Ytong 10', h: { td: '60', tv: '25', tl: '10', malta: 'tenka', spara: '1' }, q: { tvarnice: 'ytong 100' } },
       { n: 'Ytong 15', h: { td: '60', tv: '25', tl: '15', malta: 'tenka', spara: '1' }, q: { tvarnice: 'ytong 150' } },
+      { n: 'Ytong 20', h: { td: '60', tv: '25', tl: '20', malta: 'tenka', spara: '1' }, q: { tvarnice: 'ytong 200' } },
+      { n: 'Ytong 25', h: { td: '60', tv: '25', tl: '25', malta: 'tenka', spara: '1' }, q: { tvarnice: 'ytong 250' } },
       { n: 'Ytong 30', h: { td: '60', tv: '25', tl: '30', malta: 'tenka', spara: '1' }, q: { tvarnice: 'ytong 300' } },
       { n: 'Porotherm 11,5', h: { td: '50', tv: '24,9', tl: '11,5', malta: 'tenka', spara: '1' }, q: { tvarnice: 'porotherm 11,5' } },
       { n: 'Porotherm 30', h: { td: '24,8', tv: '24,9', tl: '30', malta: 'tenka', spara: '1' }, q: { tvarnice: 'porotherm 30' } },
+      { n: 'Porotherm 44', h: { td: '24,8', tv: '24,9', tl: '44', malta: 'tenka', spara: '1' }, q: { tvarnice: 'porotherm 44' } },
+      { n: 'Příčkovka YTONG PLUS 7,5', h: { td: '60', tv: '25', tl: '7,5', malta: 'tenka', spara: '1' }, q: { tvarnice: 'ytong 75' } },
       { n: 'Cihla plná', h: { td: '29', tv: '6,5', tl: '14', malta: 'klasicka', spara: '12' }, q: { tvarnice: 'cihla plna' } }
     ],
     pole: [
@@ -3633,40 +3638,53 @@ const KALK = {
       { id: 'tl', popis: 'Tloušťka zdi', mj: 'cm', v: '15', tip: 'Ovlivní spotřebu malty, ne počet kusů.' },
       { id: 'malta', popis: 'Pojivo', typ: 'volba', v: 'tenka', volby: [['tenka', 'Tenkovrstvá'], ['klasicka', 'Klasická'], ['pena', 'Pěna']],
         tip: 'Tenkovrstvá malta je na přesné tvárnice, klasická na spáru 10–12 mm.' },
-      { id: 'spara', popis: 'Spára', mj: 'mm', v: '1', profi: P },
-      { id: 'spTenka', popis: 'Spotřeba tenkovrstvé malty', mj: 'kg/m² na 10 cm', v: '1,6', profi: P, ukaz: h => h.malta === 'tenka' },
+      { id: 'spara', popis: 'Spára', mj: 'mm', v: '1', profi: P, tip: 'Tenkovrstvá malta 1–3 mm, klasická 10–12 mm (při klasické maltě a spáře pod 5 mm počítám 10 mm).' },
+      { id: 'spTenka', popis: 'Spotřeba tenkovrstvé malty', mj: 'kg/m² na 10 cm', v: '2,5', profi: P, tip: 'Výrobci uvádějí cca 20–30 kg na m³ zdiva.', ukaz: h => h.malta === 'tenka' },
       { id: 'prorez', popis: 'Prořez', mj: '%', v: '5', profi: P, tip: 'Rezerva na řezání. Členitá stěna 8–10 %.' },
       { id: 'vyztuz', popis: 'Výztuž do spáry každou', mj: 'řadu', v: '0', profi: P, tip: '0 = bez výztuže. Obvykle každá 3. řada.' },
-      { id: 'preklady', popis: 'Překlady nad otvory', typ: 'ano', v: '1', tip: 'Délka překladu = šířka otvoru + 2 × 25 cm uložení.' }
+      { id: 'preklady', popis: 'Překlady nad otvory', typ: 'ano', v: '1', tip: 'Délka překladu = šířka otvoru + 2 × 25 cm uložení.' },
+      { id: 'izolPod', popis: 'Hydroizolace pod první řadu', typ: 'ano', v: '0', tip: 'Asfaltový pás nebo izolace proti vlhkosti pod první řadou tvárnic (na soklu / základové desce). Počítá se podle délky stěn.' },
+      { id: 'prvniRada', popis: 'První řada na klasickou maltu', typ: 'ano', v: '0', profi: P, ukaz: h => h.malta !== 'klasicka', tip: 'První řada se klade do cementové malty (vyrovnání nerovností). Přidá 1 řadu klasické malty do spáry 15 mm.' }
     ],
-    jak: 'Plocha = součet stěn − otvory.\nKusů na m² = 1 ÷ ((délka + spára) × (výška + spára)), navýšeno o prořez.\nTenkovrstvá malta: zadaná spotřeba na každých 10 cm tloušťky.\nKlasická malta: 12 % objemu zdiva, 1 900 kg/m³.\nZdicí pěna: 1 dóza na 10 m².\nVýztuž: počet řad ÷ zvolený krok × délka stěny.\nPřeklad: šířka otvoru + 0,5 m.',
+    jak: 'Plocha = součet stěn − otvory.\nKusů na m² = 1 ÷ ((délka + spára) × (výška + spára)), navýšeno o prořez.\nTenkovrstvá malta: zadaná spotřeba (výchozí 2,5 kg/m² na každých 10 cm tloušťky = cca 25 kg na m³ zdiva).\nKlasická malta: objem spár = tloušťka × (1 − podíl tvárnic v ploše), +15 % ztráty a zapadání do dutin, 1 900 kg/m³.\nZdicí pěna: 1 dóza na 10 m².\nVýztuž: počet řad ÷ zvolený krok × délka stěny.\nPřeklad: šířka otvoru + 0,5 m.\nHydroizolace pod první řadu: délka stěn + 10 % přesahy.\nObjem zdiva (m³) = plocha × tloušťka – uvedeno u tvárnic.',
     spocitej(h) {
       const A = h.plocha;
       if (!A || !h.td || !h.tv) return null;
-      const sp = (h.spara || 0) / 10;
+      // klasická malta = spára 10–12 mm; při zadané tenké spáře (do 5 mm) počítám s 10 mm
+      const sparaMm = h.malta === 'klasicka' && (h.spara || 0) < 5 ? 10 : (h.spara || 0);
+      const sp = sparaMm / 10;
       const naM2 = 1 / (((h.td + sp) / 100) * ((h.tv + sp) / 100));
-      const r = [{ klic: 'tvarnice', nazev: 'Tvárnice / cihly', mnozstvi: nahoru(A * naM2 * (1 + (h.prorez || 0) / 100)), mj: 'ks', q: null,
-        zaklad: `${f3(zaok(A))} m² × ${f3(zaok(naM2))} ks/m², prořez ${f3(h.prorez || 0)} %` }];
       const tl = h.tl || 15;
+      const r = [{ klic: 'tvarnice', nazev: 'Tvárnice / cihly', mnozstvi: nahoru(A * naM2 * (1 + (h.prorez || 0) / 100)), mj: 'ks', q: null,
+        zaklad: `${f3(zaok(A))} m² × ${f3(zaok(naM2))} ks/m², prořez ${f3(h.prorez || 0)} %, zdivo ${f3(zaok(A * tl / 100))} m³` }];
       if (h.malta === 'klasicka') {
-        const m3 = A * (tl / 100) * 0.12;
-        r.push({ klic: 'malta', nazev: 'Zdicí malta', mnozstvi: nahoru(m3 * 1900), mj: 'kg', q: 'malta zdic', zaklad: `12 % objemu zdiva, 1 900 kg/m³` });
+        // objem spár z geometrie: podíl plochy, kterou nezabírají tvárnice (+15 % ztráty a zapadání do dutin)
+        const podil = Math.min(0.45, Math.max(0.08, 1 - naM2 * (h.td / 100) * (h.tv / 100)));
+        const m3 = A * (tl / 100) * podil * 1.15;
+        r.push({ klic: 'malta', nazev: 'Zdicí malta', mnozstvi: nahoru(m3 * 1900), mj: 'kg', q: 'malta zdic', zaklad: `spáry ${f3(zaok(podil * 100))} % objemu zdiva +15 % ztráty, 1 900 kg/m³` });
       } else if (h.malta === 'pena') {
         r.push({ klic: 'pena', nazev: 'Zdicí pěna', mnozstvi: nahoru(A / 10), mj: 'ks', q: 'pena zdic', zaklad: '1 dóza na 10 m²' });
       } else {
-        const s = h.spTenka || 1.6;
+        const s = h.spTenka || 2.5;
         r.push({ klic: 'malta', nazev: 'Tenkovrstvá malta', mnozstvi: nahoru(A * s * tl / 10), mj: 'kg', q: 'malta tenkovrstv', zaklad: `${f3(s)} kg/m² na 10 cm, zeď ${f3(tl)} cm` });
       }
+      if (h.prvniRada && h.malta !== 'klasicka' && h.delka > 0) {
+        const kg = h.delka * (tl / 100) * (0.015 + 0.005) * 1900 * 1.15;
+        r.push({ klic: 'maltaPrvni', nazev: 'Cementová malta pod první řadu', mnozstvi: nahoru(kg), mj: 'kg', q: 'malta zdic', zaklad: `délka stěn ${f3(zaok(h.delka))} m × tloušťka ${f3(tl)} cm × 20 mm` });
+      }
+      if (h.izolPod && h.delka > 0) r.push({ klic: 'izolPod', nazev: 'Hydroizolace pod první řadu zdiva', mnozstvi: nahoru(h.delka * 1.1), mj: 'bm', q: null, zaklad: `délka stěn ${f3(zaok(h.delka))} m + 10 % přesahy (pás šířky ${f3(tl)} cm)` });
       if (h.vyztuz > 0) {
         let bm = 0;
-        h.useky.forEach(u => { if (u.d > 0 && u.v > 0) bm += Math.ceil(Math.floor(u.v * 100 / (h.tv || 25)) / h.vyztuz) * u.d; });
+        h.useky.forEach(u => { if (u.d > 0 && u.v > 0) bm += Math.ceil(Math.floor(u.v * 100 / ((h.tv || 25) + sp)) / h.vyztuz) * u.d; });
         if (bm > 0) r.push({ klic: 'vyztuz', nazev: 'Výztuž do ložné spáry', mnozstvi: nahoru(bm * 1.05), mj: 'bm', q: 'murfor', zaklad: `každá ${f3(h.vyztuz)}. řada, +5 % přesahy` });
       }
       if (h.preklady && h.otvoryN) {
         const delky = h.otvory.filter(o => o.s > 0 && o.n > 0).map(o => `${o.n}× ${f3(zaok(o.s + 0.5))} m`);
         r.push({ klic: 'preklad', nazev: 'Překlad nad otvorem', mnozstvi: h.otvoryN, mj: 'ks', q: null, zaklad: 'délky: ' + delky.join(', ') });
       }
-      return { radky: r, prace: [{ klic: 'zdeni', nazev: 'Zdění', mj: 'm²', mnozstvi: zaok(A) }] };
+      const pr = [{ klic: 'zdeni', nazev: 'Zdění', mj: 'm²', mnozstvi: zaok(A) }];
+      if (h.preklady && h.otvoryN) pr.push({ klic: 'osazeniPrekladu', nazev: 'Osazení překladů', mj: 'ks', mnozstvi: h.otvoryN });
+      return { radky: r, prace: pr };
     }
   },
 
@@ -3697,9 +3715,10 @@ const KALK = {
       { id: 'izolace', popis: 'Izolace do dutiny', typ: 'ano', v: '1' },
       { id: 'finalni', popis: 'Finální stěrka (Q3)', typ: 'ano', v: '1', tip: 'Celoplošné přestěrkování pohledové plochy pod malbu.' },
       { id: 'spFinal', popis: 'Spotřeba finální stěrky', mj: 'kg/m²', v: '0,6', profi: P, ukaz: h => !!h.finalni, tip: 'Tenká vrstva cca 1 mm ≈ 0,6 kg/m², silnější 1 kg/m².' },
+      { id: 'rohy', popis: 'Vnější rohy a ukončení (lišty)', mj: 'ks', v: '0', ukaz: h => h.konstrukce !== 'podhled', tip: 'Počet vnějších rohů z SDK – dostanou rohovou lištu na celou výšku. Ostění dveří a oken se počítá samo.' },
       { id: 'vyztuzotvoru', popis: 'Vyztužit otvory UA', typ: 'ano', v: '1', ukaz: h => h.konstrukce !== 'podhled', tip: 'Kolem dveří UA profily na celou výšku s připojovacími úhelníky, aby konstrukce nepracovala.' }
     ],
-    jak: 'Plocha = součet stěn − otvory.\nDesky: plocha × strany × záklop + prořez, zaokrouhleno na celé desky vybraného formátu (prodej v m²).\nCW: délka ÷ osová vzdálenost + 1 na každou stěnu; délku profilu volím nejkratší, která pokryje výšku stěny (prodej v m).\nUW: 2 × délka − dveře + nadpraží (šířka + 0,5 m), zaokrouhleno na celé kusy.\nUA: 2 stojky na otvor na celou výšku + 4 připojovací úhelníky.\nKotvy: obvod konstrukce ÷ rozteč kotvení.\nŠrouby: pohledová vrstva 25 ks/m² (u 2 desek delší TN 35), spodní 12 ks/m² TN 25; zaokrouhleno na balení.\nTmel 0,4 kg/m², páska 1,2 bm/m² pohledové plochy, finální stěrka (Q3) 0,6 kg/m² pohledové plochy, těsnění = obvod podle šířky profilu.\nPodhled: CD = (šířka ÷ rozteč + 1) × délka, UD = obvod, přímý závěs každých 0,9 m, 1 stropní kotva na závěs.',
+    jak: 'Plocha = součet stěn − otvory.\nDesky: plocha × strany × záklop + prořez, zaokrouhleno na celé desky vybraného formátu (prodej v m²).\nCW: délka ÷ osová vzdálenost + 1 na každou stěnu; délku profilu volím nejkratší, která pokryje výšku stěny (prodej v m).\nUW: 2 × délka − dveře + nadpraží (šířka + 0,5 m), zaokrouhleno na celé kusy.\nUA: 2 stojky na otvor na celou výšku + 4 připojovací úhelníky.\nKotvy: obvod konstrukce ÷ rozteč kotvení.\nŠrouby: pohledová vrstva 25 ks/m² (u 2 desek delší TN 35), spodní 12 ks/m² TN 25; zaokrouhleno na balení.\nTmel 0,4 kg/m², páska 1,2 bm/m² pohledové plochy, finální stěrka (Q3) 0,6 kg/m² pohledové plochy, těsnění = obvod podle šířky profilu.\nRohová lišta: ostění otvorů (2 × výška + šířka, z každé strany) + vnější rohy × výška stěny.\nPodhled: CD = (šířka ÷ rozteč + 1) × délka, UD = obvod, přímý závěs každých 0,9 m, 1 stropní kotva na závěs, podélná spojka CD každé 4 m profilu.\nŠrouby u desek 15 mm: spodní vrstva TN 35, horní TN 45.',
     spocitej(h) {
       const A = h.plocha;
       if (!A) return null;
@@ -3742,10 +3761,16 @@ const KALK = {
         r.push({ klic: 'ud', nazev: 'Profil UD 28/30', mnozstvi: zaok(h.obvod), mj: 'bm', jed: 'metry', sv: 'ud', q: 'profil ud', zaklad: 'obvod místnosti' });
         r.push({ klic: 'zaves', nazev: 'Závěs přímý 125', mnozstvi: nahoru(cd / 0.9), mj: 'ks', sv: 'zaves', q: 'zaves primy', zaklad: 'každých 0,9 m profilu CD' });
         r.push({ klic: 'hmozd', nazev: 'Stropní kotva DN6', mnozstvi: nahoru(cd / 0.9 + h.obvod / 0.8), mj: 'ks', sv: 'strop', q: 'stropni dn6', zaklad: '1 na závěs + UD po 0,8 m' });
+        r.push({ klic: 'spojkaCD', nazev: 'Spojka CD profilu (podélná)', mnozstvi: nahoru(cd / 4), mj: 'ks', q: 'spojka cd', zaklad: 'profily se dodávají po 4 m' });
+      }
+      if (!podhled) {
+        const roh = (h.obvodOtvoru || 0) * stran + (h.rohy || 0) * (h.vyskaMax || 2.6);
+        if (roh > 0) r.push({ klic: 'rohovnik', nazev: 'Rohová lišta pro SDK', mnozstvi: nahoru(roh * 1.05), mj: 'bm', q: 'rohova lista sadrokart', zaklad: `ostění otvorů ${stran === 2 ? 'z obou stran ' : ''}+ vnější rohy, +5 %` });
       }
       if (vrstev === 2) {
-        r.push({ klic: 'srouby', nazev: 'Šrouby TN 25 – spodní vrstva', mnozstvi: nahoru(pohled * 12), mj: 'ks', sv: 'sroub:25', q: 'sroub tn 25', zaklad: '12 ks/m²' });
-        r.push({ klic: 'srouby2', nazev: 'Šrouby TN 35 – pohledová vrstva', mnozstvi: nahoru(pohled * 25), mj: 'ks', sv: 'sroub:35', q: 'sroub tn 35', zaklad: '25 ks/m²' });
+        const sp1 = tl === '15' ? 35 : 25, sp2 = tl === '15' ? 45 : 35;
+        r.push({ klic: 'srouby', nazev: `Šrouby TN ${sp1} – spodní vrstva`, mnozstvi: nahoru(pohled * 12), mj: 'ks', sv: 'sroub:' + sp1, q: 'sroub tn ' + sp1, zaklad: '12 ks/m²' });
+        r.push({ klic: 'srouby2', nazev: `Šrouby TN ${sp2} – pohledová vrstva`, mnozstvi: nahoru(pohled * 25), mj: 'ks', sv: 'sroub:' + sp2, q: 'sroub tn ' + sp2, zaklad: '25 ks/m²' });
       } else {
         r.push({ klic: 'srouby', nazev: 'Šrouby TN 25', mnozstvi: nahoru(pohled * 25), mj: 'ks', sv: tl === '15' ? 'sroub:35' : 'sroub:25', q: 'sroub tn', zaklad: '25 ks/m²' });
       }
@@ -3760,6 +3785,7 @@ const KALK = {
       return { radky: r, prace: [
         { klic: 'montaz', nazev: 'Montáž SDK konstrukce', mj: 'm²', mnozstvi: zaok(A) },
         { klic: 'tmeleni', nazev: 'Tmelení a broušení Q2', mj: 'm²', mnozstvi: zaok(pohled) }]
+        .concat(h.izolace ? [{ klic: 'montazIzolace', nazev: 'Montáž izolace do dutiny', mj: 'm²', mnozstvi: zaok(A) }] : [])
         .concat(h.finalni ? [{ klic: 'sterkovani', nazev: 'Finální stěrkování Q3', mj: 'm²', mnozstvi: zaok(pohled) }] : []) };
     }
   },
@@ -3770,7 +3796,8 @@ const KALK = {
     sablony: [
       { n: 'Jádro + štuk', h: { typ: 'dvou', tlJadro: '10', tlStuk: '2', strop: '1' } },
       { n: 'Jen štuk', h: { typ: 'stuk', tlStuk: '3', strop: '1' } },
-      { n: 'Sanace – silnější jádro', h: { typ: 'dvou', tlJadro: '20', tlStuk: '2', strop: '0' } }
+      { n: 'Sanace – silnější jádro', h: { typ: 'dvou', tlJadro: '20', tlStuk: '2', strop: '0' } },
+      { n: 'Sádrová strojní', h: { typ: 'jadro', tlJadro: '10', strop: '1', spJadro: '1' }, q: { jadro: 'omitka sadrov' } }
     ],
     pole: [
       { id: 'strop', popis: 'Omítat i strop', typ: 'ano', v: '1' },
@@ -3779,12 +3806,16 @@ const KALK = {
       { id: 'tlStuk', popis: 'Tloušťka štuku', mj: 'mm', v: '2', ukaz: h => h.typ !== 'jadro' },
       { id: 'spJadro', popis: 'Spotřeba jádra', mj: 'kg/m² na mm', v: '1,4', profi: P, ukaz: h => h.typ !== 'stuk' },
       { id: 'spStuk', popis: 'Spotřeba štuku', mj: 'kg/m² na mm', v: '1,3', profi: P, ukaz: h => h.typ !== 'jadro' },
+      { id: 'osteni', popis: 'Hloubka ostění oken a dveří', mj: 'cm', v: '15', tip: 'Ostění se omítá zvlášť – o šířku zdi mínus rám okna. 0 = nepočítat.' },
+      { id: 'rohyOm', popis: 'Vnější rohy', mj: 'ks', v: '0', profi: P, tip: 'Počet vnějších rohů místností – dostanou rohovou lištu na celou výšku.' },
+      { id: 'sit', popis: 'Pletivo / síťovina na spoje', typ: 'ano', v: '0', tip: 'Přes spoje dvou materiálů (zdivo × beton), rýhy a pod štuk. Počítá 10 % plochy.' },
       { id: 'omitniky', popis: 'Omítníky (vodicí lišty)', typ: 'ano', v: '1', ukaz: h => h.typ !== 'stuk' },
       { id: 'penetrace', popis: 'Penetrace / můstek', typ: 'ano', v: '1' }
     ],
-    jak: 'Stěny = obvod místnosti × výška − otvory, strop = délka × šířka.\nJádro = plocha × tloušťka × spotřeba na mm.\nŠtuk = plocha × tloušťka × spotřeba na mm.\nOmítníky: lišta každých 1,5 m délky stěny, na celou výšku.\nRohovníky: obvod otvorů (ostění).\nPenetrace 0,2 l/m².',
+    jak: 'Stěny = obvod místnosti × výška − otvory + ostění (obvod otvorů × hloubka), strop = délka × šířka.\nJádro = plocha × tloušťka × spotřeba na mm.\nŠtuk = plocha × tloušťka × spotřeba na mm.\nOmítníky: lišta každých 1,5 m délky stěny, na celou výšku.\nRohovníky: obvod otvorů (ostění) + vnější rohy × výška.\nPletivo: 10 % plochy.\nPenetrace 0,2 l/m².',
     spocitej(h) {
-      const A = h.steny + (h.strop ? h.podlaha : 0);
+      const ost = (h.obvodOtvoru || 0) * (h.osteni || 0) / 100;
+      const A = h.steny + ost + (h.strop ? h.podlaha : 0);
       if (!A) return null;
       const r = [];
       if (h.penetrace) r.push({ klic: 'penetrace', nazev: 'Penetrace', mnozstvi: zaok(A * 0.2), mj: 'l', q: 'penetrac', zaklad: '0,2 l/m²' });
@@ -3796,8 +3827,12 @@ const KALK = {
         let bm = 0; h.useky.forEach(u => { if (u.d > 0 && u.s > 0 && u.v > 0) bm += Math.ceil(2 * (u.d + u.s) / 1.5) * u.v; });
         if (bm) r.push({ klic: 'omitnik', nazev: 'Omítník', mnozstvi: nahoru(bm), mj: 'bm', q: 'omitnik', zaklad: 'každých 1,5 m stěny' });
       }
-      if (h.obvodOtvoru) r.push({ klic: 'rohovnik', nazev: 'Rohový profil', mnozstvi: nahoru(h.obvodOtvoru), mj: 'bm', q: 'rohovnik', zaklad: 'ostění otvorů' });
-      return { radky: r, prace: [{ klic: 'omitani', nazev: 'Omítání', mj: 'm²', mnozstvi: zaok(A) }] };
+      const roh = (h.obvodOtvoru || 0) + (h.rohyOm || 0) * (h.vyskaMax || 2.6);
+      if (roh) r.push({ klic: 'rohovnik', nazev: 'Rohový profil', mnozstvi: nahoru(roh), mj: 'bm', q: 'rohovnik', zaklad: 'ostění otvorů + vnější rohy' });
+      if (h.sit) r.push({ klic: 'sit', nazev: 'Pletivo / síťovina', mnozstvi: nahoru(A * 0.1), mj: 'm²', q: 'sitovin', zaklad: '10 % plochy' });
+      const prO = [{ klic: 'omitani', nazev: 'Omítání', mj: 'm²', mnozstvi: zaok(A) }];
+      if (h.obvodOtvoru > 0) prO.push({ klic: 'osteni', nazev: 'Omítání ostění (příplatek)', mj: 'bm', mnozstvi: zaok(h.obvodOtvoru) });
+      return { radky: r, prace: prO };
     }
   },
 
@@ -3814,11 +3849,14 @@ const KALK = {
       { id: 'natery', popis: 'Počet nátěrů', typ: 'volba', v: '2', volby: [['1', '1×'], ['2', '2×'], ['3', '3×']] },
       { id: 'vydatnost', popis: 'Vydatnost barvy', mj: 'm²/kg', v: '6', profi: P, tip: 'Na obalu, u malířských barev obvykle 5–7 m² z 1 kg v jedné vrstvě.' },
       { id: 'penetrace', popis: 'Penetrace', typ: 'ano', v: '1' },
-      { id: 'zakryti', popis: 'Zakrývací fólie a páska', typ: 'ano', v: '1' }
+      { id: 'zakryti', popis: 'Zakrývací fólie a páska', typ: 'ano', v: '1' },
+      { id: 'osteni', popis: 'Hloubka ostění oken a dveří', mj: 'cm', v: '15', profi: P, tip: 'Ostění se maluje také. 0 = nepočítat.' },
+      { id: 'opravy', popis: 'Vyspravení a vyhlazení podkladu', typ: 'ano', v: '0', tip: 'Přetmelení trhlin a děr, u starých stěn i celoplošný glet.' },
+      { id: 'pomucky', popis: 'Váleček, štětec, tácek', typ: 'ano', v: '1' }
     ],
-    jak: 'Plocha = stěny − otvory + strop.\nBarva (kg) = plocha × počet nátěrů ÷ vydatnost.\nPenetrace 0,1 l/m² (ředěná).\nFólie = podlaha + 10 %, páska = 2 × obvod.',
+    jak: 'Plocha = stěny − otvory + ostění + strop.\nBarva (kg) = plocha × počet nátěrů ÷ vydatnost.\nPenetrace 0,1 l/m² (ředěná).\nFólie = podlaha + 10 %, páska = 2 × obvod.\nVyspravení: tmel 0,15 kg/m².',
     spocitej(h) {
-      const A = h.steny + (h.strop ? h.podlaha : 0);
+      const A = h.steny + (h.obvodOtvoru || 0) * (h.osteni || 0) / 100 + (h.strop ? h.podlaha : 0);
       if (!A) return null;
       const n = h.natery || 2;
       const r = [{ klic: 'barva', nazev: 'Malířská barva', mnozstvi: nahoru(A * n / (h.vydatnost || 6)), mj: 'kg', q: 'malirsk barv',
@@ -3828,7 +3866,12 @@ const KALK = {
         r.push({ klic: 'folie', nazev: 'Zakrývací fólie', mnozstvi: nahoru((h.podlaha || A * 0.3) * 1.1), mj: 'm²', q: 'zakryvac foli', zaklad: 'podlaha + 10 %' });
         r.push({ klic: 'paska', nazev: 'Malířská páska', mnozstvi: nahoru((h.obvod || 0) * 2), mj: 'bm', q: 'malirsk pask', zaklad: 'u podlahy a stropu' });
       }
-      return { radky: r, prace: [{ klic: 'malovani', nazev: 'Malování', mj: 'm²', mnozstvi: zaok(A) }] };
+      if (h.opravy) r.push({ klic: 'tmel', nazev: 'Tmel / štuk na opravy', mnozstvi: nahoru(A * 0.15), mj: 'kg', q: 'tmel', zaklad: '0,15 kg/m²' });
+      if (h.pomucky) r.push({ klic: 'pomucky', nazev: 'Malířské pomůcky (váleček, štětec, tácek)', mnozstvi: 1, mj: 'sada', q: 'valecek', zaklad: 'na jednu zakázku' });
+      const prM = [{ klic: 'malovani', nazev: 'Malování', mj: 'm²', mnozstvi: zaok(A) }];
+      if (h.zakryti) prM.push({ klic: 'priprava', nazev: 'Zakrytí a příprava', mj: 'm²', mnozstvi: zaok(h.podlaha || A * 0.3) });
+      if (h.opravy) prM.push({ klic: 'opravyPrace', nazev: 'Vyspravení a vyhlazení', mj: 'm²', mnozstvi: zaok(A) });
+      return { radky: r, prace: prM };
     }
   },
 
@@ -3854,9 +3897,12 @@ const KALK = {
       { id: 'prorez', popis: 'Prořez', mj: '%', v: '10', profi: P, tip: '10 % rovně, 15 % diagonálně nebo členitě.' },
       { id: 'baleniM2', popis: 'm² v balení', mj: 'm²', v: '0', profi: P, tip: '0 = neznám. Jinak zaokrouhlím na celá balení.' },
       { id: 'penetrace', popis: 'Penetrace', typ: 'ano', v: '1' },
-      { id: 'sokl', popis: 'Sokl po obvodu', typ: 'ano', v: '0' }
+      { id: 'sokl', popis: 'Sokl po obvodu', typ: 'ano', v: '0' },
+      { id: 'silikon', popis: 'Silikon v rozích a u vany', typ: 'ano', v: '1', tip: 'Pružná spára v koutech, u podlahy, vany a sprchy – pro mokré prostory nutnost.' },
+      { id: 'listy', popis: 'Rohové a ukončovací lišty', mj: 'bm', v: '0', tip: 'Vnější rohy obkladu, ukončení nad obkladem, přechod dlažba/koberec.' },
+      { id: 'flex', popis: 'Flexibilní lepidlo (C2 S1)', typ: 'ano', v: '0', tip: 'Velkoformát, podlahové topení, venkovní plochy, koupelny nad podkladem se sádrokartonem.' }
     ],
-    jak: 'Plocha = součet ploch − odečty, dlažba navýšená o prořez.\nLepidlo = zub (mm) × 0,45 kg/m², oboustranně × 1,3.\nSpárovačka = (A + B) ÷ (A × B) × šířka spáry × tloušťka × 1,6 kg/m² (A, B v mm).\nKřížky = počet dlaždic + 10 %.\nPenetrace 0,15 l/m², sokl = obvod ploch.',
+    jak: 'Plocha = součet ploch − odečty, dlažba navýšená o prořez.\nLepidlo = zub (mm) × 0,45 kg/m², oboustranně × 1,3.\nSpárovačka = (A + B) ÷ (A × B) × šířka spáry × tloušťka × 1,6 kg/m² (A, B v mm).\nKřížky = počet dlaždic + 10 %.\nPenetrace 0,15 l/m², sokl = obvod ploch.\nSilikon: 1 kartuše (310 ml) na 10 bm spáry.\nLišty: zadaná délka + 5 %.',
     spocitej(h) {
       const A = h.plocha;
       if (!A) return null;
@@ -3871,7 +3917,7 @@ const KALK = {
       if (h.baleniM2 > 0) { const bal = nahoru(sPr / h.baleniM2); m2 = zaok(bal * h.baleniM2); zakl += `, ${bal} balení`; }
       r.push({ klic: 'material', nazev: 'Dlažba / obklad', mnozstvi: m2, mj: 'm²', q: null, zaklad: zakl });
       const lep = A * (h.zub || 8) * 0.45 * (h.oboustranne ? 1.3 : 1);
-      r.push({ klic: 'lepidlo', nazev: 'Lepidlo na obklady a dlažby', mnozstvi: nahoru(lep), mj: 'kg', q: 'lepidlo obklad',
+      r.push({ klic: 'lepidlo', nazev: h.flex ? 'Flexibilní lepidlo na obklady a dlažby' : 'Lepidlo na obklady a dlažby', mnozstvi: nahoru(lep), mj: 'kg', q: h.flex ? 'lepidlo flex' : 'lepidlo obklad',
         zaklad: `zub ${f3(h.zub || 8)} mm × 0,45 kg/m²${h.oboustranne ? ', oboustranně +30 %' : ''}` });
       if (h.kd && h.ksi && h.spara) {
         const a = h.kd * 10, b = h.ksi * 10;
@@ -3881,8 +3927,12 @@ const KALK = {
       if (ks) r.push({ klic: 'krizky', nazev: 'Spárovací křížky', mnozstvi: nahoru(ks * 1.1), mj: 'ks', q: 'krizk', zaklad: 'kus na dlaždici + 10 %' });
       if (h.penetrace) r.push({ klic: 'penetrace', nazev: 'Penetrace', mnozstvi: zaok(A * 0.15), mj: 'l', q: 'penetrac', zaklad: '0,15 l/m²' });
       if (h.sokl && h.obvod) r.push({ klic: 'sokl', nazev: 'Sokl', mnozstvi: nahoru(h.obvod * 1.05), mj: 'bm', q: null, zaklad: 'obvod + 5 %' });
-      const pr = [{ klic: 'pokladka', nazev: 'Pokládka dlažby / obkladu', mj: 'm²', mnozstvi: zaok(A) }];
+      if (h.silikon && h.obvod) r.push({ klic: 'silikon', nazev: 'Sanitární silikon (kartuše 310 ml)', mnozstvi: nahoru(h.obvod / 10), mj: 'ks', q: 'silikon sanit', zaklad: '1 kartuše na 10 bm spáry, obvod ploch' });
+      if (h.listy > 0) r.push({ klic: 'listy', nazev: 'Rohová / ukončovací lišta', mnozstvi: nahoru(h.listy * 1.05), mj: 'bm', q: 'list obklad', zaklad: 'zadaná délka + 5 %' });
+      const pr = [{ klic: 'pokladka', nazev: 'Pokládka dlažby / obkladu', mj: 'm²', mnozstvi: zaok(A) }, { klic: 'sparovani', nazev: 'Spárování', mj: 'm²', mnozstvi: zaok(A) }];
       if (h.sokl && h.obvod) pr.push({ klic: 'sokl', nazev: 'Pokládka soklu', mj: 'bm', mnozstvi: nahoru(h.obvod) });
+      if (h.silikon && h.obvod) pr.push({ klic: 'silikonovani', nazev: 'Silikonování spár', mj: 'bm', mnozstvi: nahoru(h.obvod) });
+      if (h.listy > 0) pr.push({ klic: 'montazListy', nazev: 'Montáž lišt', mj: 'bm', mnozstvi: nahoru(h.listy) });
       return { radky: r, prace: pr };
     }
   },
@@ -3899,11 +3949,13 @@ const KALK = {
       { id: 'vyskaSten', popis: 'Izolace na stěnách do výšky', mj: 'm', v: '0,3', tip: 'Vytažení na stěnu kolem celé místnosti.' },
       { id: 'sprcha', popis: 'Stěny sprchy navíc', mj: 'm²', v: '0', tip: 'Např. 2 stěny 0,9 m × 2 m = 3,6 m².' },
       { id: 'vrstvy', popis: 'Vrstvy stěrky', typ: 'volba', v: '2', volby: [['2', '2 vrstvy'], ['3', '3 vrstvy']] },
-      { id: 'spotreba', popis: 'Spotřeba na vrstvu', mj: 'kg/m²', v: '1,3', profi: P, tip: 'Podle výrobce, obvykle 1,2–1,5 kg/m².' },
+      { id: 'spotreba', popis: 'Spotřeba na vrstvu', mj: 'kg/m²', v: '1,5', profi: P, tip: 'Podle výrobce, obvykle 1,2–1,6 kg/m² na vrstvu (celkem 3–3,5 kg/m² při tloušťce 2 mm).' },
       { id: 'prostupy', popis: 'Prostupy (voda, odpad)', mj: 'ks', v: '3' },
-      { id: 'rohy', popis: 'Vnitřní rohy', mj: 'ks', v: '4', profi: P }
+      { id: 'rohy', popis: 'Vnitřní rohy', mj: 'ks', v: '4', profi: P },
+      { id: 'rohyVn', popis: 'Vnější rohy', mj: 'ks', v: '0', profi: P, tip: 'Např. zazdívka, výstupek nebo hrana vany.' },
+      { id: 'vpust', popis: 'Podlahové vpusti / žlaby', mj: 'ks', v: '0', tip: 'Každá vpust potřebuje manžetu nebo přírubu zalitou do hydroizolace.' }
     ],
-    jak: 'Plocha = podlaha + obvod × výška na stěnách + stěny sprchy.\nStěrka = plocha × vrstvy × spotřeba.\nPenetrace 0,2 l/m².\nPáska = obvod + svislé rohy (ve sprše do výšky 2 m).\nManžety = počet prostupů.',
+    jak: 'Plocha = podlaha + obvod × výška na stěnách + stěny sprchy.\nStěrka = plocha × vrstvy × spotřeba.\nPenetrace 0,2 l/m².\nPáska = obvod + svislé rohy (ve sprše do výšky 2 m).\nManžety = prostupy + vpusti.\nVnější rohy: 1 ks na roh.',
     spocitej(h) {
       if (!h.podlaha && !h.m2) return null;
       const A = h.podlaha + h.m2 + (h.obvod || 0) * (h.vyskaSten || 0) + (h.sprcha || 0);
@@ -3911,12 +3963,14 @@ const KALK = {
       const svisle = (h.rohy || 0) * (h.sprcha > 0 ? 2 : (h.vyskaSten || 0));
       return { radky: [
         { klic: 'penetrace', nazev: 'Penetrace', mnozstvi: zaok(A * 0.2), mj: 'l', q: 'penetrac', zaklad: '0,2 l/m²' },
-        { klic: 'sterka', nazev: 'Hydroizolační stěrka', mnozstvi: nahoru(A * vr * (h.spotreba || 1.3)), mj: 'kg', q: 'hydroizolac',
-          zaklad: `${f3(zaok(A))} m² × ${vr} vrstvy × ${f3(h.spotreba || 1.3)} kg` },
+        { klic: 'sterka', nazev: 'Hydroizolační stěrka', mnozstvi: nahoru(A * vr * (h.spotreba || 1.5)), mj: 'kg', q: 'hydroizolac',
+          zaklad: `${f3(zaok(A))} m² × ${vr} vrstvy × ${f3(h.spotreba || 1.5)} kg` },
         { klic: 'paska', nazev: 'Těsnicí páska', mnozstvi: nahoru(((h.obvod || 0) + svisle) * 1.1), mj: 'bm', q: 'tesnic pask', zaklad: 'obvod + svislé rohy, +10 %' },
-        ...(h.prostupy > 0 ? [{ klic: 'manzety', nazev: 'Těsnicí manžeta', mnozstvi: h.prostupy, mj: 'ks', q: 'manzet', zaklad: 'na každý prostup' }] : []),
-        ...(h.rohy > 0 ? [{ klic: 'rohy', nazev: 'Těsnicí roh vnitřní', mnozstvi: h.rohy, mj: 'ks', q: 'tesnic roh', zaklad: 'vnitřní rohy' }] : [])
-      ], prace: [{ klic: 'hydro', nazev: 'Hydroizolace', mj: 'm²', mnozstvi: zaok(A) }] };
+        ...(h.prostupy + h.vpust > 0 ? [{ klic: 'manzety', nazev: 'Těsnicí manžeta', mnozstvi: (h.prostupy || 0) + (h.vpust || 0), mj: 'ks', q: 'manzet', zaklad: 'na každý prostup a vpust' }] : []),
+        ...(h.rohy > 0 ? [{ klic: 'rohy', nazev: 'Těsnicí roh vnitřní', mnozstvi: h.rohy, mj: 'ks', q: 'tesnic roh', zaklad: 'vnitřní rohy' }] : []),
+        ...(h.rohyVn > 0 ? [{ klic: 'rohyVn', nazev: 'Těsnicí roh vnější', mnozstvi: h.rohyVn, mj: 'ks', q: 'tesnic roh vnejs', zaklad: 'vnější rohy' }] : [])
+      ], prace: [{ klic: 'hydro', nazev: 'Hydroizolace', mj: 'm²', mnozstvi: zaok(A) },
+        { klic: 'paskaPrace', nazev: 'Lepení těsnicích pásek a manžet', mj: 'bm', mnozstvi: nahoru(((h.obvod || 0) + svisle)) }] };
     }
   },
 
@@ -3928,17 +3982,18 @@ const KALK = {
     ],
     pole: [
       { id: 'tl', popis: 'Průměrná tloušťka', mj: 'mm', v: '5' },
-      { id: 'sp', popis: 'Spotřeba', mj: 'kg/m² na mm', v: '1,6', profi: P },
+      { id: 'sp', popis: 'Spotřeba', mj: 'kg/m² na mm', v: '1,6', profi: P, tip: 'Samonivelační stěrky 1,5–1,8 kg/m² na mm.' },
+      { id: 'rezerva', popis: 'Rezerva na nerovnosti a zbytky', mj: '%', v: '5', profi: P, tip: 'U hodně nerovného podkladu 10 %.' },
       { id: 'penetrace', popis: 'Penetrace', typ: 'ano', v: '1' },
       { id: 'paska', popis: 'Okrajová dilatační páska', typ: 'ano', v: '1' }
     ],
-    jak: 'Stěrka = plocha × tloušťka × spotřeba na mm.\nPenetrace 0,15 l/m², páska = obvod.',
+    jak: 'Stěrka = plocha × tloušťka × spotřeba na mm + rezerva.\nPenetrace 0,15 l/m², páska = obvod + 5 %.\nPod savé podklady (anhydrit, cementový potěr) penetrace před stěrkou, po zaschnutí vyzkoušej vlhkost.',
     spocitej(h) {
       const A = h.plocha; if (!A) return null;
       const r = [];
       if (h.penetrace) r.push({ klic: 'penetrace', nazev: 'Penetrace', mnozstvi: zaok(A * 0.15), mj: 'l', q: 'penetrac', zaklad: '0,15 l/m²' });
-      r.push({ klic: 'sterka', nazev: 'Samonivelační stěrka', mnozstvi: nahoru(A * (h.tl || 5) * (h.sp || 1.6)), mj: 'kg', q: 'samonivel',
-        zaklad: `${f3(zaok(A))} m² × ${f3(h.tl || 5)} mm × ${f3(h.sp || 1.6)} kg` });
+      r.push({ klic: 'sterka', nazev: 'Samonivelační stěrka', mnozstvi: nahoru(A * (h.tl || 5) * (h.sp || 1.6) * (1 + (h.rezerva || 0) / 100)), mj: 'kg', q: 'samonivel',
+        zaklad: `${f3(zaok(A))} m² × ${f3(h.tl || 5)} mm × ${f3(h.sp || 1.6)} kg, rezerva ${f3(h.rezerva || 0)} %` });
       if (h.paska && h.obvod) r.push({ klic: 'paska', nazev: 'Okrajová páska', mnozstvi: nahoru(h.obvod * 1.05), mj: 'bm', q: 'dilatac pask', zaklad: 'obvod + 5 %' });
       return { radky: r, prace: [{ klic: 'nivelace', nazev: 'Nivelace podlahy', mj: 'm²', mnozstvi: zaok(A) }] };
     }
@@ -3950,6 +4005,7 @@ const KALK = {
     sablony: [
       { n: 'Laminát', h: { baleniM2: '2,22', prorez: '7', podlozka: '1', folie: '1' } },
       { n: 'Vinyl click', h: { baleniM2: '2,2', prorez: '5', podlozka: '0', folie: '0' } },
+      { n: 'Vinyl lepený', h: { baleniM2: '0', prorez: '5', podlozka: '0', folie: '0', lepidlo: '1' } },
       { n: 'Diagonálně', h: { prorez: '12' } }
     ],
     pole: [
@@ -3958,9 +4014,10 @@ const KALK = {
       { id: 'podlozka', popis: 'Podložka', typ: 'ano', v: '1' },
       { id: 'folie', popis: 'Parozábrana na beton', typ: 'ano', v: '1' },
       { id: 'sokl', popis: 'Soklové lišty', typ: 'ano', v: '1' },
-      { id: 'dvere', popis: 'Dveře (přechodové lišty)', mj: 'ks', v: '1' }
+      { id: 'dvere', popis: 'Dveře (přechodové lišty)', mj: 'ks', v: '1' },
+      { id: 'lepidlo', popis: 'Lepidlo (lepený vinyl, parkety)', typ: 'ano', v: '0', tip: 'Pro lepené podlahy místo podložky. Spotřeba cca 0,35 kg/m².' }
     ],
-    jak: 'Podlaha = plocha × (1 + prořez), zaokrouhleno na celá balení.\nPodložka plocha + 5 %, fólie plocha + 15 % na přesahy.\nLišty = (obvod − 0,9 m na dveře) + 5 %.',
+    jak: 'Podlaha = plocha × (1 + prořez), zaokrouhleno na celá balení.\nPodložka plocha + 5 %, fólie plocha + 15 % na přesahy.\nLišty = (obvod − 0,9 m na dveře) + 5 %.\nLepidlo na vinyl: 0,35 kg/m².\nSokl: koncovky a rohy se přikoupí podle půdorysu.',
     spocitej(h) {
       const A = h.plocha; if (!A) return null;
       const sPr = A * (1 + (h.prorez || 0) / 100);
@@ -3969,6 +4026,7 @@ const KALK = {
       const r = [{ klic: 'podlaha', nazev: 'Podlaha', mnozstvi: m2, mj: 'm²', q: null, zaklad: zakl }];
       if (h.podlozka) r.push({ klic: 'podlozka', nazev: 'Podložka pod podlahu', mnozstvi: nahoru(A * 1.05), mj: 'm²', q: 'mirelon', zaklad: 'plocha + 5 %' });
       if (h.folie) r.push({ klic: 'folie', nazev: 'PE fólie parozábrana', mnozstvi: nahoru(A * 1.15), mj: 'm²', q: 'folie pe', zaklad: 'plocha + 15 % přesahy' });
+      if (h.lepidlo) r.push({ klic: 'lepidlo', nazev: 'Lepidlo na podlahy', mnozstvi: nahoru(A * 0.35), mj: 'kg', q: 'lepidlo vinyl', zaklad: '0,35 kg/m²' });
       const lista = Math.max(0, (h.obvod || 0) - 0.9 * (h.dvere || 0));
       if (h.sokl && lista) r.push({ klic: 'sokl', nazev: 'Soklová lišta', mnozstvi: nahoru(lista * 1.05), mj: 'bm', q: 'soklov list', zaklad: 'obvod bez dveří + 5 %' });
       if (h.dvere > 0) r.push({ klic: 'prechod', nazev: 'Přechodová lišta', mnozstvi: h.dvere, mj: 'ks', q: 'prechodov list', zaklad: '1 na dveře' });
@@ -3984,7 +4042,7 @@ const KALK = {
     sablony: [
       { n: 'Potěr 5 cm', h: { tloustka: '5', rezerva: '5', forma: 'pytle' }, q: { smes: 'poter' } },
       { n: 'Mazanina 10 cm', h: { tloustka: '10', rezerva: '5', forma: 'michany', kari: '1' } },
-      { n: 'Základový pas 40 cm', h: { tloustka: '40', rezerva: '10', forma: 'betonarna' } }
+      { n: 'Základový pas 40 cm', h: { tloustka: '40', rezerva: '10', forma: 'betonarna', ocel: '70', bedneni: '1' } }
     ],
     pole: [
       { id: 'tloustka', popis: 'Tloušťka', mj: 'cm', v: '5' },
@@ -3992,9 +4050,12 @@ const KALK = {
       { id: 'vydatnost', popis: 'Vydatnost pytle', mj: 'l', v: '12,5', profi: P, ukaz: h => h.forma === 'pytle', tip: 'Pytel 25 kg dá zhruba 12,5 l směsi.' },
       { id: 'rezerva', popis: 'Rezerva', mj: '%', v: '5', profi: P, tip: 'Nerovný podklad 10 %.' },
       { id: 'kari', popis: 'Kari síť', typ: 'ano', v: '0' },
-      { id: 'dilatace', popis: 'Okrajová páska', typ: 'ano', v: '0' }
+      { id: 'dilatace', popis: 'Okrajová páska', typ: 'ano', v: '0' },
+      { id: 'folie', popis: 'PE fólie pod desku / potěr', typ: 'ano', v: '0', tip: 'Separační vrstva proti odtoku vody z betonu. Plocha + 15 % přesahy.' },
+      { id: 'ocel', popis: 'Betonářská ocel', mj: 'kg/m³', v: '0', profi: P, tip: '0 = bez. Pas obvykle 60–100 kg/m³, deska 80–120 kg/m³.' },
+      { id: 'bedneni', popis: 'Bednění po obvodu', typ: 'ano', v: '0', ukaz: h => h.forma !== 'pytle', tip: 'Pro desky a pasy. Plocha = obvod × tloušťka.' }
     ],
-    jak: 'Objem = plocha × tloušťka + rezerva.\nPytle = objem v litrech ÷ vydatnost pytle.\nMíchaný C20/25 na 1 m³: 320 kg cementu, 0,65 m³ písku, 0,65 m³ štěrku, 160 l vody.\nKari síť plocha + 10 % přesahy.',
+    jak: 'Objem = plocha × tloušťka + rezerva.\nPytle = objem v litrech ÷ vydatnost pytle.\nMíchaný C20/25 na 1 m³: 320 kg cementu, 0,65 m³ písku, 0,65 m³ štěrku, 160 l vody.\nKari síť plocha + 10 % přesahy.\nBetonářská ocel: objem × zadané kg/m³ + 5 % zbytky.\nBednění: obvod × tloušťka.\nPísek a štěrk se v kamenivu přepočítají na tuny (1,6 t/m³).',
     spocitej(h) {
       const A = h.plocha; if (!A || !h.tloustka) return null;
       const V = A * h.tloustka / 100 * (1 + (h.rezerva || 0) / 100);
@@ -4008,7 +4069,14 @@ const KALK = {
       } else r.push({ klic: 'beton', nazev: 'Beton z betonárny', mnozstvi: Math.ceil(V * 4) / 4, mj: 'm³', q: null, zaklad: zakl + ', objednat po 0,25 m³' });
       if (h.kari) r.push({ klic: 'kari', nazev: 'Kari síť', mnozstvi: zaok(A * 1.1), mj: 'm²', q: 'kari sit', zaklad: 'plocha + 10 % přesahy' });
       if (h.dilatace && h.obvod) r.push({ klic: 'paska', nazev: 'Okrajová páska', mnozstvi: nahoru(h.obvod * 1.05), mj: 'bm', q: 'dilatac pask', zaklad: 'obvod' });
-      return { radky: r, prace: [{ klic: 'betonaz', nazev: 'Betonáž / potěr', mj: 'm²', mnozstvi: zaok(A) }] };
+      if (h.folie) r.push({ klic: 'folie', nazev: 'PE fólie', mnozstvi: nahoru(A * 1.15), mj: 'm²', q: 'folie pe', zaklad: 'plocha + 15 % přesahy' });
+      if (h.ocel > 0) r.push({ klic: 'ocel', nazev: 'Betonářská ocel', mnozstvi: nahoru(V * h.ocel * 1.05), mj: 'kg', q: 'betonarska ocel', zaklad: `${f3(zaok(V * 1000) / 1000)} m³ × ${f3(h.ocel)} kg/m³ + 5 %` });
+      if (h.bedneni && h.obvod && h.forma !== 'pytle') r.push({ klic: 'bedneni', nazev: 'Bednění', mnozstvi: zaok(h.obvod * h.tloustka / 100), mj: 'm²', q: 'bedneni', zaklad: `obvod ${f3(zaok(h.obvod))} m × ${f3(h.tloustka)} cm` });
+      const prB = [{ klic: 'betonaz', nazev: 'Betonáž / potěr', mj: 'm²', mnozstvi: zaok(A) },
+        { klic: 'betonazM3', nazev: 'Betonáž (podle objemu)', mj: 'm³', mnozstvi: zaok(V * 100) / 100 }];
+      if (h.bedneni && h.obvod && h.forma !== 'pytle') prB.push({ klic: 'bedneniPrace', nazev: 'Bednění a odbednění', mj: 'm²', mnozstvi: zaok(h.obvod * h.tloustka / 100) });
+      if (h.ocel > 0) prB.push({ klic: 'vyztuzovani', nazev: 'Vázání výztuže', mj: 'kg', mnozstvi: nahoru(V * h.ocel) });
+      return { radky: r, prace: prB };
     }
   },
 
@@ -4047,7 +4115,10 @@ const KALK = {
         const apu = h.otvory.reduce((s, o) => s + (2 * (o.v || 0) + (o.s || 0)) * (o.n || 0), 0);
         r.push({ klic: 'apu', nazev: 'Okenní APU lišta', mnozstvi: nahoru(apu), mj: 'bm', q: 'apu list', zaklad: 'napojení na okna' });
       }
-      return { radky: r, prace: [{ klic: 'zatepleni', nazev: 'Zateplení fasády', mj: 'm²', mnozstvi: zaok(A) }] };
+      const prF = [{ klic: 'zatepleni', nazev: 'Zateplení fasády', mj: 'm²', mnozstvi: zaok(A) },
+        { klic: 'leseni', nazev: 'Lešení (montáž, pronájem, demontáž)', mj: 'm²', mnozstvi: zaok(A + (h.plochaOtvoru || 0)) }];
+      if (h.obvodOtvoru > 0) prF.push({ klic: 'osteniF', nazev: 'Zateplení ostění a parapetů', mj: 'bm', mnozstvi: zaok(h.obvodOtvoru) });
+      return { radky: r, prace: prF };
     }
   }
 };
@@ -4232,28 +4303,41 @@ const SORT = {
     malta: ['Malty a suché směsi', ['malt', 'smes', 'zdic']],
     pena: ['Zdicí pěny a lepidla', ['pen', 'lepidl', 'zdic']],
     vyztuz: ['Výztuž zdiva', ['vyztuz', 'zdiv', 'armatur']],
-    preklad: ['Překlady', ['preklad', 'zdiv']] },
+    preklad: ['Překlady', ['preklad', 'zdiv']],
+    izolPod: ['Hydroizolace', ['hydroizol', 'izolac', 'pas', 'asfalt']],
+    maltaPrvni: ['Malty a suché směsi', ['malt', 'smes', 'zdic']] },
   sdk: { _: ['Suchá výstavba', ['sucha vystav', 'sadrokart', 'sdk']],
-    izolace: ['Izolace', ['izolac', 'mineral', 'vata', 'tepeln', 'zvuk']] },
+    izolace: ['Izolace', ['izolac', 'mineral', 'vata', 'tepeln', 'zvuk']],
+    rohovnik: ['Suchá výstavba', ['sucha vystav', 'sadrokart', 'sdk', 'profil', 'list']],
+    spojkaCD: ['Suchá výstavba', ['sucha vystav', 'sadrokart', 'sdk', 'profil']] },
   omitka: { _: ['Omítky a suché směsi', ['omitk', 'stuk', 'smes', 'malt']],
     penetrace: ['Penetrace', ['penetrac', 'nater', 'stavebni chem']],
     omitnik: ['Omítníky a profily', ['omitnik', 'omitk', 'profil', 'list']],
-    rohovnik: ['Omítníky a profily', ['rohov', 'omitk', 'profil', 'list']] },
-  malba: { _: ['Barvy a malířské potřeby', ['barv', 'nater', 'malir']] },
+    rohovnik: ['Omítníky a profily', ['rohov', 'omitk', 'profil', 'list']],
+    sit: ['Pletiva a sítě', ['pletiv', 'sitovin', 'perlink', 'omitk']] },
+  malba: { _: ['Barvy a malířské potřeby', ['barv', 'nater', 'malir']],
+    tmel: ['Tmely a štuky', ['tmel', 'stuk', 'glet', 'sterk', 'smes']] },
   plocha: { _: ['Obklady, dlažby a lepidla', ['obklad', 'dlazb', 'lepidl', 'sparov', 'keramik']],
     penetrace: ['Penetrace', ['penetrac', 'stavebni chem', 'obklad']],
-    sokl: ['Obklady a dlažby', ['obklad', 'dlazb', 'sokl', 'keramik']] },
+    sokl: ['Obklady a dlažby', ['obklad', 'dlazb', 'sokl', 'keramik']],
+    silikon: ['Silikony a tmely', ['silikon', 'tmel', 'stavebni chem']],
+    listy: ['Obkladové lišty', ['list', 'profil', 'obklad']] },
   hydro: { _: ['Hydroizolace', ['hydroizol', 'izolac', 'koupeln']],
-    penetrace: ['Penetrace', ['penetrac', 'hydroizol', 'stavebni chem']] },
+    penetrace: ['Penetrace', ['penetrac', 'hydroizol', 'stavebni chem']],
+    rohyVn: ['Hydroizolace', ['hydroizol', 'izolac', 'koupeln']] },
   nivelace: { _: ['Podlahové směsi', ['samoniv', 'nivel', 'podlah', 'sterk', 'smes']],
     penetrace: ['Penetrace', ['penetrac', 'podlah', 'stavebni chem']],
     paska: ['Podlahy a izolace', ['podlah', 'dilatac', 'izolac']] },
   podlaha: { _: ['Podlahy', ['podlah', 'lamin', 'vinyl']],
+    lepidlo: ['Lepidla na podlahy', ['lepidl', 'podlah', 'vinyl', 'stavebni chem']],
     folie: ['Fólie a izolace', ['foli', 'izolac', 'podlah']] },
   objem: { _: ['Beton a suché směsi', ['beton', 'cement', 'smes', 'malt']],
     pisek: ['Kamenivo', ['kameniv', 'pisek', 'sterk', 'sypk']],
     sterk: ['Kamenivo', ['kameniv', 'pisek', 'sterk', 'sypk']],
     kari: ['Výztuž a kari sítě', ['kari', 'vyztuz', 'armatur', 'ocel']],
+    ocel: ['Výztuž a kari sítě', ['vyztuz', 'armatur', 'ocel', 'betonarsk']],
+    bedneni: ['Bednění', ['bednen', 'bedn', 'desk']],
+    folie: ['Fólie a izolace', ['foli', 'izolac']],
     paska: ['Podlahy a izolace', ['podlah', 'dilatac', 'izolac']] },
   fasada: { _: ['Zateplení a fasády', ['zatepl', 'fasad', 'etics', 'kzs', 'polystyren', 'izolac', 'omitk']] }
 };

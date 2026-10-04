@@ -4120,6 +4120,253 @@ const KALK = {
       if (h.obvodOtvoru > 0) prF.push({ klic: 'osteniF', nazev: 'Zateplení ostění a parapetů', mj: 'bm', mnozstvi: zaok(h.obvodOtvoru) });
       return { radky: r, prace: prF };
     }
+  },
+
+  strecha: {
+    nazev: 'Střecha', ikona: '🏚️', rozmer: 'plocha', usek: 'Půdorys', otvory: true,
+    popisky: () => ['Délka (po hřebeni)', 'Šířka domu'],
+    otvoryNadpis: 'Odečíst (střešní okna, komín)',
+    otvoryVolby: [['0.78,1.18', 'Okno 78×118'], ['1.14,1.18', 'Okno 114×118'], ['0.6,0.6', 'Komín'], ['1,1', 'Vlastní']],
+    popis: 'Šikmé střechy z tašek, plechu nebo šindele. Zadej půdorys domu, sklon a přesah – skutečnou plochu střechy dopočítám.',
+    sablony: [
+      { n: 'Betonová taška 35°', h: { krytina: 'taska', sklon: '35', kusuM2: '10', lat: '33' } },
+      { n: 'Pálená taška 40°', h: { krytina: 'taska', sklon: '40', kusuM2: '13', lat: '32' } },
+      { n: 'Plech 20°', h: { krytina: 'plech', sklon: '20', lat: '35' } },
+      { n: 'Asfaltový šindel 30°', h: { krytina: 'sindel', sklon: '30' } }
+    ],
+    pole: [
+      { id: 'krytina', popis: 'Krytina', typ: 'volba', v: 'taska', volby: [['taska', 'Tašky'], ['plech', 'Plech'], ['sindel', 'Šindel']] },
+      { id: 'sklon', popis: 'Sklon střechy', mj: '°', v: '35', tip: 'Tašky obvykle od 22°, plech od 8–10°, šindel od 12°.' },
+      { id: 'pres', popis: 'Přesah přes zeď', mj: 'cm', v: '40', tip: 'Okapový a štítový přesah, obvykle 30–60 cm.' },
+      { id: 'kusuM2', popis: 'Tašek na m²', mj: 'ks', v: '10', ukaz: h => h.krytina === 'taska', tip: 'Podle výrobce: betonové cca 10, pálené drážkové 13–16.' },
+      { id: 'lat', popis: 'Rozteč latí', mj: 'cm', v: '33', ukaz: h => h.krytina !== 'sindel', tip: 'Tašky podle krytiny (30–35 cm), plech 35–40 cm. Šindel jde na celoplošné bednění.' },
+      { id: 'krokve', popis: 'Rozteč krokví', mj: 'cm', v: '90', profi: P, tip: 'Kontralatě vedou po každé krokvi.' },
+      { id: 'folie', popis: 'Podstřešní fólie', typ: 'ano', v: '1' },
+      { id: 'zlab', popis: 'Okapní žlaby a háky', typ: 'ano', v: '1' },
+      { id: 'hreben', popis: 'Délka hřebene a nároží', mj: 'm', v: '0', profi: P, tip: '0 = délka domu (sedlová střecha).' },
+      { id: 'okap', popis: 'Délka okapu', mj: 'm', v: '0', profi: P, tip: '0 = 2 × délka domu (sedlová střecha).' },
+      { id: 'prorez', popis: 'Prořez', mj: '%', v: '5', profi: P, tip: 'Valbová nebo členitá střecha 8–10 %.' }
+    ],
+    jak: 'Plocha střechy = (půdorys + obvod × přesah + 4 × přesah²) ÷ cos(sklon) − okna a komíny.\nTašky: plocha × kusů na m² + prořez; hřebenáč po 38 cm.\nPlech: plocha + 10 % na přesahy a ořezy; šindel: plocha + 10 %, na celoplošné bednění (+8 %).\nLatě: plocha ÷ rozteč + 5 %, kontralatě: plocha ÷ rozteč krokví + 5 %.\nPodstřešní fólie: plocha + 15 % přesahy.\nŽlab = délka okapu, hák každých 60 cm.',
+    spocitej(h) {
+      if (!h.podlaha) return null;
+      const cos = Math.cos(Math.min(75, Math.max(0, h.sklon || 35)) * Math.PI / 180), pr = (h.pres || 0) / 100;
+      const A = Math.max(0, (h.podlaha + h.obvod * pr + 4 * pr * pr) / cos - h.plochaOtvoru);
+      const heb = h.hreben > 0 ? h.hreben : h.delka, okap = h.okap > 0 ? h.okap : 2 * h.delka;
+      const z0 = `střecha ${f3(zaok(A))} m² (sklon ${f3(h.sklon)}°, přesah ${f3(h.pres)} cm)`;
+      const r = [];
+      if (h.krytina === 'taska') {
+        r.push({ klic: 'krytina', nazev: 'Střešní tašky', mnozstvi: nahoru(A * (h.kusuM2 || 10) * (1 + (h.prorez || 0) / 100)), mj: 'ks', q: null, zaklad: `${z0}, ${f3(h.kusuM2 || 10)} ks/m², prořez ${f3(h.prorez || 0)} %` });
+        if (heb > 0) r.push({ klic: 'hrebenac', nazev: 'Hřebenáč (taška hřebenová)', mnozstvi: nahoru(heb / 0.38), mj: 'ks', q: null, zaklad: `hřeben ${f3(zaok(heb))} m ÷ 0,38 m` });
+      } else if (h.krytina === 'plech') {
+        r.push({ klic: 'krytina', nazev: 'Plechová krytina', mnozstvi: nahoru(A * 1.1), mj: 'm²', q: null, zaklad: z0 + ', +10 % přesahy a ořez' });
+        if (heb > 0) r.push({ klic: 'hrebenac', nazev: 'Hřebenáč plechový', mnozstvi: nahoru(heb * 1.05), mj: 'bm', q: null, zaklad: 'délka hřebene + 5 %' });
+      } else {
+        r.push({ klic: 'bedneni', nazev: 'Bednění (OSB / prkna)', mnozstvi: nahoru(A * 1.08), mj: 'm²', q: 'osb', zaklad: z0 + ', +8 %' });
+        r.push({ klic: 'krytina', nazev: 'Asfaltový šindel', mnozstvi: nahoru(A * 1.1), mj: 'm²', q: 'sindel', zaklad: z0 + ', +10 % ořez' });
+        if (heb > 0) r.push({ klic: 'hrebenac', nazev: 'Hřebenový šindel', mnozstvi: nahoru(heb * 1.05), mj: 'bm', q: 'hrebenac sindel', zaklad: 'délka hřebene + 5 %' });
+      }
+      if (h.folie) r.push({ klic: 'folie', nazev: 'Podstřešní fólie', mnozstvi: nahoru(A * 1.15), mj: 'm²', q: 'podstresni foli', zaklad: 'plocha + 15 % přesahy' });
+      if (h.krytina !== 'sindel') r.push({ klic: 'late', nazev: 'Střešní latě', mnozstvi: nahoru(A / ((h.lat || 33) / 100) * 1.05), mj: 'bm', q: 'late', zaklad: `rozteč ${f3(h.lat || 33)} cm, +5 %` });
+      r.push({ klic: 'kontralate', nazev: 'Kontralatě', mnozstvi: nahoru(A / ((h.krokve || 90) / 100) * 1.05), mj: 'bm', q: 'late', zaklad: `rozteč krokví ${f3(h.krokve || 90)} cm, +5 %` });
+      if (h.zlab && okap > 0) {
+        r.push({ klic: 'zlab', nazev: 'Okapní žlab', mnozstvi: nahoru(okap * 1.05), mj: 'bm', q: 'zlab', zaklad: `okap ${f3(zaok(okap))} m + 5 %` });
+        r.push({ klic: 'hak', nazev: 'Hák žlabu', mnozstvi: nahoru(okap / 0.6) + 1, mj: 'ks', q: 'hak zlab', zaklad: 'každých 60 cm' });
+      }
+      const pr2 = [{ klic: 'pokryvani', nazev: 'Pokrývání střechy', mj: 'm²', mnozstvi: zaok(A) }, { klic: 'latovani', nazev: h.krytina === 'sindel' ? 'Bednění střechy' : 'Latování a kontralatě', mj: 'm²', mnozstvi: zaok(A) }];
+      if (h.folie) pr2.push({ klic: 'foliePrace', nazev: 'Položení podstřešní fólie', mj: 'm²', mnozstvi: zaok(A) });
+      if (heb > 0) pr2.push({ klic: 'hrebenPrace', nazev: 'Hřeben a nároží', mj: 'bm', mnozstvi: zaok(heb) });
+      if (h.zlab && okap > 0) pr2.push({ klic: 'zlabPrace', nazev: 'Montáž žlabů', mj: 'bm', mnozstvi: zaok(okap) });
+      return { radky: r, prace: pr2 };
+    }
+  },
+
+  podkrovi: {
+    nazev: 'Zateplení podkroví', ikona: '🌡️', rozmer: 'plocha', usek: 'Šikmina', otvory: true,
+    popisky: () => ['Délka', 'Šířka (po krokvi)'],
+    otvoryNadpis: 'Odečíst (střešní okno, komín)',
+    otvoryVolby: [['0.78,1.18', 'Okno 78×118'], ['1.14,1.18', 'Okno 114×118'], ['0.6,0.6', 'Komín'], ['1,1', 'Vlastní']],
+    popis: 'Izolace šikmé střechy zevnitř – vata mezi krokve, případně druhá vrstva pod krokve, parozábrana a lepicí pásky.',
+    sablony: [
+      { n: 'Vata 200 mm', h: { tl: '20', tl2: '0' } },
+      { n: '160 + 60 křížem', h: { tl: '16', tl2: '6' } },
+      { n: '240 + 60 křížem', h: { tl: '24', tl2: '6' } }
+    ],
+    pole: [
+      { id: 'tl', popis: 'Izolace mezi krokve', mj: 'cm', v: '20', tip: 'Podle výšky krokví; pro nízkoenergetický dům 24 cm a víc.' },
+      { id: 'tl2', popis: 'Druhá vrstva pod krokve', mj: 'cm', v: '0', tip: '0 = bez druhé vrstvy. Překrývá krokve a snižuje tepelné mosty.' },
+      { id: 'parozabrana', popis: 'Parozábrana', typ: 'ano', v: '1' },
+      { id: 'paska', popis: 'Lepicí a těsnicí pásky', typ: 'ano', v: '1' },
+      { id: 'prorez', popis: 'Prořez', mj: '%', v: '5', profi: P, tip: 'Vata se do rozteče krokví řeže s přesahem; nerovné krokve 8–10 %.' }
+    ],
+    jak: 'Plocha = součet šikmin − okna a komíny.\nVata = plocha + prořez (druhá vrstva stejně).\nParozábrana = plocha + 15 % přesahy.\nPáska = 0,7 bm/m² na spoje + obvod na napojení.',
+    spocitej(h) {
+      const A = h.plocha; if (!A) return null;
+      const pr = 1 + (h.prorez || 0) / 100;
+      const r = [{ klic: 'vata', nazev: `Izolace mezi krokve ${f3(h.tl || 20)} cm`, mnozstvi: zaok(A * pr), mj: 'm²', q: 'vata', zaklad: `${f3(zaok(A))} m² + prořez ${f3(h.prorez || 0)} %` }];
+      if (h.tl2 > 0) r.push({ klic: 'vata2', nazev: `Izolace pod krokve ${f3(h.tl2)} cm`, mnozstvi: zaok(A * pr), mj: 'm²', q: 'vata', zaklad: 'druhá vrstva přes krokve' });
+      if (h.parozabrana) r.push({ klic: 'parozabrana', nazev: 'Parozábrana', mnozstvi: nahoru(A * 1.15), mj: 'm²', q: 'parozabran', zaklad: 'plocha + 15 % přesahy' });
+      if (h.paska) r.push({ klic: 'paska', nazev: 'Lepicí páska na parozábranu', mnozstvi: nahoru(A * 0.7 + (h.obvod || 0)), mj: 'bm', q: 'pask parozabran', zaklad: '0,7 bm/m² + obvod' });
+      return { radky: r, prace: [{ klic: 'izolace', nazev: 'Montáž izolace', mj: 'm²', mnozstvi: zaok(A) }].concat(h.parozabrana ? [{ klic: 'parozabranaPrace', nazev: 'Montáž parozábrany', mj: 'm²', mnozstvi: zaok(A) }] : []) };
+    }
+  },
+
+  zamkova: {
+    nazev: 'Zámková dlažba', ikona: '🛣️', rozmer: 'plocha', usek: 'Plocha', otvory: true,
+    otvoryNadpis: 'Odečíst (šachta, sloup, záhon)',
+    otvoryVolby: [['0.6,0.6', 'Šachta 60'], ['1,1', 'Vlastní']],
+    popis: 'Chodníky, příjezdy a terasy – dlažba, podsyp, podkladní vrstva, obrubníky, geotextilie i výkop.',
+    sablony: [
+      { n: 'Chodník 6 cm', h: { tl: '6', lozeni: '4', podklad: '15' } },
+      { n: 'Příjezd 8 cm', h: { tl: '8', lozeni: '4', podklad: '25' } },
+      { n: 'Terasa 4 cm', h: { tl: '4', lozeni: '3', podklad: '10', obrubniky: '0' } }
+    ],
+    pole: [
+      { id: 'tl', popis: 'Tloušťka dlažby', mj: 'cm', v: '6', tip: 'Pochozí 4–6 cm, pojízdná osobním autem 8 cm.' },
+      { id: 'lozeni', popis: 'Lože (drť 4/8)', mj: 'cm', v: '4' },
+      { id: 'podklad', popis: 'Podkladní vrstva (0/32)', mj: 'cm', v: '15', tip: 'Chodník 10–15 cm, příjezd 20–30 cm hutněné vrstvy.' },
+      { id: 'geo', popis: 'Geotextilie', typ: 'ano', v: '1' },
+      { id: 'obrubniky', popis: 'Obrubníky po obvodu', typ: 'ano', v: '1' },
+      { id: 'sparovaci', popis: 'Písek do spár', typ: 'ano', v: '1' },
+      { id: 'prorez', popis: 'Prořez', mj: '%', v: '5', profi: P, tip: 'Rovné plochy 3–5 %, oblouky a složitý tvar 8–12 %.' },
+      { id: 'zhutneni', popis: 'Zhutnění podkladu', mj: '%', v: '10', profi: P, tip: 'Rezerva kameniva na slehnutí.' }
+    ],
+    jak: 'Dlažba = plocha + prořez.\nLože: plocha × tloušťka × 1,6 t/m³ + zhutnění.\nPodklad: plocha × tloušťka × 2,0 t/m³ + zhutnění.\nGeotextilie: plocha + 15 %.\nObrubník: obvod + 2 %, beton pod obrubník 30 l na bm.\nPísek do spár: 1,5 kg/m².\nVýkop = plocha × (dlažba + lože + podklad).',
+    spocitej(h) {
+      const A = h.plocha; if (!A) return null;
+      const hu = 1 + (h.zhutneni || 0) / 100;
+      const r = [{ klic: 'dlazba', nazev: 'Zámková dlažba', mnozstvi: zaok(A * (1 + (h.prorez || 0) / 100)), mj: 'm²', q: null, zaklad: `${f3(zaok(A))} m² + prořez ${f3(h.prorez || 0)} %` },
+        { klic: 'lozeni', nazev: 'Drť 4/8 do lože', mnozstvi: zaok(A * (h.lozeni || 4) / 100 * 1.6 * hu), mj: 't', q: 'drt 4 8', zaklad: `${f3(h.lozeni || 4)} cm × 1,6 t/m³ + ${f3(h.zhutneni || 0)} %` },
+        { klic: 'podklad', nazev: 'Štěrkodrť 0/32 – podklad', mnozstvi: zaok(A * (h.podklad || 15) / 100 * 2 * hu), mj: 't', q: 'sterkodrt 0 32', zaklad: `${f3(h.podklad || 15)} cm × 2,0 t/m³ + ${f3(h.zhutneni || 0)} %` }];
+      if (h.geo) r.push({ klic: 'geo', nazev: 'Geotextilie', mnozstvi: nahoru(A * 1.15), mj: 'm²', q: 'geotextili', zaklad: 'plocha + 15 %' });
+      if (h.obrubniky && h.obvod) {
+        r.push({ klic: 'obrubnik', nazev: 'Obrubník', mnozstvi: nahoru(h.obvod * 1.02), mj: 'bm', q: 'obrubnik', zaklad: 'obvod + 2 %' });
+        r.push({ klic: 'betonObr', nazev: 'Beton pod obrubníky (pytel)', mnozstvi: nahoru(h.obvod * 30 / 12.5), mj: 'ks', q: 'beton smes', zaklad: '30 l na bm, pytel 12,5 l' });
+      }
+      if (h.sparovaci) r.push({ klic: 'pisek', nazev: 'Písek do spár', mnozstvi: nahoru(A * 1.5), mj: 'kg', q: 'pisek spar', zaklad: '1,5 kg/m²' });
+      const vykop = zaok(A * ((h.tl || 6) + (h.lozeni || 4) + (h.podklad || 15)) / 100);
+      const pr = [{ klic: 'vykop', nazev: 'Výkop a odvoz zeminy', mj: 'm³', mnozstvi: vykop }, { klic: 'zhutneni', nazev: 'Úprava a zhutnění podkladu', mj: 'm²', mnozstvi: zaok(A) },
+        { klic: 'pokladka', nazev: 'Pokládka zámkové dlažby', mj: 'm²', mnozstvi: zaok(A) }];
+      if (h.obrubniky && h.obvod) pr.push({ klic: 'obrubnikPrace', nazev: 'Osazení obrubníků', mj: 'bm', mnozstvi: nahoru(h.obvod) });
+      return { radky: r, prace: pr };
+    }
+  },
+
+  skladba: {
+    nazev: 'Skladba podlahy', ikona: '🧊', rozmer: 'plocha', usek: 'Místnost', otvory: false,
+    popis: 'Plovoucí podlaha na zemině nebo stropu: hydroizolace, polystyren, fólie, okrajová páska, kari síť a cementový potěr.',
+    sablony: [
+      { n: 'EPS 50 + potěr 50', h: { tlEps: '5', tlPoter: '5', hydro: '0' } },
+      { n: 'EPS 100 + potěr 60', h: { tlEps: '10', tlPoter: '6', hydro: '1' } },
+      { n: 'Jen potěr 50', h: { tlEps: '0', tlPoter: '5', hydro: '0' } }
+    ],
+    pole: [
+      { id: 'tlEps', popis: 'Polystyren EPS', mj: 'cm', v: '5', tip: '0 = bez tepelné izolace. Pod potěr na zemině běžně EPS 100 / 150.' },
+      { id: 'tlPoter', popis: 'Tloušťka potěru', mj: 'cm', v: '5' },
+      { id: 'hydro', popis: 'Hydroizolace proti zemní vlhkosti', typ: 'ano', v: '0', tip: 'Asfaltový pás nebo izolace na betonové desce nad terénem.' },
+      { id: 'folie', popis: 'PE fólie nad izolantem', typ: 'ano', v: '1' },
+      { id: 'okraj', popis: 'Okrajová dilatační páska', typ: 'ano', v: '1' },
+      { id: 'kari', popis: 'Kari síť', typ: 'ano', v: '0' },
+      { id: 'vydatnost', popis: 'Vydatnost pytle potěru', mj: 'l', v: '12,5', profi: P },
+      { id: 'rezerva', popis: 'Rezerva potěru', mj: '%', v: '5', profi: P }
+    ],
+    jak: 'Hydroizolace a fólie: plocha + 15 % přesahy.\nPolystyren: plocha + 3 %.\nOkrajová páska: obvod + 5 %.\nPotěr: plocha × tloušťka + rezerva, pytel dá cca 12,5 l.\nKari: plocha + 10 %.',
+    spocitej(h) {
+      const A = h.plocha; if (!A) return null;
+      const r = [];
+      if (h.hydro) r.push({ klic: 'hydro', nazev: 'Hydroizolační pás', mnozstvi: nahoru(A * 1.15), mj: 'm²', q: 'hydroizolac pas', zaklad: 'plocha + 15 % přesahy' });
+      if (h.tlEps > 0) r.push({ klic: 'eps', nazev: `Polystyren EPS ${f3(h.tlEps * 10)} mm`, mnozstvi: zaok(A * 1.03), mj: 'm²', q: 'eps podlah', zaklad: 'plocha + 3 %' });
+      if (h.folie) r.push({ klic: 'folie', nazev: 'PE fólie', mnozstvi: nahoru(A * 1.15), mj: 'm²', q: 'folie pe', zaklad: 'plocha + 15 % přesahy' });
+      if (h.okraj && h.obvod) r.push({ klic: 'okraj', nazev: 'Okrajová dilatační páska', mnozstvi: nahoru(h.obvod * 1.05), mj: 'bm', q: 'dilatac pask', zaklad: 'obvod + 5 %' });
+      if (h.kari) r.push({ klic: 'kari', nazev: 'Kari síť', mnozstvi: zaok(A * 1.1), mj: 'm²', q: 'kari sit', zaklad: 'plocha + 10 %' });
+      if (h.tlPoter > 0) r.push({ klic: 'poter', nazev: 'Cementový potěr (pytel)', mnozstvi: nahoru(A * h.tlPoter / 100 * 1000 * (1 + (h.rezerva || 0) / 100) / (h.vydatnost || 12.5)), mj: 'ks', q: 'poter',
+        zaklad: `${f3(zaok(A))} m² × ${f3(h.tlPoter)} cm + ${f3(h.rezerva || 0)} %, ${f3(h.vydatnost || 12.5)} l z pytle` });
+      const pr = [];
+      if (h.hydro) pr.push({ klic: 'hydroPrace', nazev: 'Položení hydroizolace', mj: 'm²', mnozstvi: zaok(A) });
+      if (h.tlEps > 0) pr.push({ klic: 'izolacePrace', nazev: 'Položení izolace a fólie', mj: 'm²', mnozstvi: zaok(A) });
+      if (h.tlPoter > 0) pr.push({ klic: 'poterPrace', nazev: 'Potěr (příprava, litý / zpracování)', mj: 'm²', mnozstvi: zaok(A) });
+      return { radky: r, prace: pr };
+    }
+  },
+
+  elektro: {
+    nazev: 'Elektroinstalace', ikona: '🔌', rozmer: 'plocha', usek: 'Byt / patro', otvory: false,
+    popisky: () => ['Délka', 'Šířka'],
+    popis: 'Rozvody v bytě nebo domku: kabely, krabice, přístroje, svorky a rýhování. Plocha slouží k odhadu délek kabelů; počty bodů zadej podle projektu.',
+    sablony: [
+      { n: 'Garsonka', h: { zas: '8', vyp: '4', sv: '5', sporak: '1', okruhy: '6' } },
+      { n: 'Byt 3+kk', h: { zas: '22', vyp: '9', sv: '12', sporak: '1', okruhy: '10' } },
+      { n: 'Rodinný dům', h: { zas: '45', vyp: '20', sv: '28', sporak: '1', okruhy: '18' } }
+    ],
+    pole: [
+      { id: 'zas', popis: 'Zásuvky 230 V', mj: 'ks', v: '10', tip: 'Jednoduché i dvojité počítej jako 1 bod.' },
+      { id: 'vyp', popis: 'Vypínače a přepínače', mj: 'ks', v: '5' },
+      { id: 'sv', popis: 'Světelné body', mj: 'ks', v: '6' },
+      { id: 'sporak', popis: 'Silové vývody 400 V (sporák, trouba, ohřev)', mj: 'ks', v: '1' },
+      { id: 'okruhy', popis: 'Okruhy – jističe v rozvaděči', mj: 'ks', v: '8' },
+      { id: 'rysy', popis: 'Zasekávání rýh ve zdi', typ: 'ano', v: '1', tip: 'Odečti, pokud vedeš kabely podlahou, podhledem nebo v SDK.' },
+      { id: 'dlBod', popis: 'Průměrná délka kabelu na bod', mj: 'm', v: '0', profi: P, tip: '0 = odhad z plochy. Typicky 6–10 m včetně svislic.' },
+      { id: 'rezerva', popis: 'Rezerva kabelů', mj: '%', v: '10', profi: P }
+    ],
+    jak: 'Délka na bod = 3 + 0,6 × √plocha (m), nebo zadaná hodnota.\nCYKY 3×2,5: zásuvky; CYKY 5×2,5: silové vývody 400 V; CYKY 3×1,5: světla + vypínače (+2,5 m svislice).\nKrabice KU 68: zásuvky + vypínače + světla; rozvodné krabice: okruhy.\nSvorky: 3 ks na bod. Přístroje a rámečky: zásuvky + vypínače.\nRýhy: 60 % délky kabelů.',
+    spocitej(h) {
+      const body = (h.zas || 0) + (h.vyp || 0) + (h.sv || 0) + (h.sporak || 0);
+      if (!body) return null;
+      const A = h.plocha;
+      const bod = h.dlBod > 0 ? h.dlBod : 3 + 0.6 * Math.sqrt(A || 40);
+      const rez = 1 + (h.rezerva || 0) / 100;
+      const cyky25 = (h.zas || 0) * bod * rez, cyky5 = (h.sporak || 0) * bod * rez, cyky15 = ((h.sv || 0) * bod + (h.vyp || 0) * 2.5) * rez;
+      const z0 = `${f3(zaok(bod))} m na bod, rezerva ${f3(h.rezerva || 0)} %`;
+      const r = [];
+      if (cyky25) r.push({ klic: 'cyky25', nazev: 'Kabel CYKY 3×2,5', mnozstvi: nahoru(cyky25), mj: 'bm', q: 'cyky 3 2 5', zaklad: `${h.zas} zásuvek, ${z0}` });
+      if (cyky5) r.push({ klic: 'cyky5', nazev: 'Kabel CYKY 5×2,5', mnozstvi: nahoru(cyky5), mj: 'bm', q: 'cyky 5 2 5', zaklad: `${h.sporak} silových vývodů, ${z0}` });
+      if (cyky15) r.push({ klic: 'cyky15', nazev: 'Kabel CYKY 3×1,5', mnozstvi: nahoru(cyky15), mj: 'bm', q: 'cyky 3 1 5', zaklad: `${h.sv} světel a ${h.vyp} vypínačů, ${z0}` });
+      const kr = (h.zas || 0) + (h.vyp || 0) + (h.sv || 0);
+      if (kr) r.push({ klic: 'krabice', nazev: 'Krabice přístrojová KU 68', mnozstvi: kr + (h.sporak || 0), mj: 'ks', q: 'krabice ku 68', zaklad: 'zásuvky + vypínače + světla + silové vývody' });
+      if (h.okruhy > 0) r.push({ klic: 'rozvodna', nazev: 'Krabice rozvodná', mnozstvi: nahoru(h.okruhy * 1.5), mj: 'ks', q: 'krabice rozvodn', zaklad: '1,5 ks na okruh' });
+      r.push({ klic: 'svorky', nazev: 'Svorky (Wago)', mnozstvi: body * 3, mj: 'ks', q: 'svork wago', zaklad: '3 ks na bod' });
+      if (h.zas > 0) r.push({ klic: 'zasuvky', nazev: 'Zásuvka 230 V (přístroj + rámeček)', mnozstvi: h.zas, mj: 'ks', q: 'zasuvk', zaklad: 'zadaný počet' });
+      if (h.vyp > 0) r.push({ klic: 'vypinace', nazev: 'Vypínač / přepínač (přístroj + rámeček)', mnozstvi: h.vyp, mj: 'ks', q: 'vypinac', zaklad: 'zadaný počet' });
+      if (h.okruhy > 0) r.push({ klic: 'jistice', nazev: 'Jistič', mnozstvi: h.okruhy, mj: 'ks', q: 'jistic', zaklad: '1 na okruh' });
+      const km = cyky25 + cyky5 + cyky15;
+      const pr = [{ klic: 'kabely', nazev: 'Tažení a ukládání kabelů', mj: 'bm', mnozstvi: nahoru(km) }, { klic: 'prstroje', nazev: 'Montáž přístrojů a krabic', mj: 'ks', mnozstvi: body + kr }];
+      if (h.rysy) { r.push({ klic: 'sadra', nazev: 'Sádra / malta na zapravení rýh', mnozstvi: nahoru(km * 0.6 * 1.5), mj: 'kg', q: 'sadra', zaklad: '60 % kabelů v rýze × 1,5 kg/bm' }); pr.push({ klic: 'rysy', nazev: 'Drážkování a zapravení rýh', mj: 'bm', mnozstvi: nahoru(km * 0.6) }); }
+      if (h.okruhy > 0) pr.push({ klic: 'rozvadec', nazev: 'Osazení a zapojení rozvaděče', mj: 'okruh', mnozstvi: h.okruhy });
+      return { radky: r, prace: pr };
+    }
+  },
+
+  bourani: {
+    nazev: 'Bourání a suť', ikona: '🔨', rozmer: 'steny', usek: 'Stěna', otvory: true,
+    popis: 'Bourání příček a zdí – objem a hmotnost sutě, počet kontejnerů a práce s odvozem.',
+    sablony: [
+      { n: 'Cihelná příčka 10', h: { tl: '10', mat: 'cihla' } },
+      { n: 'Cihelná zeď 30', h: { tl: '30', mat: 'cihla' } },
+      { n: 'Pórobeton 15', h: { tl: '15', mat: 'porobeton' } },
+      { n: 'Beton 20', h: { tl: '20', mat: 'beton' } },
+      { n: 'Příčka SDK', h: { tl: '10', mat: 'sdk' } }
+    ],
+    pole: [
+      { id: 'tl', popis: 'Tloušťka zdi', mj: 'cm', v: '15' },
+      { id: 'mat', popis: 'Materiál', typ: 'volba', v: 'cihla', volby: [['cihla', 'Cihly'], ['porobeton', 'Pórobeton'], ['beton', 'Beton'], ['sdk', 'Sádrokarton']] },
+      { id: 'kontejner', popis: 'Velikost kontejneru', typ: 'volba', v: '5', volby: [['3', '3 m³'], ['5', '5 m³'], ['7', '7 m³']] },
+      { id: 'omitka', popis: 'Včetně omítky', typ: 'ano', v: '1', tip: 'U cihel a pórobetonu přidá ~ 3 cm omítky.', ukaz: h => h.mat === 'cihla' || h.mat === 'porobeton' },
+      { id: 'pytle', popis: 'Pytle na suť (vynášení)', typ: 'ano', v: '0', tip: 'Pro ruční vynášení z patra, 25 l pytel.' }
+    ],
+    jak: 'Objem zdi = plocha × tloušťka (+ 3 cm omítky u cihel a pórobetonu).\nHmotnost: cihla 1 600, pórobeton 600, beton 2 400, SDK 700 kg/m³.\nObjem sutě po rozbourání = objem × kypření (1,5–2,0).\nKontejnery: podle objemu (využití 90 %) i nosnosti 1 t/m³ – platí přísnější.',
+    spocitej(h) {
+      const A = h.plocha; if (!A) return null;
+      const M = { cihla: [1600, 1.5], porobeton: [600, 1.5], beton: [2400, 1.6], sdk: [700, 2.0] }[h.mat] || [1600, 1.5];
+      const tl = (h.tl || 15) + (h.omitka && (h.mat === 'cihla' || h.mat === 'porobeton') ? 3 : 0);
+      const V = A * tl / 100, t = V * M[0] / 1000, sut = V * M[1];
+      const k = Number(h.kontejner || 5);
+      const poObjemu = nahoru(sut / (k * 0.9)), poHmot = nahoru(t / k);
+      const r = [{ klic: 'kontejner', nazev: `Kontejner na suť ${k} m³`, mnozstvi: Math.max(1, poObjemu, poHmot), mj: 'ks', q: null,
+        zaklad: `zeď ${f3(zaok(V))} m³ → suť ${f3(zaok(sut))} m³, ${f3(zaok(t))} t (objem ${poObjemu} ks, hmotnost ${poHmot} ks)` }];
+      if (h.pytle) r.push({ klic: 'pytle', nazev: 'Pytel na suť', mnozstvi: nahoru(sut / 0.025), mj: 'ks', q: 'pytel sut', zaklad: `${f3(zaok(sut))} m³ ÷ 25 l` });
+      return { radky: r, prace: [{ klic: 'bourani', nazev: 'Bourání', mj: 'm²', mnozstvi: zaok(A) }, { klic: 'bouraniM3', nazev: 'Bourání (podle objemu)', mj: 'm³', mnozstvi: zaok(V) },
+        { klic: 'vynaseni', nazev: 'Vynášení a nakládka sutě', mj: 'm³', mnozstvi: zaok(sut) }, { klic: 'odvoz', nazev: 'Odvoz a likvidace sutě', mj: 't', mnozstvi: zaok(t) }] };
+    }
   }
 };
 /* =====================================================================
@@ -4339,6 +4586,34 @@ const SORT = {
     bedneni: ['Bednění', ['bednen', 'bedn', 'desk']],
     folie: ['Fólie a izolace', ['foli', 'izolac']],
     paska: ['Podlahy a izolace', ['podlah', 'dilatac', 'izolac']] },
+  strecha: { _: ['Střechy a krytiny', ['strech', 'krytin', 'tasek', 'tasky', 'plech']],
+    late: ['Řezivo', ['rezivo', 'late', 'drev', 'hranol']],
+    kontralate: ['Řezivo', ['rezivo', 'late', 'drev', 'hranol']],
+    folie: ['Fólie a izolace', ['foli', 'izolac', 'strech']],
+    bedneni: ['Desky a bednění', ['osb', 'desk', 'bedn', 'drev']],
+    zlab: ['Okapy a žlaby', ['zlab', 'okap', 'klempir']],
+    hak: ['Okapy a žlaby', ['zlab', 'okap', 'klempir']] },
+  podkrovi: { _: ['Izolace', ['izolac', 'mineral', 'vata', 'tepeln']],
+    parozabrana: ['Fólie a izolace', ['foli', 'parozabr', 'izolac']],
+    paska: ['Fólie a izolace', ['pask', 'foli', 'izolac']] },
+  zamkova: { _: ['Zámková dlažba a zahrada', ['zamkov', 'dlazb', 'betonov', 'zahrad']],
+    lozeni: ['Kamenivo', ['kameniv', 'drt', 'sterk', 'sypk']],
+    podklad: ['Kamenivo', ['kameniv', 'drt', 'sterk', 'sypk']],
+    geo: ['Geotextilie', ['geotextili', 'foli', 'izolac']],
+    obrubnik: ['Obrubníky', ['obrubnik', 'zamkov', 'betonov']],
+    betonObr: ['Beton a suché směsi', ['beton', 'smes', 'malt']],
+    pisek: ['Kamenivo', ['pisek', 'kameniv', 'zamkov', 'sypk']] },
+  skladba: { _: ['Podlahové izolace a směsi', ['podlah', 'izolac', 'poter', 'polystyren', 'eps']],
+    hydro: ['Hydroizolace', ['hydroizol', 'izolac', 'asfalt']],
+    folie: ['Fólie a izolace', ['foli', 'izolac']],
+    okraj: ['Podlahy a izolace', ['podlah', 'dilatac', 'izolac']],
+    kari: ['Výztuž a kari sítě', ['kari', 'vyztuz', 'armatur', 'ocel']],
+    poter: ['Beton a suché směsi', ['poter', 'beton', 'cement', 'smes']] },
+  elektro: { _: ['Elektroinstalace', ['elektro', 'kabel', 'vodic', 'instalac']],
+    krabice: ['Elektroinstalační krabice', ['krabic', 'elektro', 'instalac']],
+    rozvodna: ['Elektroinstalační krabice', ['krabic', 'elektro', 'instalac']],
+    sadra: ['Sádry a omítky', ['sadr', 'omitk', 'smes', 'malt']] },
+  bourani: { _: ['Odpad a suť', ['sut', 'odpad', 'kontejner', 'pytl']] },
   fasada: { _: ['Zateplení a fasády', ['zatepl', 'fasad', 'etics', 'kzs', 'polystyren', 'izolac', 'omitk']] }
 };
 /** Sortiment řádku: {nazev, slova, tema, skupina} – tema/skupina, pokud si ji uživatel vybral. */
@@ -4364,7 +4639,7 @@ function temataSortimentu(vsechna, sort) {
 }
 const cestaSortimentu = p => [...new Set([p.tema, p.skupina, p.podskupina].filter(Boolean))].join(' › ');
 
-const PORADI = ['zdivo', 'sdk', 'omitka', 'malba', 'plocha', 'hydro', 'nivelace', 'podlaha', 'objem', 'fasada'];
+const PORADI = ['zdivo', 'sdk', 'omitka', 'malba', 'plocha', 'hydro', 'nivelace', 'podlaha', 'objem', 'fasada', 'skladba', 'strecha', 'podkrovi', 'zamkova', 'elektro', 'bourani'];
 /** Řádek, jehož materiál určuje rozměr (tvárnice, dlaždice). */
 const HLAVNI_S_ROZMEREM = { zdivo: { klic: 'tvarnice', pole: ['td', 'tv', 'tl'] }, plocha: { klic: 'material', pole: ['kd', 'ksi'] } };
 
@@ -4373,7 +4648,8 @@ const HLAVNI_S_ROZMEREM = { zdivo: { klic: 'tvarnice', pole: ['td', 'tv', 'tl'] 
    ===================================================================== */
 let A = null, root = null;
 const KLIC = 'kk-stav-v1';
-const S = { druh: 'zdivo', rezim: 'laik', tipy: false, jak: false, filtr: 'malesice', prirazka: 15, d: {}, cenyPrace: {} };
+const DOPRAVA0 = { zpusob: 'ne', km: '', sazba: '', pausal: '', nosnost: '1,2', jizdy: '', kg: '' };
+const S = { doprava: { ...DOPRAVA0 }, druh: 'zdivo', rezim: 'laik', tipy: false, jak: false, filtr: 'malesice', prirazka: 15, d: {}, cenyPrace: {} };
 const R = { radky: [], prace: [], h: null, zas: {}, zasBez: {}, nenalezeno: {}, vybiram: false, znovu: false, dlg: null, hledaniSeq: 0, vysledky: [] };
 let ulozCas, vyberCas;
 
@@ -4390,6 +4666,7 @@ function stav() {
 function nacti() {
   try { const t = A.pamet.cti(KLIC, ''); if (t) { const x = JSON.parse(t); Object.assign(S, x); } } catch (e) {}
   if (!KALK[S.druh]) S.druh = 'zdivo';
+  S.doprava = Object.assign({}, DOPRAVA0, S.doprava);
   if (!['malesice', 'obe', 'stavimex', 'vse'].includes(S.filtr)) S.filtr = 'malesice';
   if (A.jenStavimex && S.filtr === 'vse') S.filtr = 'stavimex';
   if (!Number.isFinite(Number(S.prirazka))) S.prirazka = A.vychoziPrirazka ?? 15;
@@ -4566,6 +4843,61 @@ function sestavRadky() {
     return r;
   });
 }
+/** Hmotnost řádku v kg (null = neznámá). Beton z betonárny veze míchačka – do nákladu se nepočítá. */
+function hmotnostRadku(r) {
+  if (r.klic === 'beton') return 0;
+  const m = r.m, mn = Number(r.mnProdej) || 0, mj = mjN(r.mjProdej);
+  if (!(mn > 0)) return 0;
+  if (m.hmotnost > 0 && ['ks', 'bal', 'rol', 'sada', 'pal'].includes(mj)) return m.hmotnost * mn;
+  if (mj === 'kg') return mn;
+  if (mj === 't') return mn * 1000;
+  if (mj === 'l') return mn * 1.2;
+  if (mj === 'm³') return mn * 1600;
+  return null;
+}
+/** Doprava materiálu: náklad podle zvolených položek, počet jízd podle nosnosti vozidla, cena za km nebo paušálem. */
+function sestavDopravu(radky) {
+  radky = radky || sestavRadky();
+  const D = S.doprava;
+  let kg = 0, bez = 0;
+  radky.forEach(r => { if (r.vyp || !r.m) return; const x = hmotnostRadku(r); if (x == null) bez++; else kg += x; });
+  const rucne = cis(D.kg) > 0;
+  if (rucne) kg = cis(D.kg);
+  const nos = (cis(D.nosnost) || 0) * 1000;
+  const jizdy = Math.max(1, Math.round(cis(D.jizdy) || (kg > 0 && nos > 0 ? nahoru(kg / nos) : 1)));
+  const km = cis(D.km) || 0, sazba = cis(D.sazba) || 0, pausal = cis(D.pausal) || 0;
+  const out = { zpusob: D.zpusob, kg, bez, rucne, jizdy, mnozstvi: 0, mj: '', cena: 0, celkem: 0, nazev: 'Doprava materiálu' };
+  if (D.zpusob === 'km') {
+    out.mnozstvi = zaok(jizdy * km * 2); out.mj = 'km'; out.cena = sazba; out.celkem = zaok(out.mnozstvi * sazba);
+    out.nazev = `Doprava materiálu (${jizdy}× ${f3(km)} km tam a zpět)`;
+  } else if (D.zpusob === 'pausal') {
+    out.mnozstvi = jizdy; out.mj = 'jízda'; out.cena = pausal; out.celkem = zaok(jizdy * pausal);
+    out.nazev = `Doprava materiálu (${jizdy} ${jizdy === 1 ? 'jízda' : jizdy < 5 ? 'jízdy' : 'jízd'})`;
+  }
+  return out;
+}
+function vykresliDopravu() {
+  const el = $k('doprava'); if (!el) return;
+  const D = S.doprava, z = D.zpusob;
+  const seg = [['ne', 'Bez dopravy'], ['km', 'Podle km'], ['pausal', 'Paušál za jízdu']].map(([v, t]) =>
+    `<button type="button" data-dzp="${v}" aria-pressed="${z === v}">${t}</button>`).join('');
+  const pole = (id, popis, mj, ph) => `<div class="kk-pole"><label class="kk-pole-popis" for="kk-d-${id}">${popis}</label>
+    <span class="kk-mj-obal"><input id="kk-d-${id}" class="kk-in" data-dop="${id}" inputmode="decimal" value="${esc(D[id])}"${ph ? ` placeholder="${ph}"` : ''}>${mj ? `<i>${mj}</i>` : ''}</span></div>`;
+  el.innerHTML = `<div class="kk-seg kk-seg-volba" role="group" aria-label="Způsob dopravy">${seg}</div>` +
+    (z === 'ne' ? '' : `<div class="kk-mrizka kk-dop-pole">${pole('km', 'Vzdálenost k zákazníkovi', 'km', 'jedním směrem')}${z === 'km' ? pole('sazba', 'Sazba za km', 'Kč/km') : pole('pausal', 'Cena jedné jízdy', 'Kč')}${pole('nosnost', 'Nosnost vozidla', 't')}${pole('jizdy', 'Počet jízd', '', 'auto')}${pole('kg', 'Hmotnost nákladu ručně', 'kg', 'auto')}</div>`) +
+    '<p class="kk-pozn" data-kk="dop-souhrn"></p>';
+  obnovDopravuSouhrn();
+}
+function obnovDopravuSouhrn(radky) {
+  if (!root) return;
+  const e = root.querySelector('[data-kk="dop-souhrn"]'); if (!e) return;
+  const d = sestavDopravu(radky);
+  let t = d.kg > 0 ? `Náklad cca ${f3(Math.round(d.kg))} kg` : 'Hmotnost nákladu zatím neznám';
+  if (d.bez && !d.rucne) t += ` (u ${d.bez} ${d.bez === 1 ? 'položky' : 'položek'} hmotnost chybí – zadej ji ručně)`;
+  if (d.zpusob !== 'ne') t += ` · ${d.jizdy} ${d.jizdy === 1 ? 'jízda' : d.jizdy < 5 ? 'jízdy' : 'jízd'}` + (d.celkem > 0 ? ` · doprava ${kc0(d.celkem)}` : ' · doplň vzdálenost a cenu');
+  e.textContent = t;
+}
+
 function sestavPraci() {
   return R.prace.map(p => {
     const kl = S.druh + ':' + p.klic;
@@ -4626,6 +4958,8 @@ function kostra() {
     <div class="kk-radky" data-kk="radky"></div>
     <div class="kk-h3">Práce <small>cenu za jednotku si pamatuju</small></div>
     <div class="kk-prace" data-kk="prace"></div>
+    <div class="kk-h3">Doprava <small>dovoz materiálu na stavbu</small></div>
+    <div class="kk-doprava" data-kk="doprava"></div>
   </section>
   <div class="kk-lista" data-kk="lista"></div>
   <dialog class="kk-dlg" data-kk="dlg" aria-labelledby="kk-dlg-t">
@@ -4844,15 +5178,17 @@ function vykresliListu() {
   const radky = sestavRadky(), prace = sestavPraci();
   const mat = radky.reduce((s, r) => s + r.celkem, 0);
   const pr = prace.reduce((s, p) => s + p.celkem, 0);
-  let hm = 0, bezCeny = 0;
-  radky.forEach(r => { if (r.vyp || !r.m) return; if (r.m.hmotnost && mjN(r.mjProdej) === 'ks') hm += r.m.hmotnost * r.mnProdej; if (r.m && !r.cena) bezCeny++; });
+  let bezCeny = 0;
+  radky.forEach(r => { if (r.vyp || !r.m) return; if (!r.cena) bezCeny++; });
+  const dop = sestavDopravu(radky), hm = dop.kg;
   const cil = A.cilDokladu ? A.cilDokladu() : null;
-  const pocet = radky.filter(r => !r.vyp).length + prace.filter(p => p.pouzit && p.cena > 0).length;
+  const pocet = radky.filter(r => !r.vyp).length + prace.filter(p => p.pouzit && p.cena > 0).length + (dop.celkem > 0 ? 1 : 0);
   $k('lista').innerHTML = !radky.length ? '' : `<div class="kk-lista-in">
     <div class="kk-lista-souhrn">
       <div><small>Materiál</small><b>${kc0(mat)}</b></div>
       ${pr ? `<div><small>Práce</small><b>${kc0(pr)}</b></div>` : ''}
-      <div class="kk-lista-celkem"><small>Celkem bez DPH</small><b>${kc0(mat + pr)}</b></div>
+      ${dop.celkem ? `<div><small>Doprava</small><b>${kc0(dop.celkem)}</b></div>` : ''}
+      <div class="kk-lista-celkem"><small>Celkem bez DPH</small><b>${kc0(mat + pr + dop.celkem)}</b></div>
       ${hm ? `<div class="kk-lista-hm"><small>Hmotnost</small><b>${f3(Math.round(hm))} kg</b></div>` : ''}
     </div>
     <div class="kk-lista-akce">
@@ -4861,6 +5197,7 @@ function vykresliListu() {
     </div>
     ${bezCeny ? `<div class="kk-lista-pozn">${bezCeny} ${bezCeny === 1 ? 'položka nemá' : 'položky nemají'} cenu – doplň ji v nabídce.</div>` : ''}
   </div>`;
+  obnovDopravuSouhrn(radky);
 }
 function obnovSouctyBezPrekresleni() {
   sestavRadky().forEach(r => { const e = root.querySelector(`[data-celkem="${r.klic}"]`); if (e) e.textContent = r.celkem ? kc0(r.celkem) : ''; });
@@ -4876,7 +5213,7 @@ function prepocitej() {
   const v = k.spocitej(h);
   R.radky = v ? v.radky : [];
   R.prace = v ? (v.prace || []) : [];
-  vykresliRadky(); vykresliPraci(); vykresliListu();
+  vykresliRadky(); vykresliPraci(); vykresliDopravu(); vykresliListu();
   uloz();
   // chybějící zásoby u vybraného materiálu
   const st = stav();
@@ -5126,7 +5463,10 @@ function textSeznamu() {
     L.push(t);
   });
   if (prace.length) { L.push('', 'Práce:'); prace.forEach(p => L.push(`• ${p.nazev} – ${f3(p.mnozstvi)} ${p.mj} × ${kc(p.cena)}`)); }
-  const sum = radky.reduce((s, r) => s + r.celkem, 0) + prace.reduce((s, p) => s + p.celkem, 0);
+  const dop = sestavDopravu(sestavRadky());
+  if (dop.celkem > 0) L.push('', `Doprava: ${dop.nazev.replace('Doprava materiálu ', '')} – ${kc0(dop.celkem)}`);
+  else if (dop.kg > 0) L.push('', `Náklad cca ${f3(Math.round(dop.kg))} kg`);
+  const sum = radky.reduce((s, r) => s + r.celkem, 0) + prace.reduce((s, p) => s + p.celkem, 0) + dop.celkem;
   if (sum) L.push('', 'Orientačně celkem bez DPH: ' + kc0(sum));
   return L.join('\n');
 }
@@ -5148,6 +5488,8 @@ async function doDokladu(btn) {
     mnozstviPozor: !!r.prevodNejde,
     poznamka: `${k.nazev}: ${r.zaklad}${r.prevod ? ', ' + r.prevod : ''}`
   })).concat(prace.map(p => ({ typ: 'prace', nazev: p.nazev, mj: p.mj, mnozstvi: p.mnozstvi, cena: p.cena, sazba_dph: 21, poznamka: k.nazev })));
+  const dop = sestavDopravu(sestavRadky());
+  if (dop.celkem > 0) vystup.push({ typ: 'prace', nazev: dop.nazev, mj: dop.mj, mnozstvi: dop.mnozstvi, cena: dop.cena, sazba_dph: 21, poznamka: k.nazev + ': doprava' });
   if (!vystup.length) return A.toast('Není co vložit.', true);
   if (btn) btn.disabled = true;
   try { await A.doDokladu(vystup, { kalkulacka: k.nazev, plocha: R.h?.plocha }); }
@@ -5170,6 +5512,7 @@ function pripojUdalosti() {
     if (d.otvorPridat) { const [s, v] = d.otvorPridat.split(','); stav().otvory.push({ s: vp(+s), v: vp(+v), n: '1' }); vykresliOtvory(); prepocitej(); return; }
     if (d.otvorSmazat !== undefined) { stav().otvory.splice(Number(d.otvorSmazat), 1); vykresliOtvory(); prepocitej(); return; }
     if (d.oKrok) { const [i, s] = d.oKrok.split(':').map(Number); const o = stav().otvory[i]; o.n = String(Math.max(0, (cis(o.n) || 0) + s)); vykresliOtvory(); prepocitej(); return; }
+    if (d.dzp) { S.doprava.zpusob = d.dzp; vykresliDopravu(); vykresliListu(); uloz(); return; }
     if (d.filtr) { S.filtr = d.filtr; prepocitej(); predvyber(false); return; }
     if (d.mat) return otevriVyber({ klic: d.mat });
     if (d.reset) { delete stav().rucne[d.reset]; prepocitej(); return; }
@@ -5216,6 +5559,7 @@ function pripojUdalosti() {
     const t = e.target, d = t.dataset, st = stav();
     if (d.u) { const [i, k] = d.u.split(':'); st.useky[+i][k] = t.value; prepocitej(); return; }
     if (d.o) { const [i, k] = d.o.split(':'); st.otvory[+i][k] = t.value; prepocitej(); return; }
+    if (d.dop) { S.doprava[d.dop] = t.value; vykresliListu(); uloz(); return; }
     if (d.pole && t.type !== 'checkbox') { st.pole[d.pole] = t.value; st.sablona = null; oznacSablony(); prepocitej(); return; }
     if (d.mn) { const r = sestavRadky().find(x => x.klic === d.mn); st.rucne[d.mn] = { q: t.value, mj: r ? r.mjProdej : '' }; obnovSouctyBezPrekresleni(); uloz(); return; }
     if (d.cp) { S.cenyPrace[S.druh + ':' + d.cp] = t.value; if (cis(t.value) > 0 && st.pracePouzit[d.cp] === undefined) { const c = root.querySelector(`[data-pz="${d.cp}"]`); if (c) c.checked = true; } obnovSouctyBezPrekresleni(); uloz(); return; }
@@ -5389,6 +5733,9 @@ const CSS = `
 .kk-p{display:grid;grid-template-columns:28px 1fr 170px 110px;gap:.6rem;align-items:center;padding:.4rem 0;border-top:1px solid var(--kk-linka)}
 .kk-p:first-child{border-top:0}
 .kk-p-nazev{font-weight:600}
+.kk-doprava{padding-bottom:.4rem}
+.kk-doprava .kk-seg{margin-bottom:.7rem}
+.kk-dop-pole{margin-bottom:.4rem}
 .kk-p-nazev span{font-weight:500;color:var(--kk-ocel);margin-left:.35rem;white-space:nowrap}
 .kk-p .kk-r-celkem{text-align:right}
 .kk-lista{position:sticky;bottom:0;z-index:15;margin:0 -.2rem}
@@ -7948,7 +8295,7 @@ document.getElementById('btnNbKalk').onclick=()=>{
   document.getElementById('panel-kalkulacky').classList.add('active');
   YeyKalk.ukazano(); window.scrollTo(0,0);
 };
-TIPS.push({i:'📐', t:'Kalkulačky materiálu', x:'Zadej stěny nebo místnosti a kalkulačka spočítá materiál i práci. Zboží vybere z katalogu podle ceny – ceny jsou orientační, pro hrubý odhad. Jedním tlačítkem vše vložíš do nabídky.'});
+TIPS.push({i:'📐', t:'Kalkulačky materiálu', x:'Zadej stěny nebo místnosti a kalkulačka spočítá materiál, práci i dopravu. Zboží vybere z katalogu podle ceny – ceny jsou orientační, pro hrubý odhad. Jedním tlačítkem vše vložíš do nabídky.'});
 
 /* Aktivace jedním klikem: yey.cz odkazuje na app.yey.cz/#licence=KLÍČ */
 (function licenceZOdkazu(){

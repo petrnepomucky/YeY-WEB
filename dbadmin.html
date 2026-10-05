@@ -136,7 +136,7 @@ const PROJ={
   office:{nazev:'YeY – Online Office',url:'https://hkzhjoveiqadezmvksdz.supabase.co',key:'sb_publishable_WUy9urfE9n5O2SelitV6FA_mhzCUrM_'}
 };
 let AK='', P='', OK=[], INFO=null, T=null, S=null, tab='data', D={radky:[],celkem:0}, sel=new Set();
-let Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:50,offset:0};
+let Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:50,offset:0,filtr:{}}, F={};
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -202,11 +202,12 @@ function renderList(){
 }
 
 async function otevri(nazev){
-  T=nazev; S=null; sel.clear(); Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:Q.limit||50,offset:0};
+  T=nazev; S=null; sel.clear(); Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:Q.limit||50,offset:0,filtr:{}}; F={};
   if(!['data','struktura'].includes(tab)) tab='data';
   renderList(); render();
   try{S=await rpc('db_admin_struktura',{p_tabulka:nazev})}catch(e){toast(e.message,1);return}
   render(); if(tab==='data') nactiData();
+  nactiFiltry();
 }
 
 /* ================= hlavní plocha ================= */
@@ -250,10 +251,50 @@ async function nactiData(){
   if(!T)return;
   const o=$('#gridBox'); if(o) o.style.opacity=.5;
   try{
-    D=await rpc('db_admin_radky',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:Q.limit,p_offset:Q.offset});
+    D=await rpc('db_admin_data',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:Q.limit,p_offset:Q.offset,p_filtr:Q.filtr});
     sel.clear();
   }catch(e){toast(e.message,1);D={radky:[],celkem:0}}
   if(tab==='data') renderData();
+}
+/* ---------- filtry téma / skupina / podskupina (katalog) ---------- */
+const UROVNE=[['Téma',['tema_nazev','tema']],['Skupina',['skupina_nazev','skupina']],['Podskupina',['podskupina_nazev','podskupina']],['Kategorie',['kategorie_nazev','kategorie']]];
+const NULLV='__NULL__';
+function katUrovne(){
+  if(!S)return[];
+  const ok=new Set(S.sloupce.filter(c=>!/\[\]$/.test(c.typ)&&!/^json/.test(c.typ)).map(c=>c.nazev));
+  return UROVNE.map(([lab,kand])=>({lab,col:kand.find(k=>ok.has(k))})).filter(u=>u.col);
+}
+async function nactiFiltry(){
+  const ur=katUrovne(); if(!ur.length){F={};return}
+  const t=T, seq=(nactiFiltry.seq=(nactiFiltry.seq||0)+1);
+  const res=await Promise.all(ur.map((u,i)=>{
+    const f={}; ur.slice(0,i).forEach(x=>{if(x.col in Q.filtr)f[x.col]=Q.filtr[x.col]});
+    return rpc('db_admin_hodnoty',{p_tabulka:t,p_sloupec:u.col,p_filtr:f,p_hledat:Q.sloupec?null:(Q.hledat||null)}).catch(e=>{toast(e.message,1);return[]});
+  }));
+  if(t!==T||seq!==nactiFiltry.seq)return;
+  F={}; ur.forEach((u,i)=>F[u.col]=res[i]);
+  if(tab==='data'&&$('#dFiltry')) $('#dFiltry').innerHTML=filtryHtml();
+  navazFiltry();
+}
+function filtryHtml(){
+  const ur=katUrovne(); if(!ur.length)return'';
+  const aktivni=Object.keys(Q.filtr).length;
+  return `<span class="hint" style="font-weight:600">Filtr:</span>${ur.map((u,i)=>{
+    const opts=F[u.col], v=u.col in Q.filtr?(Q.filtr[u.col]===null?NULLV:Q.filtr[u.col]):'';
+    const vOpts=opts&&v&&!opts.some(o=>(o.h===null?NULLV:o.h)===v)?[{h:v===NULLV?null:v,n:0}].concat(opts):opts||[];
+    return `<select data-ur="${i}" style="width:auto;max-width:260px" title="${esc(u.col)}"><option value="">${esc(u.lab)}: vše${opts?` (${num(opts.length)})`:' …'}</option>
+      ${vOpts.map(o=>{const k=o.h===null?NULLV:o.h;return `<option value="${esc(k)}" ${k===v?'selected':''}>${o.h===null?'(nezařazeno)':esc(o.h)} · ${num(o.n)}</option>`}).join('')}</select>`;
+  }).join('')}${aktivni?'<button id="dFiltrZrus" class="sm">✕ Zrušit filtr</button>':''}`;
+}
+function navazFiltry(){
+  const ur=katUrovne();
+  document.querySelectorAll('#dFiltry [data-ur]').forEach(sl=>sl.onchange=()=>{
+    const i=+sl.dataset.ur, v=sl.value;
+    if(v==='') delete Q.filtr[ur[i].col]; else Q.filtr[ur[i].col]=v===NULLV?null:v;
+    ur.slice(i+1).forEach(x=>delete Q.filtr[x.col]);
+    Q.offset=0; nactiData(); nactiFiltry();
+  });
+  const z=$('#dFiltrZrus'); if(z) z.onclick=()=>{Q.filtr={};Q.offset=0;nactiData();nactiFiltry()};
 }
 function renderData(){
   const ob=$('#obsah');
@@ -273,9 +314,10 @@ function renderData(){
       ${upr?'<button id="dImport">Import CSV</button>':''}
       <button id="dReload" title="Načíst znovu">⟳</button>
     </div>
+    ${katUrovne().length?`<div class="row" id="dFiltry" style="margin-top:8px">${filtryHtml()}</div>`:''}
   </div>
   <div class="row" style="margin-bottom:8px">
-    <span class="hint">${num(od)}–${num(do_)} z ${num(D.celkem)} řádků${Q.razeni?` · řazeno podle <b>${esc(Q.razeni)}</b> ${Q.sestupne?'↓':'↑'}`:''}${upr?'':' · <b>jen pro čtení</b> (pohled)'}</span>
+    <span class="hint">${num(od)}–${num(do_)} z ${num(D.celkem)} řádků${Object.keys(Q.filtr).length?' · <b>filtrováno</b>':''}${Q.razeni?` · řazeno podle <b>${esc(Q.razeni)}</b> ${Q.sestupne?'↓':'↑'}`:''}${upr?'':' · <b>jen pro čtení</b> (pohled)'}</span>
     <span style="flex:1"></span>
     <select id="dLimit" style="width:auto">${[25,50,100,250,500].map(n=>`<option ${Q.limit===n?'selected':''}>${n}</option>`).join('')}</select>
     <button id="dPrev" ${Q.offset?'':'disabled'}>‹ Předchozí</button>
@@ -288,7 +330,8 @@ function renderData(){
     ${D.radky.map((r,i)=>`<tr data-i="${i}" class="${sel.has(i)?'sel':''}">${upr&&maCtid?`<td class="cb"><input type="checkbox" data-cb="${i}" ${sel.has(i)?'checked':''}></td>`:''}${cols.map(c=>`<td>${bunka(r[c])}</td>`).join('')}</tr>`).join('')}
   </tbody></table>${D.radky.length?'':'<div class="empty">Žádné řádky</div>'}</div>`;
 
-  const hl=()=>{Q.hledat=$('#dHledat').value.trim();Q.sloupec=$('#dSloupec').value;Q.offset=0;nactiData()};
+  const hl=()=>{Q.hledat=$('#dHledat').value.trim();Q.sloupec=$('#dSloupec').value;Q.offset=0;nactiData();nactiFiltry()};
+  navazFiltry();
   $('#dHledat').onkeydown=e=>{if(e.key==='Enter')hl()};
   $('#dHledej').onclick=hl;
   $('#dSloupec').onchange=()=>{if($('#dHledat').value.trim())hl()};
@@ -391,7 +434,7 @@ async function exportTabulky(){
   try{
     for(let off=0;off<D.celkem;off+=2000){
       b.textContent=`Export ${Math.round(off/D.celkem*100)} %`;
-      const r=await rpc('db_admin_radky',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:2000,p_offset:off});
+      const r=await rpc('db_admin_data',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:2000,p_offset:off,p_filtr:Q.filtr});
       all.push(...r.radky); if(r.radky.length<2000)break;
     }
     stahni(`${T}_${new Date().toISOString().slice(0,10)}.csv`,naCsv(cols,all)); toast(`Exportováno ${num(all.length)} řádků`);

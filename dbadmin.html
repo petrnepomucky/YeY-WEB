@@ -136,7 +136,7 @@ const PROJ={
   office:{nazev:'YeY – Online Office',url:'https://hkzhjoveiqadezmvksdz.supabase.co',key:'sb_publishable_WUy9urfE9n5O2SelitV6FA_mhzCUrM_'}
 };
 let AK='', P='', OK=[], INFO=null, T=null, S=null, tab='data', D={radky:[],celkem:0}, sel=new Set();
-let Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:50,offset:0};
+let Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:50,offset:0,filtr:{}}, F={};
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -202,11 +202,12 @@ function renderList(){
 }
 
 async function otevri(nazev){
-  T=nazev; S=null; sel.clear(); Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:Q.limit||50,offset:0};
+  T=nazev; S=null; sel.clear(); Q={hledat:'',sloupec:'',razeni:'',sestupne:false,limit:Q.limit||50,offset:0,filtr:{}}; F={};
   if(!['data','struktura'].includes(tab)) tab='data';
   renderList(); render();
   try{S=await rpc('db_admin_struktura',{p_tabulka:nazev})}catch(e){toast(e.message,1);return}
   render(); if(tab==='data') nactiData();
+  nactiFiltry();
 }
 
 /* ================= hlavní plocha ================= */
@@ -250,10 +251,50 @@ async function nactiData(){
   if(!T)return;
   const o=$('#gridBox'); if(o) o.style.opacity=.5;
   try{
-    D=await rpc('db_admin_radky',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:Q.limit,p_offset:Q.offset});
+    D=await rpc('db_admin_data',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:Q.limit,p_offset:Q.offset,p_filtr:Q.filtr});
     sel.clear();
   }catch(e){toast(e.message,1);D={radky:[],celkem:0}}
   if(tab==='data') renderData();
+}
+/* ---------- filtry téma / skupina / podskupina (katalog) ---------- */
+const UROVNE=[['Téma',['tema_nazev','tema']],['Skupina',['skupina_nazev','skupina']],['Podskupina',['podskupina_nazev','podskupina']],['Kategorie',['kategorie_nazev','kategorie']]];
+const NULLV='__NULL__';
+function katUrovne(){
+  if(!S)return[];
+  const ok=new Set(S.sloupce.filter(c=>!/\[\]$/.test(c.typ)&&!/^json/.test(c.typ)).map(c=>c.nazev));
+  return UROVNE.map(([lab,kand])=>({lab,col:kand.find(k=>ok.has(k))})).filter(u=>u.col);
+}
+async function nactiFiltry(){
+  const ur=katUrovne(); if(!ur.length){F={};return}
+  const t=T, seq=(nactiFiltry.seq=(nactiFiltry.seq||0)+1);
+  const res=await Promise.all(ur.map((u,i)=>{
+    const f={}; ur.slice(0,i).forEach(x=>{if(x.col in Q.filtr)f[x.col]=Q.filtr[x.col]});
+    return rpc('db_admin_hodnoty',{p_tabulka:t,p_sloupec:u.col,p_filtr:f,p_hledat:Q.sloupec?null:(Q.hledat||null)}).catch(e=>{toast(e.message,1);return[]});
+  }));
+  if(t!==T||seq!==nactiFiltry.seq)return;
+  F={}; ur.forEach((u,i)=>F[u.col]=res[i]);
+  if(tab==='data'&&$('#dFiltry')) $('#dFiltry').innerHTML=filtryHtml();
+  navazFiltry();
+}
+function filtryHtml(){
+  const ur=katUrovne(); if(!ur.length)return'';
+  const aktivni=Object.keys(Q.filtr).length;
+  return `<span class="hint" style="font-weight:600">Filtr:</span>${ur.map((u,i)=>{
+    const opts=F[u.col], v=u.col in Q.filtr?(Q.filtr[u.col]===null?NULLV:Q.filtr[u.col]):'';
+    const vOpts=opts&&v&&!opts.some(o=>(o.h===null?NULLV:o.h)===v)?[{h:v===NULLV?null:v,n:0}].concat(opts):opts||[];
+    return `<select data-ur="${i}" style="width:auto;max-width:260px" title="${esc(u.col)}"><option value="">${esc(u.lab)}: vše${opts?` (${num(opts.length)})`:' …'}</option>
+      ${vOpts.map(o=>{const k=o.h===null?NULLV:o.h;return `<option value="${esc(k)}" ${k===v?'selected':''}>${o.h===null?'(nezařazeno)':esc(o.h)} · ${num(o.n)}</option>`}).join('')}</select>`;
+  }).join('')}${aktivni?'<button id="dFiltrZrus" class="sm">✕ Zrušit filtr</button>':''}`;
+}
+function navazFiltry(){
+  const ur=katUrovne();
+  document.querySelectorAll('#dFiltry [data-ur]').forEach(sl=>sl.onchange=()=>{
+    const i=+sl.dataset.ur, v=sl.value;
+    if(v==='') delete Q.filtr[ur[i].col]; else Q.filtr[ur[i].col]=v===NULLV?null:v;
+    ur.slice(i+1).forEach(x=>delete Q.filtr[x.col]);
+    Q.offset=0; nactiData(); nactiFiltry();
+  });
+  const z=$('#dFiltrZrus'); if(z) z.onclick=()=>{Q.filtr={};Q.offset=0;nactiData();nactiFiltry()};
 }
 function renderData(){
   const ob=$('#obsah');
@@ -273,9 +314,10 @@ function renderData(){
       ${upr?'<button id="dImport">Import CSV</button>':''}
       <button id="dReload" title="Načíst znovu">⟳</button>
     </div>
+    ${katUrovne().length?`<div class="row" id="dFiltry" style="margin-top:8px">${filtryHtml()}</div>`:''}
   </div>
   <div class="row" style="margin-bottom:8px">
-    <span class="hint">${num(od)}–${num(do_)} z ${num(D.celkem)} řádků${Q.razeni?` · řazeno podle <b>${esc(Q.razeni)}</b> ${Q.sestupne?'↓':'↑'}`:''}${upr?'':' · <b>jen pro čtení</b> (pohled)'}</span>
+    <span class="hint">${num(od)}–${num(do_)} z ${num(D.celkem)} řádků${Object.keys(Q.filtr).length?' · <b>filtrováno</b>':''}${Q.razeni?` · řazeno podle <b>${esc(Q.razeni)}</b> ${Q.sestupne?'↓':'↑'}`:''}${upr?'':' · <b>jen pro čtení</b> (pohled)'}</span>
     <span style="flex:1"></span>
     <select id="dLimit" style="width:auto">${[25,50,100,250,500].map(n=>`<option ${Q.limit===n?'selected':''}>${n}</option>`).join('')}</select>
     <button id="dPrev" ${Q.offset?'':'disabled'}>‹ Předchozí</button>
@@ -288,7 +330,8 @@ function renderData(){
     ${D.radky.map((r,i)=>`<tr data-i="${i}" class="${sel.has(i)?'sel':''}">${upr&&maCtid?`<td class="cb"><input type="checkbox" data-cb="${i}" ${sel.has(i)?'checked':''}></td>`:''}${cols.map(c=>`<td>${bunka(r[c])}</td>`).join('')}</tr>`).join('')}
   </tbody></table>${D.radky.length?'':'<div class="empty">Žádné řádky</div>'}</div>`;
 
-  const hl=()=>{Q.hledat=$('#dHledat').value.trim();Q.sloupec=$('#dSloupec').value;Q.offset=0;nactiData()};
+  const hl=()=>{Q.hledat=$('#dHledat').value.trim();Q.sloupec=$('#dSloupec').value;Q.offset=0;nactiData();nactiFiltry()};
+  navazFiltry();
   $('#dHledat').onkeydown=e=>{if(e.key==='Enter')hl()};
   $('#dHledej').onclick=hl;
   $('#dSloupec').onchange=()=>{if($('#dHledat').value.trim())hl()};
@@ -325,6 +368,7 @@ function editor(r){
   const novy=!r, upr=S.upravitelna, cols=S.sloupce;
   $('#mbox').innerHTML=`<h3>${novy?'Nový řádek':'Řádek'} <small class="hint">${esc(T)}</small><span class="sp"></span><button id="mX">✕</button></h3>
     ${novy?'<p class="hint">Prázdná pole se nevyplní – použije se výchozí hodnota sloupce.</p>':''}
+    ${!novy&&jeLicence()?'<div class="msg varovani">Změna sloupce <b>exp</b> platnost licence neprodlouží – datum je zapsané v podepsaném klíči. Použij tlačítko <b>🔑 Prodloužit licenci</b> dole.</div>':''}
     <div id="mF">${cols.map((c,i)=>{
       const v=r?r[c.nazev]:undefined, txt=naText(v,c), dis=!upr||c.generovany;
       const isNull=r&&v===null;
@@ -338,6 +382,7 @@ function editor(r){
     <div class="row" style="margin-top:14px">
       ${upr?`<button class="pri" id="mUloz">${novy?'Vložit':'Uložit změny'}</button>`:''}
       ${upr&&!novy&&r._ctid?'<button class="del" id="mSmaz">Smazat řádek</button>':''}
+      ${!novy&&jeLicence()&&r.vs!=null?'<button class="yel" id="mLic">🔑 Prodloužit licenci</button>':''}
       ${!novy?'<button id="mKopie">Kopírovat jako nový</button><button id="mJson">Kopírovat JSON</button>':''}
       <span style="flex:1"></span><button id="mZavri">Zavřít</button>
     </div>`;
@@ -347,6 +392,7 @@ function editor(r){
   const zmena=i=>{$(`.fld[data-r="${i}"]`).classList.add('chg')};
   $('#mF').querySelectorAll('[data-f]').forEach(el=>el.addEventListener('input',()=>{const n=$(`[data-n="${el.dataset.f}"]`);if(n&&el.value!=='')n.checked=false;zmena(el.dataset.f)}));
   $('#mF').querySelectorAll('[data-n]').forEach(el=>el.onchange=()=>zmena(el.dataset.n));
+  if($('#mLic')) $('#mLic').onclick=()=>licenceDialog(r);
   if($('#mJson')) $('#mJson').onclick=()=>{const o={...r};delete o._ctid;navigator.clipboard?.writeText(JSON.stringify(o,null,2));toast('Zkopírováno')};
   if($('#mKopie')) $('#mKopie').onclick=()=>{const o={...r};delete o._ctid;cols.forEach(c=>{if(c.identity||c.generovany||S.pk.includes(c.nazev)&&c.default)delete o[c.nazev]});editor(null);
     cols.forEach((c,i)=>{const el=$(`[data-f="${i}"]`);if(el&&o[c.nazev]!==undefined&&o[c.nazev]!==null){el.value=naText(o[c.nazev],c);zmena(i)}})};
@@ -380,6 +426,58 @@ function editor(r){
 $('#modal').addEventListener('mousedown',e=>{if(e.target.id==='modal')$('#modal').style.display='none'});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#modal').style.display='none'});
 
+/* ---------- prodloužení licence (YeY – Online Office) ---------- */
+// Licenční klíč je podepsaný a datum platnosti je v něm – změna sloupce exp nic nezmění.
+// Nový klíč vydá funkce `licence` (akce prodlouzit), chráněná secretem ADMIN_KLIC.
+const jeLicence=()=>P==='office'&&T==='licence_objednavky';
+const LIC_FN=PROJ.office.url+'/functions/v1/licence', LIC_APP='https://yey.cz/yey.html';
+function licenceDialog(r){
+  const d=new Date(); d.setFullYear(d.getFullYear()+1);
+  const zakl=r.exp&&r.exp>d.toISOString().slice(0,10)?r.exp:d.toISOString().slice(0,10);
+  $('#mbox').innerHTML=`<h3>Prodloužit licenci<span class="sp"></span><button id="mX">✕</button></h3>
+    <div class="msg info">VS <b>${esc(r.vs)}</b> · IČO <b>${esc(r.ico)}</b>${r.firma?' · '+esc(r.firma):''} · tarif ${esc(r.tarif)}<br>
+      Současná platnost: <b>${r.exp?esc(r.exp):'trvalá'}</b> · stav: ${esc(r.stav)}</div>
+    <p class="hint">Vydá se <b>nový podepsaný licenční klíč</b> s novým datem. Zákazník ho musí vložit do aplikace (Nastavení → Licence) nebo kliknout na aktivační odkaz – starý klíč dál platí jen do svého původního data.</p>
+    ${r.stav!=='vydano'?'<div class="msg chyba">Licence k této objednávce ještě nebyla vydaná – nejdřív je potřeba potvrdit platbu.</div>':''}
+    <div class="fld"><div class="nm">Platí do</div><div><div class="row">
+      <input type="date" id="lExp" value="${esc(zakl)}" style="width:auto">
+      <button class="sm" data-roky="1">+1 rok</button><button class="sm" data-roky="2">+2 roky</button><button class="sm" data-do="2050-12-31">do 2050</button>
+      <label class="nl" style="margin:0"><input type="checkbox" id="lTrvala"> trvalá (bez data)</label></div></div></div>
+    <div class="fld"><div class="nm">E-mail</div><div><label class="nl" style="margin:0"><input type="checkbox" id="lPoslat" ${r.email?'checked':'disabled'}> poslat nový klíč zákazníkovi na ${r.email?esc(r.email):'(e-mail chybí)'}</label></div></div>
+    <div class="fld"><div><div class="nm">Admin klíč licence</div><div class="ty">secret ADMIN_KLIC funkce licence</div></div><div><input type="password" id="lKlic" value="${esc(sg('dba_lic')||'')}" autocomplete="off" placeholder="stejný jako pro ruční potvrzení platby"></div></div>
+    <div class="row" style="margin-top:14px"><button class="pri" id="lStart">Vydat nový klíč</button><span class="hint" id="lStav"></span><span style="flex:1"></span><button id="lZpet">Zpět</button></div>
+    <div id="lVysl"></div>`;
+  $('#mX').onclick=()=>$('#modal').style.display='none';
+  $('#lZpet').onclick=()=>editor(r);
+  document.querySelectorAll('#mbox [data-roky]').forEach(b=>b.onclick=()=>{const x=r.exp&&new Date(r.exp+'T12:00:00')>new Date()?new Date(r.exp+'T12:00:00'):new Date();x.setFullYear(x.getFullYear()+(+b.dataset.roky));$('#lExp').value=x.toISOString().slice(0,10);$('#lTrvala').checked=false;$('#lExp').disabled=false});
+  document.querySelectorAll('#mbox [data-do]').forEach(b=>b.onclick=()=>{$('#lExp').value=b.dataset.do;$('#lTrvala').checked=false;$('#lExp').disabled=false});
+  $('#lTrvala').onchange=e=>{$('#lExp').disabled=e.target.checked};
+  $('#lStart').onclick=async()=>{
+    const trvala=$('#lTrvala').checked, exp=trvala?null:$('#lExp').value, klic=$('#lKlic').value.trim();
+    if(!trvala&&!/^\d{4}-\d{2}-\d{2}$/.test(exp||'')){toast('Zadej datum platnosti',1);return}
+    if(!klic){toast('Zadej admin klíč licence (ADMIN_KLIC)',1);$('#lKlic').focus();return}
+    if(!confirm(`Vydat nový licenční klíč pro IČO ${r.ico} s platností ${trvala?'TRVALÁ':'do '+exp}?`))return;
+    $('#lStart').disabled=true; $('#lStav').textContent='Podepisuji…';
+    try{
+      const resp=await fetch(LIC_FN,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({akce:'prodlouzit',vs:String(r.vs),klic,exp,poslat:$('#lPoslat').checked})});
+      const j=await resp.json().catch(()=>({}));
+      if(!resp.ok||!j.ok) throw new Error(j.chyba||('HTTP '+resp.status));
+      ss('dba_lic',klic);
+      const odkaz=LIC_APP+'#licence='+encodeURIComponent(j.licence);
+      $('#lStav').textContent='';
+      $('#lVysl').innerHTML=`<div class="msg info" style="margin-top:12px"><b>Hotovo.</b> Nový klíč platí ${j.exp?'do <b>'+esc(j.exp)+'</b>':'<b>trvale</b>'}.
+          ${$('#lPoslat').checked?(j.emailOdeslan?' E-mail zákazníkovi odeslán ✓':' <span class="badc">E-mail se nepodařilo odeslat</span> – pošli klíč ručně.'):' E-mail se neposílal – pošli klíč zákazníkovi.'}</div>
+        <label>Nový licenční klíč</label><textarea class="mono" rows="3" readonly id="lNovy">${esc(j.licence)}</textarea>
+        <label style="margin-top:8px">Aktivační odkaz (jedním klikem)</label><input readonly id="lOdkaz" value="${esc(odkaz)}">
+        <div class="row" style="margin-top:8px"><button id="lKop">Kopírovat klíč</button><button id="lKopO">Kopírovat odkaz</button></div>`;
+      $('#lKop').onclick=()=>{navigator.clipboard?.writeText(j.licence);toast('Klíč zkopírován')};
+      $('#lKopO').onclick=()=>{navigator.clipboard?.writeText(odkaz);toast('Odkaz zkopírován')};
+      $('#lZpet').textContent='Zavřít'; $('#lZpet').onclick=()=>$('#modal').style.display='none';
+      nactiData();
+    }catch(e){$('#lStav').textContent='';toast(e.message,1);$('#lStart').disabled=false}
+  };
+}
+
 /* ---------- CSV ---------- */
 function csvHodnota(v){if(v===null||v===undefined)return'';if(typeof v==='object')v=JSON.stringify(v);v=String(v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function stahni(nazev,text){const b=new Blob(['﻿'+text],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nazev;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
@@ -391,7 +489,7 @@ async function exportTabulky(){
   try{
     for(let off=0;off<D.celkem;off+=2000){
       b.textContent=`Export ${Math.round(off/D.celkem*100)} %`;
-      const r=await rpc('db_admin_radky',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:2000,p_offset:off});
+      const r=await rpc('db_admin_data',{p_tabulka:T,p_hledat:Q.hledat||null,p_sloupec:Q.sloupec||null,p_razeni:Q.razeni||null,p_sestupne:Q.sestupne,p_limit:2000,p_offset:off,p_filtr:Q.filtr});
       all.push(...r.radky); if(r.radky.length<2000)break;
     }
     stahni(`${T}_${new Date().toISOString().slice(0,10)}.csv`,naCsv(cols,all)); toast(`Exportováno ${num(all.length)} řádků`);

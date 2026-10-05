@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="cs"><head><meta charset="UTF-8"><title>YeY – leták A5</title>
+<style>
+@page{size:148mm 210mm;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:148mm;height:210mm}
+body{font-family:'Liberation Sans','DejaVu Sans',Arial,sans-serif;color:#1D272F;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.p{position:relative;width:148mm;height:210mm;overflow:hidden;background:#F4F5F2;display:flex;flex-direction:column}
+.top{flex:none;background:#1D272F;color:#fff;padding:9mm 10mm 7mm}
+.logo{display:flex;align-items:baseline;gap:3mm}
+.logo b{font-size:15pt;color:#F2B705;letter-spacing:.5pt}
+.logo span{font-size:8pt;opacity:.8}
+h1{font-size:20pt;line-height:1.12;margin-top:6mm;font-weight:700}
+h1 em{font-style:normal;color:#F2B705}
+.sub{font-size:9pt;line-height:1.35;margin-top:3mm;opacity:.9}
+.tape{flex:none;height:4.2mm;background:repeating-linear-gradient(90deg,#1D272F 0 .25mm,transparent .25mm 2mm) bottom/100% 40% no-repeat,#F2B705}
+.langs{display:flex;gap:2mm;margin-top:4.5mm}
+.langs i{font-style:normal;font-size:8pt;font-weight:700;background:#F2B705;color:#1D272F;border-radius:1.5mm;padding:.8mm 2.2mm}
+.body{flex:1;padding:6mm 10mm 0;display:grid;grid-template-columns:1fr 1fr;gap:3.2mm}
+.box{background:#fff;border:.3mm solid #D8DCD6;border-radius:2.2mm;padding:3mm 3.4mm}
+.box h2{font-size:8.5pt;letter-spacing:.3pt;margin-bottom:1.4mm;color:#8a6a00;text-transform:uppercase}
+.box ul{list-style:none}
+.box li{font-size:7.8pt;line-height:1.28;padding-left:3.4mm;position:relative;margin-top:1mm}
+.box li:before{content:"";position:absolute;left:0;top:1.35mm;width:1.7mm;height:1.7mm;border-radius:50%;background:#F2B705}
+.note{padding:3.5mm 10mm 0;font-size:7.6pt;color:#5D6B76;line-height:1.35;text-align:center}
+.cta{margin:4mm 10mm 8mm;background:#1D272F;color:#fff;border-radius:3mm;padding:4mm 5mm;display:flex;gap:5mm;align-items:center}
+.cta svg{width:24mm;height:24mm;background:#fff;padding:1.6mm;border-radius:1.6mm;flex:none}
+.cta .t{font-size:11pt;font-weight:700;line-height:1.2}
+.cta .t small{display:block;font-size:8pt;font-weight:400;opacity:.85;margin-top:1.4mm;line-height:1.35}
+.cta .u{display:inline-block;margin-top:2mm;font-size:13pt;font-weight:700;color:#F2B705}
+.cta .m{font-size:8pt;margin-top:.8mm;opacity:.9}
+</style></head><body>
+<div class="p">
+ <div class="top">
+  <div class="logo"><b>YeY</b><span>Kancelář pro řemeslníky</span></div>
+  <h1>Od zaměření k faktuře.<br><em>Teď i ve vašem jazyce.</em></h1>
+  <p class="sub">Kalkulačky materiálu, nabídky a faktury s QR platbou. Rozhraní v češtině, ukrajinštině, ruštině a angličtině.</p>
+  <div class="langs"><i>CZ</i><i>UA</i><i>RU</i><i>EN</i></div>
+ </div>
+ <div class="tape"></div>
+ <div class="body">
+  <div class="box"><h2>Česky</h2><ul>
+   <li>16 kalkulaček: zdivo, sádrokarton, střecha, elektro…</li>
+   <li>Nabídky, faktury s QR platbou, předávací protokoly</li>
+   <li>Výpočet dopravy materiálu</li>
+   <li>Vaše data zůstávají u vás – bez registrace</li></ul></div>
+  <div class="box"><h2>Українською</h2><ul>
+   <li>16 калькуляторів: кладка, гіпсокартон, дах, електрика…</li>
+   <li>Пропозиції, рахунки-фактури з QR-оплатою, акти передачі</li>
+   <li>Розрахунок доставки матеріалу</li>
+   <li>Ваші дані залишаються у вас – без реєстрації</li></ul></div>
+  <div class="box"><h2>По-русски</h2><ul>
+   <li>16 калькуляторов: кладка, гипсокартон, крыша, электрика…</li>
+   <li>Предложения, счета-фактуры с QR-оплатой, акты передачи</li>
+   <li>Расчёт доставки материала</li>
+   <li>Ваши данные остаются у вас – без регистрации</li></ul></div>
+  <div class="box"><h2>In English</h2><ul>
+   <li>16 calculators: masonry, plasterboard, roofing, electrics…</li>
+   <li>Quotations, invoices with QR payment, handover protocols</li>
+   <li>Material delivery calculation</li>
+   <li>Your data stays with you – no registration</li></ul></div>
+ </div>
+ <p class="note">Rozhraní se přepíná v hlavičce aplikace. Doklady pro české zákazníky se tisknou česky.<br>Документи для чеських замовників друкуються чеською · Documents for Czech customers are printed in Czech.</p>
+ <div class="cta">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" shape-rendering="crispEdges"><path d="M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM9 0h1v1h-1zM12 0h1v1h-1zM14 0h1v1h-1zM15 0h1v1h-1zM16 0h1v1h-1zM17 0h1v1h-1zM18 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM9 1h1v1h-1zM11 1h1v1h-1zM14 1h1v1h-1zM20 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM9 2h1v1h-1zM11 2h1v1h-1zM14 2h1v1h-1zM16 2h1v1h-1zM17 2h1v1h-1zM18 2h1v1h-1zM20 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM14 3h1v1h-1zM16 3h1v1h-1zM17 3h1v1h-1zM18 3h1v1h-1zM20 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM12 4h1v1h-1zM14 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM18 4h1v1h-1zM20 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM9 5h1v1h-1zM10 5h1v1h-1zM14 5h1v1h-1zM20 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM15 6h1v1h-1zM16 6h1v1h-1zM17 6h1v1h-1zM18 6h1v1h-1zM19 6h1v1h-1zM20 6h1v1h-1zM9 7h1v1h-1zM11 7h1v1h-1zM12 7h1v1h-1zM0 8h1v1h-1zM3 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM8 8h1v1h-1zM11 8h1v1h-1zM13 8h1v1h-1zM15 8h1v1h-1zM3 9h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM12 9h1v1h-1zM14 9h1v1h-1zM15 9h1v1h-1zM16 9h1v1h-1zM20 9h1v1h-1zM2 10h1v1h-1zM3 10h1v1h-1zM4 10h1v1h-1zM6 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM11 10h1v1h-1zM12 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM1 11h1v1h-1zM2 11h1v1h-1zM3 11h1v1h-1zM9 11h1v1h-1zM11 11h1v1h-1zM12 11h1v1h-1zM14 11h1v1h-1zM16 11h1v1h-1zM17 11h1v1h-1zM19 11h1v1h-1zM20 11h1v1h-1zM0 12h1v1h-1zM2 12h1v1h-1zM4 12h1v1h-1zM5 12h1v1h-1zM6 12h1v1h-1zM7 12h1v1h-1zM8 12h1v1h-1zM12 12h1v1h-1zM13 12h1v1h-1zM15 12h1v1h-1zM17 12h1v1h-1zM8 13h1v1h-1zM11 13h1v1h-1zM12 13h1v1h-1zM14 13h1v1h-1zM15 13h1v1h-1zM20 13h1v1h-1zM0 14h1v1h-1zM1 14h1v1h-1zM2 14h1v1h-1zM3 14h1v1h-1zM4 14h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM12 14h1v1h-1zM13 14h1v1h-1zM16 14h1v1h-1zM17 14h1v1h-1zM18 14h1v1h-1zM19 14h1v1h-1zM0 15h1v1h-1zM6 15h1v1h-1zM8 15h1v1h-1zM11 15h1v1h-1zM12 15h1v1h-1zM15 15h1v1h-1zM16 15h1v1h-1zM19 15h1v1h-1zM20 15h1v1h-1zM0 16h1v1h-1zM2 16h1v1h-1zM3 16h1v1h-1zM4 16h1v1h-1zM6 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM13 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM0 17h1v1h-1zM2 17h1v1h-1zM3 17h1v1h-1zM4 17h1v1h-1zM6 17h1v1h-1zM8 17h1v1h-1zM9 17h1v1h-1zM10 17h1v1h-1zM12 17h1v1h-1zM14 17h1v1h-1zM16 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM0 18h1v1h-1zM2 18h1v1h-1zM3 18h1v1h-1zM4 18h1v1h-1zM6 18h1v1h-1zM10 18h1v1h-1zM12 18h1v1h-1zM13 18h1v1h-1zM14 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM0 19h1v1h-1zM6 19h1v1h-1zM10 19h1v1h-1zM13 19h1v1h-1zM0 20h1v1h-1zM1 20h1v1h-1zM2 20h1v1h-1zM3 20h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM6 20h1v1h-1zM8 20h1v1h-1zM9 20h1v1h-1zM11 20h1v1h-1zM13 20h1v1h-1zM14 20h1v1h-1zM16 20h1v1h-1zM19 20h1v1h-1z"/></svg>
+  <div><div class="t">Vyzkoušejte zdarma<small>Відскануйте QR-код · Отсканируйте QR-код · Scan the QR code</small></div>
+   <div class="u">yey.cz</div><div class="m">info@yey.cz</div></div>
+ </div>
+</div></body></html>

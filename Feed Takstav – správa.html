@@ -1,0 +1,411 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Feed Takstav – správa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Barlow+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: horní lišta s kartami, pod ní jeden pracovní panel; tabulky v posuvných kontejnerech. Paleta: šedomodrá ocel + oranžová výstražná (stavebnina). */
+:root{
+  --bg:#f3f4f6; --panel:#ffffff; --fg:#1d232b; --muted:#5f6b78; --line:#d9dee4;
+  --accent:#c4581a; --accent-fg:#ffffff; --soft:#eef1f4;
+  --ok:#2f7d4f; --warn:#a86a00; --bad:#b3261e;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14181d; --panel:#1c2229; --fg:#e4e8ec; --muted:#97a3af; --line:#2f3842;
+  --accent:#e37638; --accent-fg:#14181d; --soft:#242b33; --ok:#5cbf85; --warn:#e0a63a; --bad:#ef6b62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181d; --panel:#1c2229; --fg:#e4e8ec; --muted:#97a3af; --line:#2f3842;
+  --accent:#e37638; --accent-fg:#14181d; --soft:#242b33; --ok:#5cbf85; --warn:#e0a63a; --bad:#ef6b62; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--body);margin:0}
+.wrap{max-width:1200px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 20px;padding-block:8px 12px}
+h1{font:700 28px/1 var(--display);letter-spacing:.02em;margin:0;text-transform:uppercase}
+h1 span{color:var(--accent)}
+h2{font:600 20px/1.2 var(--display);letter-spacing:.03em;text-transform:uppercase;margin:0 0 8px}
+.sub{color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:4px;border-bottom:2px solid var(--line);margin-bottom:16px}
+nav button{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:8px 12px;font:600 15px var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer}
+nav button[aria-selected="true"]{color:var(--fg);border-color:var(--accent)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;display:grid;gap:12px;min-width:0}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button.b,.b{font:500 13px var(--body);border:1px solid var(--line);background:var(--soft);color:var(--fg);border-radius:4px;padding:6px 12px;cursor:pointer}
+button.b.p{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+button.b.d{color:var(--bad)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input,select,textarea{font:13px var(--body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-width:0}
+textarea{font-family:var(--mono);width:100%}
+label{display:grid;gap:2px;font-size:12px;color:var(--muted)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--soft);font-weight:600;font-size:12px;color:var(--muted);white-space:nowrap;position:sticky;top:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--soft);border:1px solid var(--line)}
+.pill.ok{color:var(--ok);border-color:currentColor}.pill.warn{color:var(--warn);border-color:currentColor}.pill.bad{color:var(--bad);border-color:currentColor}
+.stat{display:grid;gap:2px}.stat b{font:700 26px/1 var(--display);font-variant-numeric:tabular-nums}
+.toast{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:4px;max-width:90vw}
+.err{color:var(--bad)}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:0}dt{color:var(--muted)}dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.login{max-width:380px;margin:10vh auto}
+details summary{cursor:pointer;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header><h1>Feed <span>Takstav</span></h1><span class="sub">xmlfeed4 · STAVIMEX · Supabase „Stavební materiál“</span></header>
+
+  <section id="login" class="panel login">
+    <h2>Přihlášení</h2>
+    <label for="klic">Administrátorský klíč<input id="klic" type="password" autocomplete="current-password"></label>
+    <div class="row"><button class="b p" id="prihlas">Přihlásit</button><span id="loginErr" class="err"></span></div>
+  </section>
+
+  <main id="app" hidden>
+    <nav role="tablist" id="tabs"></nav>
+    <div id="view"></div>
+  </main>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const URL_ = "https://fvrpuddkarujfttoaavb.supabase.co";
+const KEY = "sb_publishable_1Y5nEfLwKmJxlnbkLmZgMg_Rzs7WQQG";
+const FEED_URL = URL_ + "/functions/v1/feed4";
+let klic = "";
+try { klic = sessionStorage.getItem("feedklic") || ""; } catch (e) {}
+
+async function rpc(fn, args) {
+  const r = await fetch(URL_ + "/rest/v1/rpc/" + fn, { method: "POST",
+    headers: { apikey: KEY, Authorization: "Bearer " + KEY, "Content-Type": "application/json" },
+    body: JSON.stringify(Object.assign({ p_klic: klic }, args || {})) });
+  const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { j = t; }
+  if (!r.ok) throw new Error((j && j.message) || t);
+  return j;
+}
+const $ = (s, el) => (el || document).querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const dt = (s) => s ? new Date(s).toLocaleString("cs-CZ", { dateStyle: "short", timeStyle: "short" }) : "–";
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3500); }
+const chyba = (e) => toast("Chyba: " + e.message);
+
+$("#prihlas").onclick = async () => {
+  klic = $("#klic").value.trim();
+  try { await rpc("feed_admin_prihlas"); try { sessionStorage.setItem("feedklic", klic); } catch (e) {} start(); }
+  catch (e) { $("#loginErr").textContent = "Klíč nesedí."; }
+};
+$("#klic").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#prihlas").click(); });
+
+const TABY = [["prehled", "Přehled"], ["vystup", "Výstup"], ["ceny", "Cenová pravidla"], ["seznamy", "Seznamy karet"],
+  ["upravy", "Úpravy karet"], ["karta", "Karta"], ["nastaveni", "Nastavení"], ["chybi", "Chybí u dodavatelů"]];
+let tab = "prehled";
+function start() {
+  $("#login").hidden = true; $("#app").hidden = false;
+  $("#tabs").innerHTML = TABY.map(([k, n]) => `<button role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join("");
+  $("#tabs").onclick = (e) => { const b = e.target.closest("button"); if (b) ukaz(b.dataset.t); };
+  const h = location.hash.slice(1); ukaz(TABY.some((t) => t[0] === h) ? h : tab);
+}
+function ukaz(t) {
+  tab = t; document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.t === t));
+  $("#view").innerHTML = '<div class="panel sub">Načítám…</div>';
+  ({ prehled, vystup, ceny, seznamy, upravy, karta, nastaveni, chybi })[t]().catch((e) => $("#view").innerHTML = `<div class="panel err">${esc(e.message)}</div>`);
+}
+
+/* ---------- PŘEHLED ---------- */
+async function prehled() {
+  const p = await rpc("feed_admin_prehled");
+  const v = (p.vystupy || []).find((x) => x.nazev === "takstav") || {};
+  const log = v.log || {};
+  const ceny = Object.entries(log.cena || {}).sort((a, b) => b[1] - a[1]);
+  $("#view").innerHTML = `
+  <div class="grid">
+    <div class="panel">
+      <h2>Výstup pro Takstav</h2>
+      <div class="row" style="gap:24px">
+        <div class="stat"><span class="sub">Položek</span><b>${v.produktu ?? "–"}</b></div>
+        <div class="stat"><span class="sub">Sestaveno</span><b style="font-size:18px">${dt(v.sestaveno)}</b></div>
+        <div class="stat"><span class="sub">Velikost</span><b style="font-size:18px">${v.velikost ? Math.round(v.velikost / 1024) + " kB" : "–"}</b></div>
+      </div>
+      <div class="row"><span class="mono" style="overflow-wrap:anywhere">${FEED_URL}</span><button class="b" id="kopUrl">Kopírovat adresu</button><a class="b" href="${FEED_URL}" target="_blank" rel="noopener">Otevřít XML</a></div>
+      <div class="row">
+        <button class="b p" data-a="sestav">Sestavit feed</button>
+        <button class="b" data-a="import">Stáhnout Den Braven + XTLine</button>
+        <button class="b" data-a="vse">Stáhnout a sestavit</button>
+        <button class="b" id="listyBtn">Načíst z Google tabulky…</button>
+      </div>
+      <div id="listyPotvrd" hidden class="panel" style="background:var(--soft)">
+        Načte listy Venku, Takstav7, URLobrazky, Prevodnik, NazvyVlastni, ObrazkyVlastni a ceník Caparol
+        z tabulky „Oprava Názvů“. <b>Úpravy karet a seznamy Venku/Takstav7 se přepíší</b> obsahem tabulky – změny udělané tady se ztratí.
+        <div class="row"><button class="b p" data-a="listy">Ano, načíst a přepsat</button><button class="b" id="listyNe">Zrušit</button></div>
+      </div>
+      <p class="sub" style="margin:0">Feed se sestavuje automaticky každou hodinu (12. minuta), dodavatelé se stahují ve 23:40. Akce běží na pozadí, výsledek se projeví do minuty.</p>
+    </div>
+    <div class="panel">
+      <h2>Filtry posledního sestavení</h2>
+      <dl>
+        <dt>Řádků v kartách</dt><dd>${log.radku ?? "–"}</dd>
+        <dt>Bez letošního prodeje</dt><dd>${log.bezPohybu ?? "–"}</dd>
+        <dt>Nulová zásoba</dt><dd>${log.nulovaZasoba ?? "–"}</dd>
+        <dt>Hvězdička / paleta</dt><dd>${log.hvezdicka ?? "–"} / ${log.paleta ?? "–"}</dd>
+        <dt>Vyřazeno ručně</dt><dd>${log.vynechanoCislo ?? "–"}</dd>
+        <dt>Den Braven / XTLine / Winshop</dt><dd>${log.denbraven ?? "–"} / ${log.xtline ?? "–"} / ${log.winshop ?? "–"}</dd>
+        <dt>Libeň EAN / kód balení</dt><dd>${log.liben ? log.liben.ean + " / " + log.liben.kodbal : "–"}</dd>
+        <dt>Vlastní názvy / fotky</dt><dd>${log.nazVlastni ?? "–"} / ${log.obrVlastni ?? "–"}</dd>
+        <dt>Hmotnost z názvu</dt><dd>${log.hmotnostNazev ?? "–"}</dd>
+        <dt>Zamítnuté krátké kódy</dt><dd>${log.kratkyKodZamitnutPocet ?? 0}</dd>
+        <dt>Bez ceny</dt><dd>${(log.cenaBezPravidla ?? 0) + (log.cenaBezNc ?? 0)}</dd>
+        <dt>Doba</dt><dd>${log.sekund ?? "–"} s</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="panel"><h2>Zdroje dodavatelů</h2><div class="tw"><table>
+      <tr><th>Zdroj</th><th>Stav</th><th class="n">Naše položky</th><th class="n">Ve feedu celkem</th><th>Naposledy OK</th></tr>
+      ${(p.zdroje || []).map((z) => `<tr><td>${esc(z.popis || z.zdroj)}</td>
+        <td>${z.chyba ? `<span class="pill bad" title="${esc(z.chyba)}">chyba</span><div class="sub" style="font-size:12px">${esc(z.chyba)}</div>` : z.aktivni ? '<span class="pill ok">OK</span>' : '<span class="pill">vypnuto</span>'}</td>
+        <td class="n">${z.v_db}</td><td class="n">${z.celkem_ve_feedu ?? "–"}</td><td>${dt(z.naposledy_ok)}</td></tr>`).join("")}
+    </table></div></div>
+    <div class="panel"><h2>Sklady (KARTY.CSV)</h2><div class="tw"><table>
+      <tr><th>Prodejna</th><th class="n">Karet</th><th>Zpracováno</th><th>Stav</th></tr>
+      ${(p.sklady || []).map((s) => `<tr><td>${esc(s.prodejna)}</td><td class="n">${s.radku ?? "–"}</td><td>${dt(s.zpracovano)}</td>
+        <td>${s.chyba ? `<span class="pill bad">${esc(s.chyba)}</span>` : '<span class="pill ok">OK</span>'}</td></tr>`).join("")}
+    </table></div></div>
+  </div>
+  <div class="panel"><h2>Cena pro Takstav podle pravidel</h2><div class="tw"><table>
+    <tr><th>Pravidlo</th><th class="n">Položek</th></tr>
+    ${ceny.map(([k, n]) => `<tr><td>${esc(k)}</td><td class="n">${n}</td></tr>`).join("")}
+  </table></div></div>`;
+  $("#kopUrl").onclick = () => navigator.clipboard.writeText(FEED_URL).then(() => toast("Adresa zkopírována"), () => toast(FEED_URL));
+  $("#listyBtn").onclick = () => $("#listyPotvrd").hidden = false;
+  $("#listyNe").onclick = () => $("#listyPotvrd").hidden = true;
+  $("#view").querySelectorAll("[data-a]").forEach((b) => b.onclick = async () => {
+    try { await rpc("feed_admin_spust", { p_akce: b.dataset.a }); toast("Spuštěno – za chvíli obnovte přehled"); $("#listyPotvrd").hidden = true; }
+    catch (e) { chyba(e); }
+  });
+}
+
+/* ---------- VÝSTUP ---------- */
+let vyst = { q: "", f: "", off: 0 };
+async function vystup() {
+  const r = await rpc("feed_admin_vystup", { p_dotaz: vyst.q, p_filtr: vyst.f, p_limit: 100, p_offset: vyst.off });
+  const prav = Object.entries(r.pravidla || {}).sort((a, b) => b[1] - a[1]);
+  $("#view").innerHTML = `<div class="panel">
+    <div class="row">
+      <input id="vq" placeholder="Číslo karty, EAN nebo název" value="${esc(vyst.f === "pravidlo" ? "" : vyst.q)}" style="flex:1 1 220px">
+      <select id="vf"><option value="">Vše</option><option value="bez_ceny">Bez ceny</option><option value="bez_hmotnosti">Bez hmotnosti</option><option value="bez_obrazku">Bez obrázku</option></select>
+      <select id="vp"><option value="">— podle cenového pravidla —</option>${prav.map(([k, n]) => `<option ${vyst.f === "pravidlo" && vyst.q === k ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>
+      <button class="b p" id="vhledej">Hledat</button>
+    </div>
+    <div class="sub">${r.celkem} položek · zobrazeno ${vyst.off + 1}–${Math.min(vyst.off + 100, r.celkem)}</div>
+    <div class="tw"><table>
+      <tr><th class="n">#</th><th>Číslo</th><th>Název ve feedu</th><th>Původní název</th><th class="n">Zásoba M / L</th><th class="n">Hmotnost</th><th class="n">OC s DPH</th><th class="n">Cena Takstav</th><th>Pravidlo</th></tr>
+      ${r.rows.map((x) => `<tr><td class="n">${x.poradi_prodeje}</td><td><a href="#karta" data-c="${esc(x.cislo)}" class="mono">${esc(x.cislo)}</a></td>
+        <td>${x.url_obrazku ? "" : '<span class="pill warn">bez foto</span> '}${esc(x.nazev)}</td><td class="sub">${esc(x.nazev_puvodni)}</td>
+        <td class="n">${esc(x.zasoba_malesice)} / ${esc(x.zasoba_liben ?? "–")}</td><td class="n">${esc(x.hmotnost_mj ?? "")}</td>
+        <td class="n">${esc(x.oc_sdph ?? "")}</td><td class="n"><b>${esc(x.cena_takstav ?? "")}</b></td><td class="sub">${esc(x.cena_pravidlo ?? "")}</td></tr>`).join("")}
+    </table></div>
+    <div class="row"><button class="b" id="vprev" ${vyst.off ? "" : "disabled"}>Předchozí</button><button class="b" id="vnext" ${vyst.off + 100 < r.celkem ? "" : "disabled"}>Další</button></div>
+  </div>`;
+  if (vyst.f !== "pravidlo") $("#vf").value = vyst.f;
+  const hledej = () => { const p = $("#vp").value; vyst = p ? { q: p, f: "pravidlo", off: 0 } : { q: $("#vq").value, f: $("#vf").value, off: 0 }; vystup().catch(chyba); };
+  $("#vhledej").onclick = hledej; $("#vq").onkeydown = (e) => e.key === "Enter" && hledej(); $("#vp").onchange = hledej;
+  $("#vprev").onclick = () => { vyst.off -= 100; vystup().catch(chyba); };
+  $("#vnext").onclick = () => { vyst.off += 100; vystup().catch(chyba); };
+  odkazyKaret();
+}
+function odkazyKaret() { $("#view").querySelectorAll("[data-c]").forEach((a) => a.onclick = (e) => { e.preventDefault(); kartaCislo = a.dataset.c; ukaz("karta"); }); }
+
+/* ---------- CENOVÁ PRAVIDLA ---------- */
+const POLE_PR = [["poradi", "Pořadí", "n"], ["popis", "Popis", "t"], ["aktivni", "Aktivní", "b"], ["dodavatel", "Dodavatel (KOD_DOD)", "a"],
+  ["nazev_zacina", "Název začíná", "a"], ["nazev_obsahuje", "Název obsahuje", "a"], ["jen_venku", "Jen venkovní sklad", "b"], ["jen_kram", "Jen krám", "b"],
+  ["na_seznamu_takstav7", "Jen seznam Takstav7", "b"], ["bez_slevy", "BEZ_SLEVY (A/N)", "t"], ["marze_pod", "Marže pod %", "n"], ["marze_nad", "Marže nad %", "n"],
+  ["prirazka", "Přirážka %", "n"], ["pulka_marze", "Půlka marže", "b"], ["strop_oc_sleva", "Strop: OC − sleva %", "n"]];
+async function ceny() {
+  const p = await rpc("feed_admin_prehled");
+  const pr = p.cena_pravidla || [];
+  const podm = (x) => [x.dodavatel?.length && "dod. " + x.dodavatel.join(", "), x.nazev_zacina?.length && "začíná " + x.nazev_zacina.join(", "),
+    x.nazev_obsahuje?.length && "obsahuje " + x.nazev_obsahuje.join(", "), x.jen_venku && "venku", x.jen_kram && "krám", x.na_seznamu_takstav7 && "Takstav7",
+    x.bez_slevy && "BEZ_SLEVY=" + x.bez_slevy, x.marze_pod != null && "marže < " + x.marze_pod + " %", x.marze_nad != null && "marže > " + x.marze_nad + " %"].filter(Boolean).join(" · ");
+  $("#view").innerHTML = `<div class="panel">
+    <p class="sub" style="margin:0">Pravidla se procházejí shora dolů, použije se první, které sedí. Cena = NC × (1 + přirážka %). Vždy platí pojistky: půlka marže, OC pod NC → OC, a Takstav musí být levnější než zákazník se slevou (nastavení cena_strop_oc_sleva_vsude).</p>
+    <div class="tw"><table><tr><th class="n">Pořadí</th><th>Pravidlo</th><th>Podmínky</th><th class="n">Přirážka</th><th>Pojistky</th><th></th></tr>
+    ${pr.map((x) => `<tr style="${x.aktivni ? "" : "opacity:.5"}"><td class="n">${x.poradi}</td><td>${esc(x.popis)}</td><td class="sub">${esc(podm(x)) || "vše ostatní"}</td>
+      <td class="n"><b>${x.prirazka} %</b></td><td class="sub">${[x.pulka_marze && "půlka marže", x.strop_oc_sleva && "strop −" + x.strop_oc_sleva + " %"].filter(Boolean).join(", ")}</td>
+      <td><button class="b" data-e="${x.id}">Upravit</button></td></tr>`).join("")}
+    </table></div>
+    <div class="row"><button class="b p" data-e="">Přidat pravidlo</button></div>
+    <div id="edit"></div></div>`;
+  $("#view").querySelectorAll("[data-e]").forEach((b) => b.onclick = () => editPravidla(pr.find((x) => String(x.id) === b.dataset.e) || { aktivni: true, poradi: (pr.at(-1)?.poradi || 0) + 10 }));
+}
+function editPravidla(x) {
+  const f = $("#edit");
+  f.innerHTML = `<div class="panel" style="background:var(--soft)"><h2>${x.id ? "Upravit pravidlo" : "Nové pravidlo"}</h2><div class="grid">
+    ${POLE_PR.map(([k, n, t]) => t === "b" ? `<label style="flex-direction:row;display:flex;gap:6px;align-items:center"><input type="checkbox" id="pr_${k}" ${x[k] ? "checked" : ""}> ${n}</label>`
+      : `<label for="pr_${k}">${n}${t === "a" ? " (čárkou)" : ""}<input id="pr_${k}" value="${esc(t === "a" ? (x[k] || []).join(", ") : x[k] ?? "")}"></label>`).join("")}
+    </div><div class="row"><button class="b p" id="prUloz">Uložit</button>${x.id ? '<button class="b d" id="prSmaz">Smazat pravidlo</button><span id="prSmazP" hidden>Opravdu? <button class="b d" id="prSmazAno">Ano, smazat</button></span>' : ""}<button class="b" id="prZavri">Zavřít</button></div>
+    <p class="sub" style="margin:0">Změna se projeví při dalším sestavení feedu (tlačítko na Přehledu nebo do hodiny).</p></div>`;
+  f.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  $("#prZavri").onclick = () => f.innerHTML = "";
+  $("#prUloz").onclick = async () => {
+    const d = { id: x.id ?? null };
+    for (const [k, , t] of POLE_PR) {
+      const el = $("#pr_" + k);
+      if (t === "b") d[k] = el.checked;
+      else if (t === "a") d[k] = el.value.split(",").map((s) => s.trim()).filter(Boolean);
+      else if (t === "n") d[k] = el.value.trim() === "" ? null : Number(el.value.replace(",", "."));
+      else d[k] = el.value.trim() || null;
+    }
+    try { await rpc("feed_admin_uloz", { p_tabulka: "feed_cena_pravidla", p_data: d }); toast("Pravidlo uloženo"); ceny(); } catch (e) { chyba(e); }
+  };
+  if (x.id) {
+    $("#prSmaz").onclick = () => $("#prSmazP").hidden = false;
+    $("#prSmazAno").onclick = async () => { try { await rpc("feed_admin_smaz", { p_tabulka: "feed_cena_pravidla", p_pk: { id: x.id } }); toast("Pravidlo smazáno"); ceny(); } catch (e) { chyba(e); } };
+  }
+}
+
+/* ---------- SEZNAMY ---------- */
+const SEZNAMY = { venku: "Venkovní sklad (pravidla „venku“; co tu není = krám)", takstav7: "Takstav7 – porovnávané položky krámu (+7 %)",
+  vynechat: "Ručně vyřazené karty (do feedu vůbec nejdou)", obohaceni_vynechat: "Bez obohacení z Winshopu a XTLine", hmotnost_vynechat: "Hmotnost se nedoplňuje z názvu" };
+let sez = { s: "venku", q: "" };
+async function seznamy() {
+  const r = await rpc("feed_admin_tabulka", { p_tabulka: "feed_seznam", p_seznam: sez.s, p_dotaz: sez.q, p_limit: 500 });
+  $("#view").innerHTML = `<div class="panel">
+    <div class="row"><select id="ss">${Object.entries(SEZNAMY).map(([k, n]) => `<option value="${k}" ${k === sez.s ? "selected" : ""}>${n}</option>`).join("")}</select>
+      <input id="sq" placeholder="Hledat číslo nebo název" value="${esc(sez.q)}" style="flex:1 1 200px"><button class="b" id="sh">Hledat</button></div>
+    <div class="grid" style="align-items:start">
+      <div style="min-width:0"><div class="sub">${r.celkem} karet</div><div class="tw" style="max-height:60vh"><table>
+        <tr><th></th><th>Číslo</th><th>Název v kartách</th><th>Poznámka</th></tr>
+        ${r.rows.map((x) => `<tr><td><input type="checkbox" class="sx" value="${esc(x.cislo)}" aria-label="Vybrat ${esc(x.cislo)}"></td><td class="mono"><a href="#karta" data-c="${esc(x.cislo)}">${esc(x.cislo)}</a></td><td>${esc(x.nazev_sklad ?? "— není v kartách Malešic —")}</td><td class="sub">${esc(x.poznamka ?? "")}</td></tr>`).join("")}
+      </table></div><div class="row" style="margin-top:8px"><button class="b d" id="sOdeber">Odebrat vybrané</button></div></div>
+      <div class="panel" style="background:var(--soft)"><label for="sNove">Přidat čísla karet (každé na řádek nebo oddělené čárkou)<textarea id="sNove" rows="6"></textarea></label>
+        <label for="sPozn">Poznámka<input id="sPozn"></label><button class="b p" id="sPridej">Přidat do seznamu</button></div>
+    </div></div>`;
+  $("#ss").onchange = () => { sez = { s: $("#ss").value, q: "" }; seznamy().catch(chyba); };
+  $("#sh").onclick = () => { sez.q = $("#sq").value; seznamy().catch(chyba); };
+  $("#sq").onkeydown = (e) => e.key === "Enter" && $("#sh").click();
+  $("#sPridej").onclick = async () => {
+    const c = $("#sNove").value.split(/[\s,;]+/).filter(Boolean);
+    if (!c.length) return toast("Zadejte čísla karet");
+    try { const n = await rpc("feed_admin_seznam_pridej", { p_seznam: sez.s, p_cisla: c, p_poznamka: $("#sPozn").value }); toast("Přidáno: " + n); seznamy(); } catch (e) { chyba(e); }
+  };
+  $("#sOdeber").onclick = async () => {
+    const c = [...document.querySelectorAll(".sx:checked")].map((x) => x.value);
+    if (!c.length) return toast("Nic není vybráno");
+    try { const n = await rpc("feed_admin_seznam_odeber", { p_seznam: sez.s, p_cisla: c }); toast("Odebráno: " + n); seznamy(); } catch (e) { chyba(e); }
+  };
+  odkazyKaret();
+}
+
+/* ---------- ÚPRAVY KARET ---------- */
+const POLE_U = [["vlastni_nazev", "Vlastní název (přebije všechny zdroje)"], ["vlastni_popis", "Krátký popis"], ["vlastni_popis_dlouhy", "Dlouhý popis"],
+  ["vlastni_obrazek", "Vlastní fotka (URL)"], ["url_produktu", "URL produktu na e-shopu"], ["url_obrazku_eshop", "Obrázek z e-shopu (URL)"],
+  ["prevod_nazev_cisty", "Převodník: čistý název"], ["prevod_rozmer", "Převodník: rozměr"], ["prevod_paleta", "Převodník: kusů na paletě"]];
+let upq = { q: "", off: 0 };
+async function upravy() {
+  const r = await rpc("feed_admin_tabulka", { p_tabulka: "feed_karta_upravy", p_dotaz: upq.q, p_limit: 100, p_offset: upq.off });
+  $("#view").innerHTML = `<div class="panel">
+    <p class="sub" style="margin:0">Ruční úpravy jedné karty. Mají přednost před Den Braven, XTLine i Winshopem. Novou kartu přidáte na záložce Karta.</p>
+    <div class="row"><input id="uq" placeholder="Číslo nebo název" value="${esc(upq.q)}" style="flex:1 1 220px"><button class="b" id="uh">Hledat</button><span class="sub">${r.celkem} karet</span></div>
+    <div class="tw"><table><tr><th>Číslo</th><th>Název v kartách</th><th>Vlastní název</th><th>Foto</th><th>E-shop</th></tr>
+    ${r.rows.map((x) => `<tr><td class="mono"><a href="#karta" data-c="${esc(x.cislo)}">${esc(x.cislo)}</a></td><td class="sub">${esc(x.nazev_sklad ?? "—")}</td><td>${esc(x.vlastni_nazev ?? x.prevod_nazev_cisty ?? "")}</td>
+      <td>${x.vlastni_obrazek ? '<span class="pill ok">vlastní</span>' : x.url_obrazku_eshop ? '<span class="pill">e-shop</span>' : ""}</td><td>${x.url_produktu ? '<span class="pill">odkaz</span>' : ""}</td></tr>`).join("")}
+    </table></div>
+    <div class="row"><button class="b" id="uprev" ${upq.off ? "" : "disabled"}>Předchozí</button><button class="b" id="unext" ${upq.off + 100 < r.celkem ? "" : "disabled"}>Další</button></div></div>`;
+  $("#uh").onclick = () => { upq = { q: $("#uq").value, off: 0 }; upravy().catch(chyba); };
+  $("#uq").onkeydown = (e) => e.key === "Enter" && $("#uh").click();
+  $("#uprev").onclick = () => { upq.off -= 100; upravy().catch(chyba); };
+  $("#unext").onclick = () => { upq.off += 100; upravy().catch(chyba); };
+  odkazyKaret();
+}
+
+/* ---------- KARTA ---------- */
+let kartaCislo = "";
+async function karta() {
+  $("#view").innerHTML = `<div class="panel"><div class="row"><input id="kc" placeholder="Číslo karty" value="${esc(kartaCislo)}"><button class="b p" id="kh">Zobrazit</button>
+    <input id="ks" placeholder="…nebo hledat v kartách podle názvu / EAN" style="flex:1 1 220px"><button class="b" id="kss">Hledat</button></div><div id="kout"></div></div>`;
+  $("#kh").onclick = () => { kartaCislo = $("#kc").value.trim(); nactiKartu(); };
+  $("#kc").onkeydown = (e) => e.key === "Enter" && $("#kh").click();
+  $("#kss").onclick = async () => {
+    try { const r = await rpc("feed_admin_tabulka", { p_tabulka: "stavimex_sklad", p_dotaz: $("#ks").value, p_limit: 50 });
+      $("#kout").innerHTML = `<div class="tw"><table><tr><th>Číslo</th><th>Název</th><th>EAN</th><th class="n">Zásoba</th><th>Ve feedu</th></tr>
+        ${r.rows.map((x) => `<tr><td class="mono"><a href="#karta" data-c="${esc(x.cislo)}">${esc(x.cislo)}</a></td><td>${esc(x.nazev)}</td><td class="mono">${esc(x.ean ?? "")}</td><td class="n">${x.zasoba ?? ""}</td><td>${x.ve_vystupu ? '<span class="pill ok">ano</span>' : '<span class="pill">ne</span>'}</td></tr>`).join("")}</table></div>`;
+      $("#kout").querySelectorAll("[data-c]").forEach((a) => a.onclick = (e) => { e.preventDefault(); kartaCislo = a.dataset.c; $("#kc").value = kartaCislo; nactiKartu(); });
+    } catch (e) { chyba(e); }
+  };
+  if (kartaCislo) nactiKartu();
+}
+async function nactiKartu() {
+  const o = $("#kout"); o.innerHTML = '<p class="sub">Načítám…</p>';
+  try {
+    const k = await rpc("feed_admin_karta", { p_cislo: kartaCislo });
+    const m = (k.sklad || []).find((s) => s.prodejna === "malesice");
+    const v = k.vystup, u = k.upravy || { cislo: kartaCislo };
+    const proc = !m ? "Karta v Malešicích neexistuje." : v ? "" : vysvetli(m, k);
+    o.innerHTML = `<div class="grid" style="align-items:start">
+      <div class="panel"><h2>Ve feedu</h2>${v ? `<dl>${Object.entries(v).filter(([, x]) => x != null && x !== "").map(([a, x]) => `<dt>${esc(a)}</dt><dd>${a.startsWith("url") ? `<a href="${esc(x)}" target="_blank" rel="noopener">${esc(x)}</a>` : esc(x)}</dd>`).join("")}</dl>${v.url_obrazku ? `<img src="${esc(v.url_obrazku)}" alt="" style="max-height:160px;object-fit:contain">` : ""}` : `<p class="pill warn">Položka ve feedu není</p><p>${esc(proc)}</p>`}</div>
+      <div class="panel"><h2>Karta a zdroje</h2>
+        ${(k.sklad || []).map((s) => `<p style="margin:0"><b>${esc(s.prodejna)}</b>: ${esc(s.nazev)} · zásoba ${s.zasoba ?? "–"} ${esc(s.mj ?? "")} · EAN ${esc(s.ean ?? "–")} · kód balení ${esc(s.kod_baleni ?? "–")}</p>`).join("")}
+        ${m ? `<p class="sub" style="margin:0">NC ${esc(m.data?.NC)} · OC bez DPH ${esc(m.data?.OC_BEZDPH)} · BEZ_SLEVY ${esc(m.data?.BEZ_SLEVY)} · dodavatel ${esc(m.data?.KOD_DOD)} · letos prodáno ${esc(m.data?.VYDEJE_VYP ?? "0")}</p>` : ""}
+        <p style="margin:0">Seznamy: ${(k.seznamy || []).map((s) => `<span class="pill">${esc(s.seznam)}</span>`).join(" ") || "žádné"}</p>
+        <p style="margin:0">Libeň přes EAN: ${(k.liben_ean || []).map((x) => esc(x.cislo + " (" + x.zasoba + ")")).join(", ") || "—"} · přes kód: ${(k.liben_kod || []).map((x) => esc(x.cislo + " (" + x.zasoba + ")")).join(", ") || "—"}</p>
+        ${(k.zdroje || []).length ? `<div class="tw"><table><tr><th>Zdroj</th><th>Název</th><th class="n">Hmotnost</th></tr>${k.zdroje.map((z) => `<tr><td>${esc(z.zdroj)}</td><td>${esc(z.nazev)}</td><td class="n">${esc(z.hmotnost ?? "")}</td></tr>`).join("")}</table></div>` : '<p class="sub" style="margin:0">Den Braven / XTLine: bez shody</p>'}
+        ${k.oprava ? `<details><summary>Popis z tabulky oprava_nazvu</summary><p>${esc(k.oprava.popis_kratky ?? "")}</p><p class="sub">${esc(k.oprava.popis_dlouhy ?? "")}</p></details>` : ""}
+      </div></div>
+      <div class="panel" style="margin-top:12px"><h2>Ruční úpravy této karty</h2><div class="grid">
+        ${POLE_U.map(([f, n]) => f.includes("popis") ? `<label for="u_${f}" style="grid-column:1/-1">${n}<textarea id="u_${f}" rows="${f.includes("dlouhy") ? 4 : 2}" style="font-family:var(--body)">${esc(u[f] ?? "")}</textarea></label>` : `<label for="u_${f}">${n}<input id="u_${f}" value="${esc(u[f] ?? "")}"></label>`).join("")}
+      </div><div class="row"><button class="b p" id="uUloz">Uložit úpravy</button>${k.upravy ? '<button class="b d" id="uSmaz">Smazat všechny úpravy karty</button><span id="uSmazP" hidden>Opravdu? <button class="b d" id="uSmazAno">Ano</button></span>' : ""}
+      <span class="sub">Projeví se při dalším sestavení feedu.</span></div></div>`;
+    $("#uUloz").onclick = async () => {
+      const d = { cislo: kartaCislo };
+      for (const [f] of POLE_U) { const x = $("#u_" + f).value.trim(); d[f] = x === "" ? null : f === "prevod_paleta" ? Number(x) : x; }
+      try { await rpc("feed_admin_uloz", { p_tabulka: "feed_karta_upravy", p_data: d }); toast("Úpravy uloženy"); nactiKartu(); } catch (e) { chyba(e); }
+    };
+    if (k.upravy) {
+      $("#uSmaz").onclick = () => $("#uSmazP").hidden = false;
+      $("#uSmazAno").onclick = async () => { try { await rpc("feed_admin_smaz", { p_tabulka: "feed_karta_upravy", p_pk: { cislo: kartaCislo } }); toast("Úpravy smazány"); nactiKartu(); } catch (e) { chyba(e); } };
+    }
+  } catch (e) { o.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+function vysvetli(m, k) {
+  const d = m.data || {}, n = String(d.NAZEV || "");
+  if (n.startsWith("*")) return "Název karty začíná hvězdičkou.";
+  if (/^PALETA/i.test(n)) return "Název začíná slovem PALETA.";
+  if ((k.seznamy || []).some((s) => s.seznam === "vynechat")) return "Karta je na seznamu ručně vyřazených.";
+  if (!(Number(String(d.VYDEJE_VYP || "0").replace(",", ".")) > 0)) return "Letos se neprodala (VYDEJE_VYP = 0).";
+  if (!(Number(String(d.ZASOBA || "0").replace(",", ".")) > 0)) return "Nulová zásoba v Malešicích.";
+  return "Feed se ještě nesestavil po poslední změně – spusťte sestavení na Přehledu.";
+}
+
+/* ---------- NASTAVENÍ ---------- */
+async function nastaveni() {
+  const p = await rpc("feed_admin_prehled");
+  $("#view").innerHTML = `<div class="panel"><p class="sub" style="margin:0">Hodnoty jsou ve formátu JSON: čísla bez uvozovek, text v uvozovkách, seznamy v hranatých závorkách, ano/ne jako true/false.</p>
+    <div class="tw"><table><tr><th>Klíč</th><th>Popis</th><th style="min-width:280px">Hodnota</th><th></th></tr>
+    ${(p.nastaveni || []).map((x, i) => `<tr><td class="mono">${esc(x.klic)}</td><td class="sub">${esc(x.popis ?? "")}</td>
+      <td><textarea id="n_${i}" rows="${JSON.stringify(x.hodnota).length > 60 ? 3 : 1}">${esc(JSON.stringify(x.hodnota))}</textarea></td>
+      <td><button class="b" data-i="${i}">Uložit</button></td></tr>`).join("")}
+    </table></div></div>`;
+  $("#view").querySelectorAll("[data-i]").forEach((b) => b.onclick = async () => {
+    const x = p.nastaveni[b.dataset.i]; let h;
+    try { h = JSON.parse($("#n_" + b.dataset.i).value); } catch (e) { return toast("Hodnota není platný JSON"); }
+    try { await rpc("feed_admin_uloz", { p_tabulka: "feed_nastaveni", p_data: { klic: x.klic, hodnota: h } }); toast("Uloženo: " + x.klic); } catch (e) { chyba(e); }
+  });
+}
+
+/* ---------- CHYBÍ U DODAVATELŮ ---------- */
+async function chybi() {
+  const r = await rpc("feed_admin_chybi");
+  $("#view").innerHTML = `<div class="panel"><p class="sub" style="margin:0">Produkty, které dodavatel vyřadil ze svého feedu. Ve feedu pro Takstav zůstávají jejich poslední známá data (název, popis, hmotnost). Když se do feedu dodavatele vrátí, převezmou se zase čerstvá.</p>
+    <div class="tw"><table><tr><th>Zdroj</th><th>EAN</th><th>Kód</th><th>Název</th><th>Chybí od</th></tr>
+    ${r.map((x) => `<tr><td>${esc(x.zdroj)}</td><td class="mono">${esc(x.ean ?? "")}</td><td class="mono">${esc(x.kod ?? "")}</td><td>${esc(x.nazev)}</td><td>${dt(x.chybi_od)}</td></tr>`).join("") || '<tr><td colspan="5" class="sub">Nic nechybí.</td></tr>'}
+    </table></div></div>`;
+}
+
+if (klic) rpc("feed_admin_prihlas").then(start, () => {});
+</script>
+
+</body></html>

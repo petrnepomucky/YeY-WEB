@@ -368,6 +368,7 @@ function editor(r){
   const novy=!r, upr=S.upravitelna, cols=S.sloupce;
   $('#mbox').innerHTML=`<h3>${novy?'Nový řádek':'Řádek'} <small class="hint">${esc(T)}</small><span class="sp"></span><button id="mX">✕</button></h3>
     ${novy?'<p class="hint">Prázdná pole se nevyplní – použije se výchozí hodnota sloupce.</p>':''}
+    ${!novy&&jeLicence()?'<div class="msg varovani">Změna sloupce <b>exp</b> platnost licence neprodlouží – datum je zapsané v podepsaném klíči. Použij tlačítko <b>🔑 Prodloužit licenci</b> dole.</div>':''}
     <div id="mF">${cols.map((c,i)=>{
       const v=r?r[c.nazev]:undefined, txt=naText(v,c), dis=!upr||c.generovany;
       const isNull=r&&v===null;
@@ -381,6 +382,7 @@ function editor(r){
     <div class="row" style="margin-top:14px">
       ${upr?`<button class="pri" id="mUloz">${novy?'Vložit':'Uložit změny'}</button>`:''}
       ${upr&&!novy&&r._ctid?'<button class="del" id="mSmaz">Smazat řádek</button>':''}
+      ${!novy&&jeLicence()&&r.vs!=null?'<button class="yel" id="mLic">🔑 Prodloužit licenci</button>':''}
       ${!novy?'<button id="mKopie">Kopírovat jako nový</button><button id="mJson">Kopírovat JSON</button>':''}
       <span style="flex:1"></span><button id="mZavri">Zavřít</button>
     </div>`;
@@ -390,6 +392,7 @@ function editor(r){
   const zmena=i=>{$(`.fld[data-r="${i}"]`).classList.add('chg')};
   $('#mF').querySelectorAll('[data-f]').forEach(el=>el.addEventListener('input',()=>{const n=$(`[data-n="${el.dataset.f}"]`);if(n&&el.value!=='')n.checked=false;zmena(el.dataset.f)}));
   $('#mF').querySelectorAll('[data-n]').forEach(el=>el.onchange=()=>zmena(el.dataset.n));
+  if($('#mLic')) $('#mLic').onclick=()=>licenceDialog(r);
   if($('#mJson')) $('#mJson').onclick=()=>{const o={...r};delete o._ctid;navigator.clipboard?.writeText(JSON.stringify(o,null,2));toast('Zkopírováno')};
   if($('#mKopie')) $('#mKopie').onclick=()=>{const o={...r};delete o._ctid;cols.forEach(c=>{if(c.identity||c.generovany||S.pk.includes(c.nazev)&&c.default)delete o[c.nazev]});editor(null);
     cols.forEach((c,i)=>{const el=$(`[data-f="${i}"]`);if(el&&o[c.nazev]!==undefined&&o[c.nazev]!==null){el.value=naText(o[c.nazev],c);zmena(i)}})};
@@ -422,6 +425,58 @@ function editor(r){
 }
 $('#modal').addEventListener('mousedown',e=>{if(e.target.id==='modal')$('#modal').style.display='none'});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#modal').style.display='none'});
+
+/* ---------- prodloužení licence (YeY – Online Office) ---------- */
+// Licenční klíč je podepsaný a datum platnosti je v něm – změna sloupce exp nic nezmění.
+// Nový klíč vydá funkce `licence` (akce prodlouzit), chráněná secretem ADMIN_KLIC.
+const jeLicence=()=>P==='office'&&T==='licence_objednavky';
+const LIC_FN=PROJ.office.url+'/functions/v1/licence', LIC_APP='https://yey.cz/yey.html';
+function licenceDialog(r){
+  const d=new Date(); d.setFullYear(d.getFullYear()+1);
+  const zakl=r.exp&&r.exp>d.toISOString().slice(0,10)?r.exp:d.toISOString().slice(0,10);
+  $('#mbox').innerHTML=`<h3>Prodloužit licenci<span class="sp"></span><button id="mX">✕</button></h3>
+    <div class="msg info">VS <b>${esc(r.vs)}</b> · IČO <b>${esc(r.ico)}</b>${r.firma?' · '+esc(r.firma):''} · tarif ${esc(r.tarif)}<br>
+      Současná platnost: <b>${r.exp?esc(r.exp):'trvalá'}</b> · stav: ${esc(r.stav)}</div>
+    <p class="hint">Vydá se <b>nový podepsaný licenční klíč</b> s novým datem. Zákazník ho musí vložit do aplikace (Nastavení → Licence) nebo kliknout na aktivační odkaz – starý klíč dál platí jen do svého původního data.</p>
+    ${r.stav!=='vydano'?'<div class="msg chyba">Licence k této objednávce ještě nebyla vydaná – nejdřív je potřeba potvrdit platbu.</div>':''}
+    <div class="fld"><div class="nm">Platí do</div><div><div class="row">
+      <input type="date" id="lExp" value="${esc(zakl)}" style="width:auto">
+      <button class="sm" data-roky="1">+1 rok</button><button class="sm" data-roky="2">+2 roky</button><button class="sm" data-do="2050-12-31">do 2050</button>
+      <label class="nl" style="margin:0"><input type="checkbox" id="lTrvala"> trvalá (bez data)</label></div></div></div>
+    <div class="fld"><div class="nm">E-mail</div><div><label class="nl" style="margin:0"><input type="checkbox" id="lPoslat" ${r.email?'checked':'disabled'}> poslat nový klíč zákazníkovi na ${r.email?esc(r.email):'(e-mail chybí)'}</label></div></div>
+    <div class="fld"><div><div class="nm">Admin klíč licence</div><div class="ty">secret ADMIN_KLIC funkce licence</div></div><div><input type="password" id="lKlic" value="${esc(sg('dba_lic')||'')}" autocomplete="off" placeholder="stejný jako pro ruční potvrzení platby"></div></div>
+    <div class="row" style="margin-top:14px"><button class="pri" id="lStart">Vydat nový klíč</button><span class="hint" id="lStav"></span><span style="flex:1"></span><button id="lZpet">Zpět</button></div>
+    <div id="lVysl"></div>`;
+  $('#mX').onclick=()=>$('#modal').style.display='none';
+  $('#lZpet').onclick=()=>editor(r);
+  document.querySelectorAll('#mbox [data-roky]').forEach(b=>b.onclick=()=>{const x=r.exp&&new Date(r.exp+'T12:00:00')>new Date()?new Date(r.exp+'T12:00:00'):new Date();x.setFullYear(x.getFullYear()+(+b.dataset.roky));$('#lExp').value=x.toISOString().slice(0,10);$('#lTrvala').checked=false;$('#lExp').disabled=false});
+  document.querySelectorAll('#mbox [data-do]').forEach(b=>b.onclick=()=>{$('#lExp').value=b.dataset.do;$('#lTrvala').checked=false;$('#lExp').disabled=false});
+  $('#lTrvala').onchange=e=>{$('#lExp').disabled=e.target.checked};
+  $('#lStart').onclick=async()=>{
+    const trvala=$('#lTrvala').checked, exp=trvala?null:$('#lExp').value, klic=$('#lKlic').value.trim();
+    if(!trvala&&!/^\d{4}-\d{2}-\d{2}$/.test(exp||'')){toast('Zadej datum platnosti',1);return}
+    if(!klic){toast('Zadej admin klíč licence (ADMIN_KLIC)',1);$('#lKlic').focus();return}
+    if(!confirm(`Vydat nový licenční klíč pro IČO ${r.ico} s platností ${trvala?'TRVALÁ':'do '+exp}?`))return;
+    $('#lStart').disabled=true; $('#lStav').textContent='Podepisuji…';
+    try{
+      const resp=await fetch(LIC_FN,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({akce:'prodlouzit',vs:String(r.vs),klic,exp,poslat:$('#lPoslat').checked})});
+      const j=await resp.json().catch(()=>({}));
+      if(!resp.ok||!j.ok) throw new Error(j.chyba||('HTTP '+resp.status));
+      ss('dba_lic',klic);
+      const odkaz=LIC_APP+'#licence='+encodeURIComponent(j.licence);
+      $('#lStav').textContent='';
+      $('#lVysl').innerHTML=`<div class="msg info" style="margin-top:12px"><b>Hotovo.</b> Nový klíč platí ${j.exp?'do <b>'+esc(j.exp)+'</b>':'<b>trvale</b>'}.
+          ${$('#lPoslat').checked?(j.emailOdeslan?' E-mail zákazníkovi odeslán ✓':' <span class="badc">E-mail se nepodařilo odeslat</span> – pošli klíč ručně.'):' E-mail se neposílal – pošli klíč zákazníkovi.'}</div>
+        <label>Nový licenční klíč</label><textarea class="mono" rows="3" readonly id="lNovy">${esc(j.licence)}</textarea>
+        <label style="margin-top:8px">Aktivační odkaz (jedním klikem)</label><input readonly id="lOdkaz" value="${esc(odkaz)}">
+        <div class="row" style="margin-top:8px"><button id="lKop">Kopírovat klíč</button><button id="lKopO">Kopírovat odkaz</button></div>`;
+      $('#lKop').onclick=()=>{navigator.clipboard?.writeText(j.licence);toast('Klíč zkopírován')};
+      $('#lKopO').onclick=()=>{navigator.clipboard?.writeText(odkaz);toast('Odkaz zkopírován')};
+      $('#lZpet').textContent='Zavřít'; $('#lZpet').onclick=()=>$('#modal').style.display='none';
+      nactiData();
+    }catch(e){$('#lStav').textContent='';toast(e.message,1);$('#lStart').disabled=false}
+  };
+}
 
 /* ---------- CSV ---------- */
 function csvHodnota(v){if(v===null||v===undefined)return'';if(typeof v==='object')v=JSON.stringify(v);v=String(v);return /[";\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>YeY – Kancelář pro řemeslníky</title>
 <meta name="description" content="Nabídky, faktury, protokoly a katalog materiálu pro řemeslníky. Běží v prohlížeči, bez registrace.">
+<script src="i18n.js"></script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📏</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -361,6 +362,8 @@ header{background:var(--karta,#fff);border-bottom:0}
 .brand h1{color:#fff;font-size:1.25rem;font-weight:600;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand{min-width:0}
 .brand .sub{color:#C9D0D5;letter-spacing:1.5px}
+.yey-jazyk{background:transparent;color:#fff;border:1px solid #48555F;border-radius:8px;padding:.33rem .4rem;font:inherit;font-weight:600;font-size:.88rem;cursor:pointer;max-width:9.5rem}
+.yey-jazyk option{color:#1D272F;background:#fff}
 .yey-ucet{color:#fff;text-decoration:none;border:1px solid #48555F;border-radius:8px;padding:.35rem .8rem;font-weight:600;font-size:.9rem;white-space:nowrap}
 .yey-ucet:hover{background:#2E3B45}
 .metr-pruh{height:14px;background:var(--metr);position:relative}
@@ -451,6 +454,7 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
 @media (max-width:640px){
   .brand .sub{display:none}
   .yey-ucet{padding:.3rem .55rem;font-size:.82rem}
+  .yey-jazyk{font-size:.8rem;padding:.28rem .25rem;max-width:7.2rem}
   .storebar{gap:.4rem;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .storebar::-webkit-scrollbar{display:none}
   .storebar>*{flex:0 0 auto}
@@ -475,6 +479,9 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
       <div class="sub">Hrubý odhad zakázek · orientační ceny</div>
     </div>
     <div class="head-spacer"></div>
+    <select id="jazyk" class="yey-jazyk" aria-label="Jazyk" title="Jazyk rozhraní (doklady zůstávají v češtině)">
+      <option value="cs">🇨🇿 Čeština</option><option value="uk">🇺🇦 Українська</option><option value="ru">🇷🇺 Русский</option><option value="en">🇬🇧 English</option>
+    </select>
     <a class="yey-ucet" id="odkazLicence" href="https://yey.cz/#cenik" title="Koupit licenci – QR platba, klíč přijde hned po zaplacení">🔑 Licence</a>
   </div>
   <div class="metr-pruh" aria-hidden="true"></div>
@@ -798,6 +805,7 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
         <div id="licStatus" style="font-weight:600;margin-bottom:10px"></div>
         <div class="field full"><label>Licenční klíč</label><textarea id="ns_licence" rows="3" style="width:100%;font-family:monospace;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical" placeholder="Sem vložte licenční klíč…"></textarea></div>
         <div id="licMsg" class="small" style="margin:6px 0"></div>
+        <div class="small muted" style="margin:0 0 8px">Aktivací licence souhlasíte s <a href="obchodni-podminky.html" target="_blank" rel="noopener">obchodními podmínkami</a> a <a href="ochrana-udaju.html" target="_blank" rel="noopener">zásadami ochrany osobních údajů</a>.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn gold sm" id="btnLicAktiv" type="button">Aktivovat licenci</button>
           <button class="btn ghost sm" id="btnLicRemove" type="button" style="display:none">Odebrat licenci</button>
@@ -4960,6 +4968,7 @@ function kostra() {
     <div class="kk-prace" data-kk="prace"></div>
     <div class="kk-h3">Doprava <small>dovoz materiálu na stavbu</small></div>
     <div class="kk-doprava" data-kk="doprava"></div>
+    <p class="kk-pozn">Kalkulačky jsou orientační pomůcka – výsledek vždy ověřte podle projektu a pokynů výrobce. <a href="obchodni-podminky.html#vypocty" target="_blank" rel="noopener">Více v podmínkách</a></p>
   </section>
   <div class="kk-lista" data-kk="lista"></div>
   <dialog class="kk-dlg" data-kk="dlg" aria-labelledby="kk-dlg-t">

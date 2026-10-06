@@ -206,6 +206,11 @@
   .kf-radek select{border:1px solid var(--line);border-radius:8px;padding:7px 8px;font-size:14px;background:#fff;min-height:40px;max-width:100%;flex:1 1 160px}
   .kf-chk{display:flex;align-items:center;gap:6px;font-size:14px;white-space:nowrap;min-height:40px}
   .kf-chk input{width:18px;height:18px}
+  .kf-bez{display:flex;gap:6px;align-items:center}
+  .kf-bez input{flex:1 1 auto;min-width:0;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:14px;min-height:40px;background:#fff}
+  .kf-bez input.on{border-color:#d9534f;background:#fff6f5}
+  .kf-bez button{border:1px solid var(--line);background:#fff;border-radius:8px;min-width:40px;min-height:40px;font-size:15px;cursor:pointer}
+  .kf-bez-info{font-size:12.5px;color:#b0413e}
   .kf-skup{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;align-items:center;padding-bottom:2px}
   .kf-skup .chip{flex:0 0 auto;white-space:nowrap}
   .kf-t{font-size:12px;color:var(--muted);flex:0 0 auto}
@@ -7790,15 +7795,36 @@ function katPickMode(pf){
    Bez hledaného slova stačí vybrat téma – ukáže se, co v něm je.
    ===================================================================== */
 const KF={};   // pf -> {tema, skupina, razeni, jenCena, fac:[{skupina,n}]}
-function kfStav(pf){ return KF[pf]=KF[pf]||{tema:'',skupina:'',razeni:'rel',jenCena:true,fac:[]}; }
+function kfStav(pf){ return KF[pf]=KF[pf]||{tema:'',skupina:'',razeni:'rel',jenCena:true,fac:[],bez:''}; }
+/** Rozdělí hledání na hledaná slova a vynechaná slova („-slovo“ v hledání + pole Vynechat). */
+function kfRozdel(pf, q){
+  const f=kfStav(pf), hledat=[], bez=[];
+  String(q||'').split(/\s+/).filter(Boolean).forEach(w=>{ if(w[0]==='-'){ if(w.length>1) bez.push(w.slice(1)); } else hledat.push(w); });
+  String(f.bez||'').split(/[\s,;]+/).filter(Boolean).forEach(w=>bez.push(w.replace(/^-/,'')));
+  const vid=new Set(), puv=bez.filter(w=>{ const n=norm(w); return n.length>=2 && !vid.has(n) && vid.add(n); }).slice(0,10);
+  return { q:hledat.join(' '), bez:puv.map(norm), zobraz:puv };
+}
 function kfBar(pf, zobrazit){
   const list=document.getElementById(pf+'PickList'); if(!list) return;
   let bar=document.getElementById(pf+'KatFiltr');
   if(!bar){
     bar=document.createElement('div'); bar.id=pf+'KatFiltr'; bar.className='kf';
+    bar.innerHTML='<div class="kf-dyn"></div>'+
+      '<div class="kf-bez"><input type="search" data-kf="bez" autocomplete="off" placeholder="Vynechat slova – např. drenáž kg (oddělte mezerou)" aria-label="Slova, která ve zboží nesmí být">'+
+      '<button type="button" data-kfbezx title="Zrušit vynechaná slova" aria-label="Zrušit vynechaná slova">✕</button></div>'+
+      '<div class="kf-bez-info" style="display:none"></div>';
     list.parentNode.insertBefore(bar, list);
+    const bezIn=bar.querySelector('[data-kf="bez"]');
+    bezIn.value=kfStav(pf).bez||'';
+    let bezT=null;
+    bezIn.addEventListener('input', ()=>{
+      kfStav(pf).bez=bezIn.value; kfBezInfo(pf);
+      clearTimeout(bezT); bezT=setTimeout(()=>katSearch(pf, document.getElementById(pf+'PickSearch').value, true), 350);
+    });
+    bezIn.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); clearTimeout(bezT); katSearch(pf, document.getElementById(pf+'PickSearch').value, true); } });
     bar.addEventListener('change', e=>{
       const f=kfStav(pf), el=e.target;
+      if(el.dataset.kf==='bez') return;
       if(el.dataset.kf==='tema'){ f.tema=el.value; f.skupina=''; f.fac=[]; }
       else if(el.dataset.kf==='razeni') f.razeni=el.value;
       else if(el.dataset.kf==='jenCena') f.jenCena=el.checked;
@@ -7806,6 +7832,11 @@ function kfBar(pf, zobrazit){
       else katRenderRes(pf);
     });
     bar.addEventListener('click', e=>{
+      if(e.target.closest('[data-kfbezx]')){
+        const f=kfStav(pf); if(!f.bez) return;
+        f.bez=''; bezIn.value=''; kfBezInfo(pf);
+        katSearch(pf, document.getElementById(pf+'PickSearch').value, true); return;
+      }
       const b=e.target.closest('[data-kfskup]'); if(!b) return;
       const f=kfStav(pf), s=b.dataset.kfskup;
       f.skupina = f.skupina===s ? '' : s;
@@ -7816,8 +7847,10 @@ function kfBar(pf, zobrazit){
   if(zobrazit) kfVykresli(pf);
 }
 async function kfVykresli(pf){
-  const bar=document.getElementById(pf+'KatFiltr'); if(!bar) return;
+  const bar0=document.getElementById(pf+'KatFiltr'); if(!bar0) return;
+  const bar=bar0.querySelector('.kf-dyn')||bar0;
   const f=kfStav(pf);
+  kfBezInfo(pf);
   let temata=[]; try{ temata=await katTemata(); }catch(e){}
   bar.innerHTML=
     '<div class="kf-radek">'+
@@ -7830,20 +7863,35 @@ async function kfVykresli(pf){
       f.fac.map(x=>'<button type="button" class="chip'+(x.skupina===f.skupina?' active':'')+'" data-kfskup="'+esc(x.skupina)+'">'+esc(x.skupina)+' <span class="muted">'+x.n+'</span>'+(x.skupina===f.skupina?' ✕':'')+'</button>').join('')
       : '')+'</div>';
 }
+function kfBezInfo(pf){
+  const bar=document.getElementById(pf+'KatFiltr'); if(!bar) return;
+  const inp=document.getElementById(pf+'PickSearch'), {bez, zobraz}=kfRozdel(pf, inp?inp.value:'');
+  const el=bar.querySelector('.kf-bez-info'), bi=bar.querySelector('[data-kf="bez"]');
+  if(bi) bi.classList.toggle('on', !!bez.length);
+  if(el){ el.style.display=bez.length?'':'none'; el.textContent=bez.length?'Vynechávám zboží obsahující: '+zobraz.join(', '):''; }
+}
 function kfAplikuj(pf, res){
   const f=kfStav(pf);
   let r=res.slice();
+  const {bez}=kfRozdel(pf, (document.getElementById(pf+'PickSearch')||{}).value);
+  if(bez.length) r=r.filter(x=>{ const t=norm([x.nazev,x.skupina,x.tema,x.podskupina_nazev].filter(Boolean).join(' ')); return !bez.some(w=>t.includes(w)); });
   if(f.jenCena) r=r.filter(x=>x.cena_bez_dph!=null && Number(x.cena_bez_dph)>0);
   if(f.razeni==='levne') r.sort((a,b)=>(Number(a.cena_bez_dph)||1e12)-(Number(b.cena_bez_dph)||1e12));
   if(f.razeni==='drahe') r.sort((a,b)=>(Number(b.cena_bez_dph)||-1)-(Number(a.cena_bez_dph)||-1));
   return r;
 }
-async function katHledejVse(pf, q, pocet){
+async function katHledejVse(pf, q0, pocet){
   const f=kfStav(pf);
+  const {q, bez}=kfRozdel(pf, q0);
   const slovo=(q||'').split(/\s+/).some(w=>w.length>=3);
   let rows=[];
   if(f.tema || f.skupina){
-    rows=await katTabulka({slova:slovo?q:'', temata:f.tema?[f.tema]:[], skupina:f.skupina||null, pocet:Math.max(pocet,120)});
+    rows=await katTabulka({slova:slovo?q:'', bez, temata:f.tema?[f.tema]:[], skupina:f.skupina||null, pocet:Math.max(pocet,120)});
+  } else if(bez.length){
+    let res;
+    try{ res=await katRpc('katalog_hledat_bez',{dotaz:q, pocet:Math.max(pocet,80), bez}); }
+    catch(e){ res=await katRpc('katalog_hledat_vse',{dotaz:q, pocet:Math.max(pocet,80)}); }   // starší databáze – vyfiltruje se v prohlížeči
+    rows=Array.isArray(res)?res:[];
   } else {
     const res=await katRpc('katalog_hledat_vse',{dotaz:q, pocet:Math.max(pocet,80)});
     rows=Array.isArray(res)?res:[];
@@ -7861,8 +7909,10 @@ function katSearch(pf, q, vynutit){
   q=(q||'').trim();
   const list=document.getElementById(pf+'PickList'), f=kfStav(pf);
   clearTimeout(KAT_T[pf]);
-  const klic=q+'|'+f.tema+'|'+f.skupina;
-  if(!q.split(/\s+/).some(w=>w.length>=3) && !f.tema && !f.skupina){
+  const rz=kfRozdel(pf, q);
+  const klic=rz.q+'|'+rz.bez.join(',')+'|'+f.tema+'|'+f.skupina;
+  kfBezInfo(pf);
+  if(!rz.q.split(/\s+/).some(w=>w.length>=3) && !f.tema && !f.skupina){
     KAT_SEQ[pf]++; KAT_RES[pf]=[]; KAT_LASTQ[pf]='';
     list.innerHTML='<div class="kat-info">Napište aspoň 3 znaky, nebo vyberte téma. Hledá se v názvu, značce, kódu i EAN – na pořadí slov ani diakritice nezáleží (např. <i>ytong 300</i>).</div>';
     kfVykresli(pf);
@@ -7886,7 +7936,7 @@ function katSearch(pf, q, vynutit){
 function stxCenaDoPolozky(r){ return r; }
 function katRenderRes(pf){
   const list=document.getElementById(pf+'PickList'), vse=KAT_RES[pf]||[], res=kfAplikuj(pf, vse).slice(0, 80);
-  if(!res.length){ list.innerHTML='<div class="kat-info">'+(vse.length?'Nalezené položky nemají cenu – vypněte „jen s cenou“.':'Nic nenalezeno. Zkuste kratší slovo, jiné téma nebo zrušte skupinu.')+'</div>'; return; }
+  if(!res.length){ list.innerHTML='<div class="kat-info">'+(vse.length?'Nalezené položky nemají cenu – vypněte „jen s cenou“.':'Nic nenalezeno. Zkuste kratší slovo, jiné téma, zrušte skupinu'+(kfRozdel(pf,(document.getElementById(pf+'PickSearch')||{}).value).bez.length?' nebo uberte vynechaná slova':'')+'.')+'</div>'; return; }
   list.innerHTML=res.map((it,i)=>{
     const c=katNajdiVCeniku(it);
     const cena=c ? c.cena : it.cena_bez_dph;
@@ -8162,7 +8212,8 @@ document.getElementById('btnKatBrowse').onclick=()=>{
   document.getElementById('katBrowseModal').classList.add('show');
   const inp=document.getElementById('cnPickSearch');
   if(!katOn()){ document.getElementById('cnPickList').innerHTML=katNeniNastaven(); return; }
-  katSearch('cn', inp.value); setTimeout(()=>inp.focus(),50);
+  KAT_SRC.cn='katalog'; kfBar('cn', true);
+  katSearch('cn', inp.value, true); setTimeout(()=>inp.focus(),50);
 };
 document.getElementById('cnPickSearch').oninput=e=>{ if(katOn()) katSearch('cn', e.target.value); };
 document.getElementById('ns_katTest').onclick=katNsTest;
@@ -8192,7 +8243,7 @@ async function katTemata(){
 }
 const KAT_TAB_SLOUPCE='kod,nazev,ean,foto_url,mj,mj_v_bal,jednotek_v_baleni,mj_v_pal,hmotnost_zmj,velikost,tloustka_mm,sazba_dph,pc_s_dph,cena_bez_dph,tema,skupina,podskupina_nazev';
 async function katTabulka(o){ return upravRadky(await katTabulkaSurove(o)); }
-async function katTabulkaSurove({slova,temata,skupina,pocet,stavimex,kody}){
+async function katTabulkaSurove({slova,temata,skupina,pocet,stavimex,kody,bez}){
   const c=katCfg(); const u=new URLSearchParams();
   u.append('select',KAT_TAB_SLOUPCE);
   const qs=v=>'"'+String(v).replace(/"/g,'')+'"';
@@ -8200,6 +8251,7 @@ async function katTabulkaSurove({slova,temata,skupina,pocet,stavimex,kody}){
   if(temata&&temata.length) u.append('tema','in.('+temata.map(qs).join(',')+')');
   if(skupina) u.append('or','(skupina.eq.'+qs(skupina)+',podskupina_nazev.eq.'+qs(skupina)+')');
   norm(slova||'').replace(/[%()*,"\\]/g,' ').split(' ').filter(w=>w.length>=2).slice(0,6).forEach(w=>u.append('hledat','ilike.*'+w+'*'));
+  (bez||[]).map(w=>norm(w).replace(/[%()*,"\\\s]/g,'')).filter(w=>w.length>=2).slice(0,10).forEach(w=>u.append('hledat','not.ilike.*'+w+'*'));
   if(stavimex) u.append('stavimex_priorita','gt.0');
   u.append('order','stavimex_priorita.desc,nazev.asc'); u.append('limit',String(pocet||80));
   const h={apikey:c.key, Authorization:'Bearer '+c.key};

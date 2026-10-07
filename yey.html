@@ -369,6 +369,8 @@ header{background:var(--karta,#fff);border-bottom:0}
 .brand .sub{color:#C9D0D5;letter-spacing:1.5px}
 .yey-jazyk{background:transparent;color:#fff;border:1px solid #48555F;border-radius:8px;padding:.33rem .4rem;font:inherit;font-weight:600;font-size:.88rem;cursor:pointer;max-width:9.5rem}
 .yey-jazyk option{color:#1D272F;background:#fff}
+input.date-bad{border-color:#d93025!important;background:#fdecea!important;color:#a50e0e;box-shadow:0 0 0 2px rgba(217,48,37,.18)}
+.date-warn{font-size:12.5px;line-height:1.35;color:#c5221f;margin-top:4px;font-weight:600}
 .yey-ucet{color:#fff;text-decoration:none;border:1px solid #48555F;border-radius:8px;padding:.35rem .8rem;font-weight:600;font-size:.9rem;white-space:nowrap}
 .yey-ucet:hover{background:#2E3B45}
 .metr-pruh{height:14px;background:var(--metr);position:relative}
@@ -715,7 +717,7 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
           <div class="field"><label>Variabilní symbol</label><input id="faVs"></div>
           <div class="field"><label>Objednávka č.</label><input id="faObj" class="hl-obj"></div>
           <div class="field"><label>Konstantní symbol</label><input id="faKs"></div>
-          <div class="field"><label>Datum vystavení</label><input id="faVyst" type="date" class="hl-obj"></div>
+          <div class="field"><label>Datum vystavení</label><input id="faVyst" type="date" class="hl-obj"><div id="faVystWarn" class="date-warn" style="display:none"></div></div>
           <div class="field"><label>DUZP</label><input id="faDuzp" type="date" class="hl-obj"></div>
           <div class="field"><label>Datum splatnosti</label><input id="faSplat" type="date"></div>
           <div class="field"><label>Forma úhrady</label><input id="faForma" value="Převodem"></div>
@@ -770,8 +772,9 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
         <div class="grid">
           <div class="field"><label class="req">Odběratel (objednatel)</label><select id="prKontakt"></select></div>
           <div class="field"><label>Číslo protokolu</label><input id="prCislo"></div>
-          <div class="field"><label>Datum předání</label><input id="prDatum" type="date"></div>
+          <div class="field"><label>Datum předání</label><input id="prDatum" type="date"><div id="prDatumWarn" class="date-warn" style="display:none"></div></div>
           <div class="field"><label>Odkaz (faktura / objednávka)</label><input id="prOdkaz"></div>
+          <div class="field"><label>Objednávka č.</label><input id="prObj" placeholder="převezme se z faktury"></div>
           <div class="field full"><label>Místo plnění</label><input id="prMisto" placeholder="adresa realizace"></div>
           <div class="field full"><label>Předmět díla</label><input id="prPredmet"></div>
           <div class="field"><label>Stav díla při předání</label><select id="prStav"><option value="bez">Bez vad a nedodělků</option><option value="vyhrady">S výhradami (viz níže)</option></select></div>
@@ -6592,6 +6595,17 @@ function nbCell(el){
   const rc=document.getElementById('nbrow-'+i); if(rc) rc.textContent=fmtCena(rowTotal(NB.polozky[i]));
   nbRecalcTotal();
 }
+/* Po kliknutí do ceny / slevy zmizí výchozí 0, ať se nepíše „1500“ jako „15000“. Prázdné pole po opuštění = 0. */
+const NULA_POLE='input[data-field="cena"],input[data-field="sleva"],#cCena';
+document.addEventListener('focusin', e=>{
+  const el=e.target; if(!el || !el.matches || !el.matches(NULA_POLE)) return;
+  if(/^\s*0+([.,]0*)?\s*$/.test(el.value)){ el.dataset.byla0='1'; el.value=''; }
+});
+document.addEventListener('focusout', e=>{
+  const el=e.target; if(!el || !el.matches || !el.matches(NULA_POLE)) return;
+  if(el.dataset.byla0 && el.value.trim()===''){ el.value='0'; }
+  delete el.dataset.byla0;
+});
 function nbRecalcTotal(){ document.getElementById('nbCelkem').textContent=fmtCena(NB.polozky.reduce((s,p)=>s+rowTotal(p),0)); }
 function contactIndex(id){ const k=DB.kontakty.find(x=>x.id===id); return k?(Number(k.index)||0):0; }
 function applyIndex(cena,id){ const i=contactIndex(id); return i? Math.round((Number(cena)||0)*(1+i/100)*100)/100 : (Number(cena)||0); }
@@ -6783,7 +6797,7 @@ function faOpenEditor(rec, forceNew){
   fillContactSelect('faKontakt',FA.kontaktId);
   setVal('faRezim',FA.rezim||'pdp'); setVal('faStav',FA.stav||'Vystavená');
   setVal('faCislo',FA.cislo); setVal('faVs',FA.vs); setVal('faObj',FA.objednavka); setVal('faKs',FA.ks);
-  setVal('faVyst',FA.datumVystaveni); setVal('faDuzp',FA.duzp); setVal('faSplat',FA.splatnost);
+  setVal('faVyst',FA.datumVystaveni); setTimeout(faKontrolaData,0); setVal('faDuzp',FA.duzp); setVal('faSplat',FA.splatnost);
   setVal('faForma',FA.formaUhrady||'Převodem'); setVal('faAkce',FA.akce); setVal('faPdpText',FA.pdpText||DEFAULT_PDP); setVal('faPozn',FA.pozn);
   document.getElementById('faPdpWrap').style.display = (FA.rezim==='pdp') ? '' : 'none';
   document.getElementById('btnFaDelete').style.display = isNew ? 'none' : '';
@@ -6857,6 +6871,7 @@ function faSave(doPrint){
   FA.cislo=val('faCislo').trim(); FA.vs=val('faVs').trim(); FA.ks=val('faKs').trim(); FA.objednavka=val('faObj').trim();
   FA.datumVystaveni=val('faVyst'); FA.duzp=val('faDuzp'); FA.splatnost=val('faSplat');
   FA.formaUhrady=val('faForma').trim(); FA.akce=val('faAkce').trim(); FA.pdpText=val('faPdpText').trim(); FA.pozn=val('faPozn').trim();
+  if(faKontrolaData() && !confirm('Pozor: datum vystavení faktury je dřívější než datum předání v předávacím protokolu.\nProtokol musí být vyhotoven nejpozději v den vystavení faktury.\n\nPřesto uložit?')) return;
   const isNew=!DB.faktury.some(x=>x.id===FA.id);
   const rec=JSON.parse(JSON.stringify(FA));
   if(isNew){ DB.faktury.push(rec); DB.cislaRady.faktura=(DB.cislaRady.faktura||1)+1;
@@ -7013,13 +7028,15 @@ function prOpenEditor(rec, forceNew){
   if(!PR.polozky) PR.polozky=[];
   document.getElementById('prEditorTitle').textContent=isNew?'Nový protokol':('Protokol '+(PR.cislo||''));
   fillContactSelect('prKontakt',PR.kontaktId);
-  setVal('prCislo',PR.cislo); setVal('prDatum',PR.datumPredani); setVal('prOdkaz',PR.odkaz);
+  if(PR.objednavka==null){ const _f=prFaktura(PR); PR.objednavka=(_f&&_f.objednavka)||''; }
+  setVal('prCislo',PR.cislo); setVal('prDatum',PR.datumPredani); setVal('prOdkaz',PR.odkaz); setVal('prObj',PR.objednavka||'');
   setVal('prMisto',PR.misto); setVal('prPredmet',PR.predmet); setVal('prStav',PR.stavDila||'bez');
   setVal('prZaruka',PR.zaruka||''); setVal('prVady',PR.vady||''); setVal('prPredano',PR.predano||''); setVal('prPozn',PR.pozn||'');
   document.getElementById('prVadyWrap').style.display=(PR.stavDila==='vyhrady')?'':'none';
   document.getElementById('btnPrDelete').style.display=isNew?'none':'';
   document.getElementById('prPicker').style.display='none';
   renderPrItems();
+  prKontrolaData();
   document.getElementById('prList').style.display='none';
   document.getElementById('prEditor').style.display='block';
   window.scrollTo(0,0);
@@ -7060,8 +7077,10 @@ function prPickRender(){
 function prSave(doPrint){
   if(!val('prKontakt')){ showToast('Vyberte odběratele.',true); return; }
   PR.kontaktId=val('prKontakt'); PR.cislo=val('prCislo').trim(); PR.datumPredani=val('prDatum');
-  PR.odkaz=val('prOdkaz').trim(); PR.misto=val('prMisto').trim(); PR.predmet=val('prPredmet').trim();
+  PR.odkaz=val('prOdkaz').trim(); PR.objednavka=val('prObj').trim(); PR.misto=val('prMisto').trim(); PR.predmet=val('prPredmet').trim();
   PR.stavDila=val('prStav'); PR.zaruka=val('prZaruka').trim(); PR.vady=val('prVady').trim(); PR.predano=val('prPredano').trim(); PR.pozn=val('prPozn').trim();
+  const _chD=prKontrolaData();
+  if(_chD && !confirm('Pozor: '+_chD+'\n\nPřesto uložit?')) return;
   const isNew=!DB.protokoly.some(x=>x.id===PR.id);
   const rec=JSON.parse(JSON.stringify(PR));
   if(isNew){ DB.protokoly.push(rec); DB.cislaRady.protokol=(DB.cislaRady.protokol||1)+1; }
@@ -7082,8 +7101,9 @@ function protokolFromFaktura(id){
   document.getElementById('panel-protokoly').classList.add('active');
   const k=DB.kontakty.find(x=>x.id===f.kontaktId)||{};
   const misto=[k.ulice||'',[k.psc,k.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-  const rec={ id:uid(), cislo:nextProtokolCislo(), kontaktId:f.kontaktId, datumPredani:today(), misto,
-    odkaz:'Faktura č. '+(f.cislo||''), predmet:f.akce||'', stavDila:'bez', vady:'', zaruka:'24 měsíců', predano:'', pozn:'',
+  const _dp=(f.datumVystaveni && f.datumVystaveni<today()) ? f.datumVystaveni : today();
+  const rec={ id:uid(), cislo:nextProtokolCislo(), kontaktId:f.kontaktId, datumPredani:_dp, misto,
+    odkaz:'Faktura č. '+(f.cislo||''), objednavka:f.objednavka||'', predmet:f.akce||'', stavDila:'bez', vady:'', zaruka:'24 měsíců', predano:'', pozn:'',
     zFaktury:f.id, zNabidky:f.zNabidky||'',
     polozky:(f.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,kat:x.kat})) };
   prOpenEditor(rec,true);
@@ -7105,6 +7125,39 @@ function protokolFromNabidka(id){
   prOpenEditor(rec,true);
   showToast('Protokol vytvořen z nabídky — zkontrolujte a uložte.');
 }
+/** Faktura, ke které protokol patří (vytvořený z faktury, nebo ze stejné nabídky). */
+function prFaktura(pr){
+  if(!pr) return null;
+  if(pr.zFaktury){ if(FA && FA.id===pr.zFaktury) return FA; const f=DB.faktury.find(x=>x.id===pr.zFaktury); if(f) return f; }
+  if(pr.zNabidky) return navFaktura(pr.zNabidky);
+  return null;
+}
+/** Datum předání nesmí být pozdější než datum vystavení faktury. Vrací text chyby, nebo ''. */
+function datumKolize(datPredani, f){
+  if(!datPredani || !f || !f.datumVystaveni) return '';
+  return datPredani>f.datumVystaveni ? ('Datum předání ('+czDate(datPredani)+') je pozdější než datum vystavení faktury '+(f.cislo||'')+' ('+czDate(f.datumVystaveni)+'). Protokol musí být vyhotoven nejpozději v den vystavení faktury.') : '';
+}
+function oznacDatum(inpId, warnId, txt){
+  const i=document.getElementById(inpId), w=document.getElementById(warnId);
+  if(i){ i.classList.toggle('date-bad', !!txt); i.title=txt||''; }
+  if(w){ w.style.display=txt?'':'none'; w.textContent=txt?'⚠ '+txt:''; }
+}
+function prKontrolaData(){
+  if(!PR) return '';
+  const txt=datumKolize(val('prDatum'), prFaktura(PR));
+  oznacDatum('prDatum','prDatumWarn',txt);
+  return txt;
+}
+function faKontrolaData(){
+  if(!FA) return '';
+  const pr=navProtokolFa(FA.id) || (FA.zNabidky ? DB.protokoly.find(p=>p.zNabidky===FA.zNabidky && !p.zFaktury) : null);
+  const txt=pr ? datumKolize(pr.datumPredani, {cislo:FA.cislo||'', datumVystaveni:val('faVyst')}) : '';
+  oznacDatum('faVyst','faVystWarn', txt ? 'Datum vystavení je dřívější než datum předání v protokolu '+(pr.cislo||'')+' ('+czDate(pr.datumPredani)+'). Protokol musí být vyhotoven nejpozději v den vystavení faktury.' : '');
+  return txt;
+}
+document.addEventListener('input', e=>{ const id=e.target && e.target.id; if(id==='prDatum') prKontrolaData(); else if(id==='faVyst') faKontrolaData(); });
+document.addEventListener('change', e=>{ const id=e.target && e.target.id; if(id==='prDatum') prKontrolaData(); else if(id==='faVyst') faKontrolaData(); });
+
 /* Návaznost dokladů: nabídka → faktura → předávací protokol */
 function navFaktura(nId){ return nId ? DB.faktury.find(f=>f.zNabidky===nId) : null; }
 function navProtokolFa(fId){ return fId ? DB.protokoly.find(p=>p.zFaktury===fId) : null; }
@@ -7141,7 +7194,9 @@ function printProtokolRezim(rec, rezim){
   H.push('<div class="doc-top"><div class="doc-brand"><img class="doc-logo-img" src="'+brandLogo()+'" alt=""><div><div class="doc-name">'+esc(d.nazev||'')+'</div><div class="doc-sub">'+esc(d.claim||'')+'</div></div></div><div class="doc-title"><div class="doc-t1">PŘEDÁVACÍ PROTOKOL</div><div class="doc-t2">'+esc(rec.cislo||'')+'</div></div></div>');
   H.push('<div class="doc-parties"><div class="doc-box"><div class="doc-lbl">ZHOTOVITEL</div><div class="doc-strong">'+esc(d.nazev||'')+'</div>'+esc(d.ulice||'')+'<br>'+esc(d.psc||'')+' '+esc(d.mesto||'')+'<br>IČ: '+esc(d.ico||'')+(d.dic?' · DIČ: '+esc(d.dic):'')+'</div>');
   H.push('<div class="doc-box"><div class="doc-lbl">OBJEDNATEL</div><div class="doc-strong">'+esc(k.nazev||'')+'</div>'+(adr||'')+(k.ico?'<br>IČ: '+esc(k.ico):'')+(k.osoba?'<br>'+esc(k.osoba):'')+'</div></div>');
+  const _obj=(rec.objednavka!=null ? rec.objednavka : ((prFaktura(rec)||{}).objednavka||'')).trim();
   H.push('<div class="doc-meta"><div><span>Datum předání</span><b>'+czDate(rec.datumPredani)+'</b></div><div><span>Místo plnění</span><b>'+(esc(rec.misto||'')||'—')+'</b></div><div><span>Odkaz</span><b>'+(esc(rec.odkaz||'')||'—')+'</b></div></div>');
+  if(_obj) H.push('<div class="doc-predmet">Protokol je vyhotoven na základě objednávky č. <b>'+esc(_obj)+'</b>.</div>');
   if(rec.predmet) H.push('<div class="doc-predmet"><span>Předmět díla:</span> '+esc(rec.predmet)+'</div>');
   if(rows) H.push('<table class="doc-items"><thead><tr><th>#</th><th>Popis provedených prací / předané položky</th><th>MJ</th><th class="r">Množství</th></tr></thead><tbody>'+rows+'</tbody></table>');
   let decl='<div class="doc-declare">'+declare;

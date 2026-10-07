@@ -6729,7 +6729,20 @@ function nbDocHtml(rec){
      '<div class="doc-foot">Orientační odhad – ceny materiálu jsou přibližné. Ceny jsou uvedeny bez DPH; režim DPH bude uplatněn dle platných předpisů na daňovém dokladu. &nbsp;·&nbsp; '+esc(d.nazev||'')+' &nbsp;·&nbsp; '+esc(d.tel||'')+' &nbsp;·&nbsp; '+esc(d.email||'')+'</div>'+
    '</div>';
 }
-function printNabidka(rec){ _savedTitle=document.title; document.title=saveTitle('Nabídka',rec.cislo,rec.kontaktId); document.getElementById('printArea').innerHTML=nbDocHtml(rec); document.body.classList.add('printing'); window.print(); }
+function printNabidka(rec){ _savedTitle=document.title; document.title=saveTitle('Nabídka',rec.cislo,rec.kontaktId); document.getElementById('printArea').innerHTML=nbDocHtml(rec); document.body.classList.add('printing'); tiskPoNacteni(); }
+/** Tisk až po načtení obrázků (logo, podpis) – jinak je prohlížeč někdy do tisku nestihne vykreslit. */
+function tiskPoNacteni(){
+  const imgs=[...document.querySelectorAll('#printArea img')];
+  const hotovo=imgs.map(i=>{
+    i.loading='eager';
+    const p = i.complete && i.naturalWidth ? Promise.resolve() : new Promise(r=>{ i.addEventListener('load',r,{once:true}); i.addEventListener('error',r,{once:true}); });
+    return p.then(()=> i.decode ? i.decode().catch(()=>{}) : null);
+  });
+  let hotov=false;
+  const tisk=()=>{ if(hotov) return; hotov=true; requestAnimationFrame(()=>requestAnimationFrame(()=>window.print())); };
+  Promise.all(hotovo).then(tisk);
+  setTimeout(tisk, 2500);   // pojistka, kdyby se obrázek nenačetl
+}
 window.addEventListener('afterprint',()=>{ document.body.classList.remove('printing'); document.getElementById('printArea').innerHTML=''; if(_savedTitle!=null){ document.title=_savedTitle; _savedTitle=null; } });
 
 // wiring nabídek
@@ -6984,7 +6997,7 @@ function tiskRezim(rezim){
   if(cb) setTimeout(()=>cb(rezim),60);
 }
 function printFaktura(rec){ vyberRezimTisku('faktura', r=>printFakturaRezim(rec, r)); }
-function printFakturaRezim(rec, rezim){ _savedTitle=document.title; document.title=saveTitle('Faktura',rec.cislo,rec.kontaktId); document.getElementById('printArea').innerHTML=faDocHtml(rec, rezim); document.body.classList.add('printing'); window.print(); }
+function printFakturaRezim(rec, rezim){ _savedTitle=document.title; document.title=saveTitle('Faktura',rec.cislo,rec.kontaktId); document.getElementById('printArea').innerHTML=faDocHtml(rec, rezim); document.body.classList.add('printing'); tiskPoNacteni(); }
 
 // wiring faktur
 document.getElementById('btnAddFaktura').onclick=()=>faOpenEditor(null);
@@ -7210,7 +7223,7 @@ function printProtokolRezim(rec, rezim){
   H.push('<div class="doc-foot">Protokol o předání a převzetí díla · vyhotoveno ve dvou stejnopisech · '+esc(d.nazev||'')+' · '+esc(d.tel||'')+'</div>');
   H.push('</div>');
   document.getElementById('printArea').innerHTML=H.join('');
-  document.body.classList.add('printing'); window.print();
+  document.body.classList.add('printing'); tiskPoNacteni();
 }
 
 // wiring protokolů

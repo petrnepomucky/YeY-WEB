@@ -108,11 +108,16 @@
   td.actions{white-space:nowrap;text-align:right}
   .krok-btn{font-size:13px;padding:6px 11px;margin-right:4px;vertical-align:middle;font-weight:600;white-space:nowrap}
   .krok-btn.hotovo{background:#eaf1ea;color:#3a6b45;border-color:#cfe0cf}
+  .btn-zapl{background:#2e7d32;color:#fff;border:1px solid #2e7d32;border-radius:8px;font-size:13px;font-weight:700;padding:6px 11px;margin-right:4px;cursor:pointer;white-space:nowrap;vertical-align:middle}
+  .btn-zapl:hover{background:#25692a}
+  .zapl-ok{display:inline-block;background:#e6f4e7;color:#2e7d32;border:1px solid #bfe0c1;border-radius:8px;font-size:12.5px;font-weight:700;padding:5px 10px;margin-right:4px;cursor:pointer;white-space:nowrap;vertical-align:middle}
+  .stav-po{background:#d93025 !important;color:#fff !important;font-weight:700}
+  td.splat-po{color:#c5221f;font-weight:700}
   .doc-foot-akce{flex-wrap:wrap;gap:8px}
   .doc-dalsi{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   .doc-dalsi-t{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
   .krok-mob{display:none}
-  @media (max-width:640px){ .krok-mob{display:block;margin-top:6px} .krok-mob .krok-btn{margin:0} td.actions .krok-btn{display:none} .doc-dalsi{width:100%} .doc-dalsi .btn{flex:1 1 auto} .doc-foot-akce .head-spacer{display:none} }
+  @media (max-width:640px){ .krok-mob{display:block;margin-top:6px} .krok-mob .krok-btn{margin:0} td.actions .krok-btn{display:none} td.actions .zapl-desk{display:none} .doc-dalsi{width:100%} .doc-dalsi .btn{flex:1 1 auto} .doc-foot-akce .head-spacer{display:none} }
   .icon-btn{border:0;background:transparent;cursor:pointer;padding:5px 7px;border-radius:6px;font-size:14px}
   .icon-btn:hover{background:var(--line-2)}
   .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;
@@ -6818,6 +6823,27 @@ function faTotalsOf(rec){
   return {zaklad,dph:0,celkem:zaklad,groups:null};
 }
 function rezimBadge(r){ const m={pdp:['PDP','#eef0f6','#3a4d7a'],bezna:['s DPH','#eaf1ea','#3a6b45'],neplatce:['bez DPH','#eef0f3','#555']}; const c=m[r]||m.pdp; return '<span class="badge" style="background:'+c[1]+';color:'+c[2]+'">'+c[0]+'</span>'; }
+/** Skutečný stav: nezaplacená faktura po datu splatnosti je „Po splatnosti“. */
+function faPoSplatnosti(f){ return !!f && f.stav!=='Zaplacená' && (f.stav==='Po splatnosti' || (!!f.splatnost && f.splatnost<today())); }
+function faDnuPo(f){ return Math.round((new Date(today())-new Date(f.splatnost))/864e5); }
+function faStavBadgeF(f){
+  if(faPoSplatnosti(f)){ const d=f.splatnost?faDnuPo(f):0; return '<span class="badge stav-po" title="Splatnost '+czDate(f.splatnost)+'">Po splatnosti'+(d>0?' · '+d+' '+(d===1?'den':d<5?'dny':'dní'):'')+'</span>'; }
+  if(f.stav==='Zaplacená') return '<span class="badge" style="background:#e6f4e7;color:#2e7d32;font-weight:700">Zaplacená'+(f.datumUhrady?' '+czDate(f.datumUhrady):'')+'</span>';
+  return faStavBadge(f.stav==='Po splatnosti'?'Vystavená':f.stav);
+}
+function faZaplaceno(id){
+  const f=DB.faktury.find(x=>x.id===id); if(!f) return;
+  if(f.stav==='Zaplacená'){
+    if(!confirm('Vrátit fakturu '+(f.cislo||'')+' mezi nezaplacené?')) return;
+    f.stav='Vystavená'; delete f.datumUhrady; showToast('Faktura '+(f.cislo||'')+' vrácena mezi nezaplacené.');
+  } else { f.stav='Zaplacená'; f.datumUhrady=today(); showToast('Faktura '+(f.cislo||'')+' označena jako zaplacená.'); }
+  markDirty(); renderFaktury();
+}
+function faZaplBtn(f){
+  return f.stav==='Zaplacená'
+    ? '<span class="zapl-ok" title="Kliknutím vrátíte mezi nezaplacené" onclick="event.stopPropagation();faZaplaceno(\''+f.id+'\')">✓ Zaplaceno</span>'
+    : '<button type="button" class="btn-zapl" title="Označit fakturu jako zaplacenou (dnešním datem)" onclick="event.stopPropagation();faZaplaceno(\''+f.id+'\')">✓ Zaplaceno</button>';
+}
 function faStavBadge(s){ const m={'Vystavená':['#eef0f6','#3a4d7a'],'Zaplacená':['#eaf1ea','#3a6b45'],'Po splatnosti':['#f7e6e6','#a12f2f']}; const c=m[s]||m['Vystavená']; return '<span class="badge" style="background:'+c[0]+';color:'+c[1]+'">'+esc(s||'—')+'</span>'; }
 
 function renderFaktury(){
@@ -6827,10 +6853,10 @@ function renderFaktury(){
   document.getElementById('fakturyEmpty').style.display=DB.faktury.length?'none':'block';
   body.innerHTML=list.map(f=>{
     const k=DB.kontakty.find(x=>x.id===f.kontaktId); const t=faTotalsOf(f);
-    return '<tr style="cursor:pointer" onclick="faPreview(\''+f.id+'\')"><td><b>'+esc(f.cislo||'—')+'</b><div class="krok-mob">'+krokFaktury(f)+'</div></td><td>'+esc(k?k.nazev:'—')+'</td>'+
-      '<td class="small">'+czDate(f.datumVystaveni)+'</td><td class="small">'+czDate(f.splatnost)+'</td>'+
-      '<td>'+rezimBadge(f.rezim)+'</td><td>'+faStavBadge(f.stav)+'</td><td class="num">'+fmtCena(t.celkem)+'</td>'+
-      '<td class="actions">'+krokFaktury(f)+'<button class="icon-btn" title="Tisk / PDF" onclick="event.stopPropagation();printFakturaById(\''+f.id+'\')">🖨️</button>'+
+    return '<tr style="cursor:pointer" onclick="faPreview(\''+f.id+'\')"><td><b>'+esc(f.cislo||'—')+'</b><div class="krok-mob">'+faZaplBtn(f)+' '+krokFaktury(f)+'</div></td><td>'+esc(k?k.nazev:'—')+'</td>'+
+      '<td class="small">'+czDate(f.datumVystaveni)+'</td><td class="small'+(faPoSplatnosti(f)?' splat-po':'')+'">'+czDate(f.splatnost)+'</td>'+
+      '<td>'+rezimBadge(f.rezim)+'</td><td>'+faStavBadgeF(f)+'</td><td class="num">'+fmtCena(t.celkem)+'</td>'+
+      '<td class="actions"><span class="zapl-desk">'+faZaplBtn(f)+'</span>'+krokFaktury(f)+'<button class="icon-btn" title="Tisk / PDF" onclick="event.stopPropagation();printFakturaById(\''+f.id+'\')">🖨️</button>'+
       '<button class="icon-btn" title="Upravit" onclick="event.stopPropagation();faEdit(\''+f.id+'\')">✏️</button>'+
       '<button class="icon-btn" title="Smazat" onclick="event.stopPropagation();faDel(\''+f.id+'\')">🗑️</button></td></tr>';
   }).join('');
@@ -6926,6 +6952,7 @@ function faSave(doPrint){
   if(!val('faKontakt')){ showToast('Vyberte odběratele.',true); return; }
   if(!FA.polozky.length){ showToast('Přidejte alespoň jednu položku.',true); return; }
   FA.kontaktId=val('faKontakt'); FA.rezim=val('faRezim'); FA.stav=val('faStav');
+  if(FA.stav==='Zaplacená'){ if(!FA.datumUhrady) FA.datumUhrady=today(); } else delete FA.datumUhrady;
   FA.cislo=val('faCislo').trim(); FA.vs=val('faVs').trim(); FA.ks=val('faKs').trim(); FA.objednavka=val('faObj').trim();
   FA.datumVystaveni=val('faVyst'); FA.duzp=val('faDuzp'); FA.splatnost=val('faSplat');
   FA.formaUhrady=val('faForma').trim(); FA.akce=val('faAkce').trim(); FA.pdpText=val('faPdpText').trim(); FA.pozn=val('faPozn').trim();

@@ -6669,7 +6669,9 @@ function autoAddToCenik(polozky){
 function sectiPolozku(arr, p){
   const n=norm(p&&p.nazev); if(!n) return null;
   const mj=norm(p.mj);
-  const r=arr.find(x=>norm(x.mj)===mj && ((p.katKod && x.katKod) ? x.katKod===p.katKod : norm(x.nazev)===n));
+  const r=arr.find(x=>norm(x.mj)===mj && (x.nab||'')===(p.nab||'') &&
+    (p.cena==null || x.cena==null || Number(x.cena)===Number(p.cena)) &&
+    ((p.katKod && x.katKod) ? x.katKod===p.katKod : norm(x.nazev)===n));
   if(!r) return null;
   r.mnozstvi=Math.round(((Number(r.mnozstvi)||0)+(Number(p.mnozstvi)||0))*1000)/1000;
   return r;
@@ -6863,7 +6865,14 @@ function renderFaItems(){
   const bezna = FA.rezim==='bezna';
   document.getElementById('faItemsHead').innerHTML='<tr><th style="width:24px">#</th><th>Popis</th><th style="width:92px">Kategorie</th><th style="width:60px">MJ</th><th style="width:78px">Množ.</th><th style="width:108px">Cena/MJ</th><th style="width:66px">Sleva %</th>'+(bezna?'<th style="width:78px">Sazba</th>':'')+'<th style="width:110px" class="num">Základ</th><th style="width:30px"></th></tr>';
   const b=document.getElementById('faItemsBody');
-  b.innerHTML=FA.polozky.map((p,i)=>'<tr>'+
+  faSeradPodleNabidek();
+  const _sk=faSkupiny(FA), _hlav={};
+  const _cols=bezna?10:9;
+  _sk.forEach(s=>{ const sum=s.items.reduce((a,x)=>a+rowTotal(x.p),0);
+    _hlav[s.items[0].i]='<tr class="fa-skup"><td colspan="'+(_cols-1)+'" style="background:var(--cream);font-weight:700;padding:8px 10px;border-top:2px solid var(--line)">'+esc(faSkupinaNazev(s))+
+      ' <span class="small muted" style="font-weight:400">· '+s.items.length+' pol. · '+fmtCena(sum)+'</span></td><td class="c" style="background:var(--cream);border-top:2px solid var(--line)">'+
+      (s.nab?'<button class="icon-btn" type="button" title="Odebrat celou nabídku z faktury" onclick="faOdeberNabidku(\''+s.nab+'\')">✕</button>':'')+'</td></tr>'; });
+  b.innerHTML=FA.polozky.map((p,i)=>(_hlav[i]||'')+'<tr>'+
     '<td class="c">'+(i+1)+'</td>'+
     '<td><input value="'+esc(p.nazev)+'" data-idx="'+i+'" data-field="nazev" oninput="faCell(this)"></td>'+
     '<td>'+katOptions(p.kat||'prace','faCell',i)+'</td>'+
@@ -6945,7 +6954,7 @@ function fakturaFromNabidka(id){
   const rec={ id:uid(), cislo:nextFakturaCislo(), vs:nextFakturaCislo().replace(/\D/g,''), ks:'', kontaktId:n.kontaktId, objednavka:'',
     datumVystaveni:today(), duzp:today(), splatnost:splatnostZ(today()), formaUhrady:'Převodem',
     rezim:'pdp', pdpText:DEFAULT_PDP, akce:n.predmet||'', pozn:'', stav:'Vystavená', zNabidky:n.id,
-    polozky:(n.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,cena:x.cena,sleva:x.sleva||0,sazba:21,kat:normKatLine(x.kat),...(x.katKod?{katKod:x.katKod}:{})})) };
+    polozky:(n.polozky||[]).map(x=>({nab:n.id,nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,cena:x.cena,sleva:x.sleva||0,sazba:21,kat:normKatLine(x.kat),...(x.katKod?{katKod:x.katKod}:{})})) };
   faOpenEditor(rec, true);
   { const dalsi=DB.nabidky.filter(x=>x.id!==n.id && x.kontaktId===n.kontaktId && x.stav!=='Odmítnuto' && (x.polozky||[]).length && !navFaktura(x.id));
     if(dalsi.length){ const el=document.getElementById('faNbPicker'); el.style.display='block'; faNbRender();
@@ -6969,7 +6978,26 @@ function faDocHtml(rec, rezim){
   const _kg=groupByKat(rec.polozky);
   const _catSazba=(arr)=>{ if(rec.rezim==='pdp') return '0 %'; if(rec.rezim==='neplatce') return '—'; const set=[...new Set(arr.map(x=>Number(x.sazba)||0))]; return set.length===1?set[0]+' %':'—'; };
   let rows=''; let _i=0;
-  if(rezim==='pol') (rec.polozky||[]).filter(p=>(p.nazev||'').trim()).forEach(p=>{ _i++;
+  const _skT=faSkupiny(rec);
+  if(_skT.length){
+    _skT.forEach(sk=>{
+      const arr=sk.items.map(x=>x.p).filter(p=>(p.nazev||'').trim()); if(!arr.length) return;
+      rows+='<tr class="doc-skup"><td colspan="8" style="padding:10px 8px 6px;font-weight:700;font-size:12px;border-bottom:1px solid #b0894e;color:#15233c">'+esc(faSkupinaNazev(sk))+'</td></tr>';
+      if(rezim==='pol') arr.forEach(p=>{ _i++;
+        const zaklad=rowTotal(p), sazba=Number(p.sazba)||0;
+        const jc=(Number(p.mnozstvi)||0) ? zaklad/(Number(p.mnozstvi)||1) : (Number(p.cena)||0);
+        const celk = bezna ? zaklad*(1+sazba/100) : zaklad;
+        rows+='<tr><td class="c">'+_i+'</td><td>'+esc(p.nazev)+'</td><td class="r">'+fmtNum(p.mnozstvi)+'</td><td class="c">'+esc(p.mj||'')+'</td><td class="r">'+fmtCena(jc)+'</td><td class="r">'+fmtCena(zaklad)+'</td><td class="r">'+_catSazba([p])+'</td><td class="r">'+fmtCena(celk)+'</td></tr>';
+      });
+      else { const kg=groupByKat(arr); LINE_KAT_ORDER.forEach(k=>{ const a=kg[k]; if(!a.length) return; _i++;
+        const zaklad=a.reduce((s,p)=>s+rowTotal(p),0);
+        const celk = bezna ? a.reduce((s,p)=>s+rowTotal(p)*(1+(Number(p.sazba)||0)/100),0) : zaklad;
+        rows+='<tr><td class="c">'+_i+'</td><td>'+LINE_KAT_LABEL[k]+'</td><td class="r">1</td><td class="c">ks</td><td class="r">'+fmtCena(zaklad)+'</td><td class="r">'+fmtCena(zaklad)+'</td><td class="r">'+_catSazba(a)+'</td><td class="r">'+fmtCena(celk)+'</td></tr>'; }); }
+      const zS=arr.reduce((s,p)=>s+rowTotal(p),0), cS= bezna ? arr.reduce((s,p)=>s+rowTotal(p)*(1+(Number(p.sazba)||0)/100),0) : zS;
+      rows+='<tr><td></td><td colspan="4" style="text-align:right;font-size:10.5px;color:#555">Mezisoučet – '+esc(sk.nab?('nabídka č. '+((sk.n&&sk.n.cislo)||'?')):'ostatní položky')+'</td><td class="r"><b>'+fmtCena(zS)+'</b></td><td></td><td class="r"><b>'+fmtCena(cS)+'</b></td></tr>';
+    });
+  }
+  else if(rezim==='pol') (rec.polozky||[]).filter(p=>(p.nazev||'').trim()).forEach(p=>{ _i++;
     const zaklad=rowTotal(p), sazba=Number(p.sazba)||0;
     const jc=(Number(p.mnozstvi)||0) ? zaklad/(Number(p.mnozstvi)||1) : (Number(p.cena)||0);
     const celk = bezna ? zaklad*(1+sazba/100) : zaklad;
@@ -7013,6 +7041,7 @@ function faDocHtml(rec, rezim){
   H.push('<div class="doc-meta"><div><span>Variabilní symbol</span><b>'+esc(rec.vs||'')+'</b></div><div><span>Datum vystavení</span><b>'+czDate(rec.datumVystaveni)+'</b></div><div><span>DUZP</span><b>'+czDate(rec.duzp)+'</b></div><div><span>Splatnost</span><b>'+czDate(rec.splatnost)+'</b></div></div>');
   H.push('<div class="small" style="margin:2px 0 12px;color:#555">'+(rec.objednavka?'Objednávka č.: '+esc(rec.objednavka)+' &nbsp;·&nbsp; ':'')+'Forma úhrady: '+esc(rec.formaUhrady||'')+' &nbsp;·&nbsp; Měna: CZK</div>');
   if(rec.akce) H.push('<div class="doc-predmet"><span>Předmět:</span> '+esc(rec.akce)+'</div>');
+  if(_skT.length) H.push('<div class="small" style="margin:-4px 0 10px;color:#555">Fakturováno na základě nabídek č.: <b>'+_skT.filter(x=>x.nab).map(x=>esc((x.n&&x.n.cislo)||'?')).join(', ')+'</b></div>');
   H.push('<table class="doc-items"><thead><tr><th>#</th><th>Předmět a rozsah plnění</th><th class="r">Množství</th><th>MJ</th><th class="r">J. cena bez DPH</th><th class="r">Základ daně</th><th class="r">Sazba</th><th class="r">Celkem</th></tr></thead><tbody>'+rows+'</tbody></table>');
   H.push(totalBlock);
   if(pdpNote) H.push(pdpNote);
@@ -7246,6 +7275,30 @@ function faNbRender(){
     : '<div class="muted small" style="padding:6px">Žádná další nabídka'+(kontakt&&!vse?' tohoto odběratele':'')+'.</div>';
   document.getElementById('faNbList').innerHTML=h;
 }
+/** Skupiny položek faktury podle nabídek. Vrací [] pokud je faktura jen z jedné (nebo žádné) nabídky. */
+function faSkupiny(rec){
+  const ids=faNabidkyIds(rec);
+  if(ids.length<2) return [];
+  const g=ids.map(id=>({nab:id, n:DB.nabidky.find(x=>x.id===id)||null, items:[]}));
+  const ost={nab:'', n:null, items:[]};
+  (rec.polozky||[]).forEach((p,i)=>{ const s=g.find(x=>x.nab===p.nab)||ost; s.items.push({p,i}); });
+  return g.concat(ost.items.length?[ost]:[]).filter(x=>x.items.length);
+}
+function faSkupinaNazev(s){ return s.nab ? 'Nabídka č. '+((s.n&&s.n.cislo)||'?')+((s.n&&s.n.predmet)?' – '+s.n.predmet:'') : 'Ostatní položky'; }
+/** Položky seřadí podle nabídek (stabilně), aby každá nabídka tvořila souvislý blok. */
+function faSeradPodleNabidek(){
+  const ids=faNabidkyIds(FA); if(ids.length<2) return;
+  const poradi=p=>{ const i=ids.indexOf(p.nab); return i<0?ids.length:i; };
+  FA.polozky=FA.polozky.map((p,i)=>({p,i})).sort((a,b)=>poradi(a.p)-poradi(b.p)||a.i-b.i).map(x=>x.p);
+}
+function faOdeberNabidku(id){
+  const n=DB.nabidky.find(x=>x.id===id);
+  if(!confirm('Odebrat z faktury nabídku '+((n&&n.cislo)||'')+' i s jejími položkami?')) return;
+  FA.polozky=FA.polozky.filter(p=>p.nab!==id);
+  if(FA.zNabidky===id){ const zb=(FA.zNabidekVice||[]); FA.zNabidky=zb.shift()||''; FA.zNabidekVice=zb; }
+  else FA.zNabidekVice=(FA.zNabidekVice||[]).filter(x=>x!==id);
+  renderFaItems(); if(document.getElementById('faNbPicker').style.display!=='none') faNbRender();
+}
 function faPridejNabidku(id){
   const n=DB.nabidky.find(x=>x.id===id); if(!n) return;
   const f=navFaktura(n.id);
@@ -7254,11 +7307,13 @@ function faPridejNabidku(id){
   if(!kontakt){ setVal('faKontakt', n.kontaktId); FA.kontaktId=n.kontaktId; updateIdxNote('faIdxNote','faKontakt'); }
   else if(n.kontaktId && n.kontaktId!==kontakt && !confirm('Nabídka '+(n.cislo||'')+' je pro jiného odběratele. Přesto ji přidat?')) return;
   let pridano=0, secteno=0;
+  if(FA.zNabidky && !FA.polozky.some(p=>p.nab)) FA.polozky.forEach(p=>{ p.nab=FA.zNabidky; });   // starší faktura: dosavadní položky patří k první nabídce
   (n.polozky||[]).forEach(x=>{
-    const p={nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,cena:x.cena,sleva:x.sleva||0,sazba:21,kat:normKatLine(x.kat),...(x.katKod?{katKod:x.katKod}:{})};
+    const p={nab:n.id,nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,cena:x.cena,sleva:x.sleva||0,sazba:21,kat:normKatLine(x.kat),...(x.katKod?{katKod:x.katKod}:{})};
     if(pridejPolozku(FA.polozky, p, false)) pridano++; else secteno++;
   });
-  if(!FA.zNabidky) FA.zNabidky=n.id; else { FA.zNabidekVice=FA.zNabidekVice||[]; if(!FA.zNabidekVice.includes(n.id)) FA.zNabidekVice.push(n.id); }
+  if(!FA.zNabidky) FA.zNabidky=n.id;
+  else { FA.zNabidekVice=FA.zNabidekVice||[]; if(!FA.zNabidekVice.includes(n.id)) FA.zNabidekVice.push(n.id); }
   const akce=val('faAkce').trim();
   if(n.predmet && !akce.toLowerCase().includes(n.predmet.toLowerCase())) setVal('faAkce', akce ? akce+', '+n.predmet : n.predmet);
   renderFaItems(); faNbRender();

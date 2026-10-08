@@ -292,6 +292,19 @@
   .doc-note{margin-top:14px;padding:10px 14px;border-left:3px solid #b0894e;font-size:11px}
   .doc-foot{margin-top:20px;padding-top:10px;border-top:1px solid #e6e0d3;font-size:9.5px;color:#6b7280}
 
+  table.doc-ram{width:100%;border-collapse:collapse;border:0}
+  table.doc-ram > tbody > tr > td, table.doc-ram > tfoot > tr > td{padding:0;border:0}
+  .doc-pata-misto{height:0}
+  .doc-pata{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:20px;padding-top:7px;border-top:1px solid #e6e0d3;font-size:9px;line-height:1.4;color:#6b7280}
+  .doc-pata .yey{white-space:nowrap;text-align:right}
+  .doc-pata .yey b{color:#15233c}
+  @media print{
+    #printArea .doc-pata{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:180mm;background:#fff}
+    #printArea .doc-pata-misto{height:13mm}
+  }
+  .doc-zaver{break-inside:avoid;page-break-inside:avoid;margin-top:16px}
+  .doc-zaver .doc-pay{margin-top:0;align-items:stretch}
+  .doc-pay .doc-vystavil{width:200px;flex-shrink:0;display:flex;flex-direction:column;justify-content:flex-end;text-align:center;border-left:1px solid #eee3d0;padding-left:16px}
   .doc-pay{display:flex;justify-content:space-between;gap:16px;margin-top:16px;border:1px solid #d9d3c6;border-radius:8px;padding:12px 16px}
   .doc-pay .lbl{font-size:8.5px;letter-spacing:1.5px;color:#8a6a2f;text-transform:uppercase;margin-bottom:5px}
   .doc-pay table{font-size:11px;border-collapse:collapse}
@@ -719,7 +732,7 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
           <div class="field"><label>Konstantní symbol</label><input id="faKs"></div>
           <div class="field"><label>Datum vystavení</label><input id="faVyst" type="date" class="hl-obj"><div id="faVystWarn" class="date-warn" style="display:none"></div></div>
           <div class="field"><label>DUZP</label><input id="faDuzp" type="date" class="hl-obj"></div>
-          <div class="field"><label>Datum splatnosti</label><input id="faSplat" type="date"></div>
+          <div class="field"><label>Datum splatnosti</label><input id="faSplat" type="date"><div class="small muted" id="faSplatTip" style="margin-top:3px"></div></div>
           <div class="field"><label>Forma úhrady</label><input id="faForma" value="Převodem"></div>
           <div class="field"><label>Stav</label><select id="faStav"><option>Vystavená</option><option>Zaplacená</option><option>Po splatnosti</option></select></div>
           <div class="field full"><label>Předmět / akce</label><input id="faAkce" class="hl-obj" placeholder="např. Rekonstrukce vodovodu – SVJ Nad Vodovodem 12"></div>
@@ -731,8 +744,14 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
           <b style="color:var(--navy);font-size:16px">Položky</b><div class="head-spacer"></div>
           <button class="btn sm" id="btnFaPick" type="button">＋ Z ceníku</button>
+          <button class="btn sm" id="btnFaNb" type="button" title="Přidat do faktury položky z jedné nebo více nabídek">＋ Z nabídky</button>
           <button class="btn sm" id="btnFaEmpty" type="button">＋ Prázdný řádek</button>
           <button class="btn sm" id="btnFaStx" type="button" title="Poslat dodavateli e-mailem poptávku materiálu – položky si vyfiltrujete">✉ Poptávka materiálu</button></div>
+        <div id="faNbPicker" style="display:none;border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:14px;background:var(--cream)">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><b>Přidat položky z nabídek</b><span class="small muted" id="faNbInfo"></span><div class="head-spacer"></div>
+            <label class="small" style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="faNbVse"> i nabídky jiných zákazníků</label></div>
+          <div id="faNbList"></div>
+        </div>
         <div id="faPicker" style="display:none;border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:14px;background:var(--cream)">
           <div id="faIdxNote" class="small" style="color:var(--gold-ink);margin-bottom:8px"></div>
           <div id="faPickChips" class="chips"></div>
@@ -881,6 +900,11 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
       <b style="color:var(--navy);font-size:16px">Chování</b>
       <label style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer"><input type="checkbox" id="ns_autoCenik" style="margin-top:3px"> <span>Nové (ručně zadané) položky z nabídek a faktur <b>automaticky přidávat do ceníku</b>.</span></label>
       <label style="display:flex;gap:10px;align-items:flex-start;margin-top:10px;cursor:pointer"><input type="checkbox" id="ns_hlidatCeny" style="margin-top:3px"> <span><b>Hlídat konzistenci cen</b> — když stejnému zákazníkovi přidáváte položku, kterou už dříve dostal, nabídne se dřívější cena, ať stejná věc není jednou dráž a podruhé levněji.</span></label>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap"><label for="ns_splatnost"><b>Standardní splatnost faktur</b></label>
+        <select id="ns_splatnost" style="border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:38px;font:inherit">
+          <option value="mesic">1 měsíc od vystavení</option><option value="7">7 dní</option><option value="10">10 dní</option><option value="14">14 dní</option><option value="21">21 dní</option><option value="30">30 dní</option><option value="45">45 dní</option><option value="60">60 dní</option><option value="90">90 dní</option><option value="0">Ihned (v den vystavení)</option>
+        </select>
+        <span class="small muted">Předvyplní se u každé nové faktury, u konkrétní faktury jde datum přepsat.</span></div>
       <label style="display:flex;gap:10px;align-items:flex-start;margin-top:10px;cursor:pointer"><input type="checkbox" id="ns_tipy" style="margin-top:3px"> <span><b>Zobrazovat postranní tipy a nápovědu</b> — malý panel v rohu s radami, jak aplikaci využít naplno. Kdykoli ho lze skrýt.</span></label>
     </div>
     <div class="card" style="padding:18px;margin-bottom:16px" id="ns_katCard">
@@ -6762,6 +6786,17 @@ document.getElementById('btnNbNovyKontakt').onclick=()=>{ afterKontaktSave=(id)=
    ============================================================ */
 let FA=null;
 const DEFAULT_PDP='Daň odvede zákazník dle §92e zákona č. 235/2004 Sb. (přenesení daňové povinnosti — stavební a montážní práce). Na dokladu je uplatněna sazba DPH 0 %.';
+/** Výchozí splatnost podle Nastavení: 'mesic' = o kalendářní měsíc později (31. 1. → 28./29. 2.), jinak počet dní. */
+function splatnostLhuta(){ const v=(DB.nastaveni||{}).splatnost; return (v==null||v==='') ? 'mesic' : String(v); }
+function splatnostZ(iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return iso||'';
+  const [y,m,d]=iso.split('-').map(Number), l=splatnostLhuta();
+  let dt;
+  if(l==='mesic'){ const posl=new Date(Date.UTC(y,m+1,0)).getUTCDate(); dt=new Date(Date.UTC(y,m,Math.min(d,posl))); }
+  else dt=new Date(Date.UTC(y,m-1,d+(parseInt(l,10)||0)));
+  return dt.toISOString().slice(0,10);
+}
+function splatnostPopis(){ const l=splatnostLhuta(); return l==='mesic' ? '1 měsíc' : l+' dní'; }
 function plusDays(iso,n){ const d=new Date(iso); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
 function nextFakturaCislo(){ return formatCislo(DB.formaty.faktura, DB.cislaRady.faktura||1); }
 function selAttr(a,b){ return (Number(a)===b)?' selected':''; }
@@ -6803,18 +6838,19 @@ function faOpenEditor(rec, forceNew){
   const isNew = forceNew || !rec;
   FA = rec ? JSON.parse(JSON.stringify(rec))
            : { id:uid(), cislo:nextFakturaCislo(), vs:nextFakturaCislo().replace(/\D/g,''), ks:'', kontaktId:'', objednavka:'',
-               datumVystaveni:today(), duzp:today(), splatnost:plusDays(today(),14), formaUhrady:'Převodem',
+               datumVystaveni:today(), duzp:today(), splatnost:splatnostZ(today()), formaUhrady:'Převodem',
                rezim:'pdp', pdpText:DEFAULT_PDP, polozky:[], akce:'', pozn:'', stav:'Vystavená' };
   if(!FA.polozky) FA.polozky=[];
   document.getElementById('faEditorTitle').textContent = isNew ? 'Nová faktura' : ('Faktura '+(FA.cislo||''));
   fillContactSelect('faKontakt',FA.kontaktId);
   setVal('faRezim',FA.rezim||'pdp'); setVal('faStav',FA.stav||'Vystavená');
   setVal('faCislo',FA.cislo); setVal('faVs',FA.vs); setVal('faObj',FA.objednavka); setVal('faKs',FA.ks);
-  setVal('faVyst',FA.datumVystaveni); setTimeout(faKontrolaData,0); setVal('faDuzp',FA.duzp); setVal('faSplat',FA.splatnost);
+  setVal('faVyst',FA.datumVystaveni); FA_VYST_PRED=FA.datumVystaveni; setTimeout(faKontrolaData,0); { const t=document.getElementById('faSplatTip'); if(t) t.textContent='Výchozí lhůta: '+splatnostPopis()+' od vystavení (Nastavení → Chování).'; } setVal('faDuzp',FA.duzp); setVal('faSplat',FA.splatnost);
   setVal('faForma',FA.formaUhrady||'Převodem'); setVal('faAkce',FA.akce); setVal('faPdpText',FA.pdpText||DEFAULT_PDP); setVal('faPozn',FA.pozn);
   document.getElementById('faPdpWrap').style.display = (FA.rezim==='pdp') ? '' : 'none';
   document.getElementById('btnFaDelete').style.display = isNew ? 'none' : '';
   document.getElementById('faPicker').style.display='none';
+  document.getElementById('faNbPicker').style.display='none';
   if(!FA.prilohy) FA.prilohy=[]; renderFaPrilohy();
   renderFaItems();
   document.getElementById('faList').style.display='none';
@@ -6888,9 +6924,10 @@ function faSave(doPrint){
   const isNew=!DB.faktury.some(x=>x.id===FA.id);
   const rec=JSON.parse(JSON.stringify(FA));
   if(isNew){ DB.faktury.push(rec); DB.cislaRady.faktura=(DB.cislaRady.faktura||1)+1;
-    const nb=rec.zNabidky && DB.nabidky.find(x=>x.id===rec.zNabidky);
-    if(nb && (!nb.stav || nb.stav==='Rozpracováno' || nb.stav==='Odesláno')){ nb.stav='Přijato'; renderNabidky(); } }
+  }
   else DB.faktury[DB.faktury.findIndex(x=>x.id===FA.id)]=rec;
+  faNabidkyIds(rec).forEach(id=>{ const nb=DB.nabidky.find(x=>x.id===id);
+    if(nb && (!nb.stav || nb.stav==='Rozpracováno' || nb.stav==='Odesláno')) nb.stav='Přijato'; });
   markDirty(); renderFaktury(); renderNabidky();
   if(doPrint) printFaktura(rec);
   faCloseEditor(); showToast('Faktura uložena.'); autoAddToCenik(rec.polozky);
@@ -6906,10 +6943,13 @@ function fakturaFromNabidka(id){
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   document.getElementById('panel-faktury').classList.add('active');
   const rec={ id:uid(), cislo:nextFakturaCislo(), vs:nextFakturaCislo().replace(/\D/g,''), ks:'', kontaktId:n.kontaktId, objednavka:'',
-    datumVystaveni:today(), duzp:today(), splatnost:plusDays(today(),14), formaUhrady:'Převodem',
+    datumVystaveni:today(), duzp:today(), splatnost:splatnostZ(today()), formaUhrady:'Převodem',
     rezim:'pdp', pdpText:DEFAULT_PDP, akce:n.predmet||'', pozn:'', stav:'Vystavená', zNabidky:n.id,
     polozky:(n.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,cena:x.cena,sleva:x.sleva||0,sazba:21,kat:normKatLine(x.kat),...(x.katKod?{katKod:x.katKod}:{})})) };
   faOpenEditor(rec, true);
+  { const dalsi=DB.nabidky.filter(x=>x.id!==n.id && x.kontaktId===n.kontaktId && x.stav!=='Odmítnuto' && (x.polozky||[]).length && !navFaktura(x.id));
+    if(dalsi.length){ const el=document.getElementById('faNbPicker'); el.style.display='block'; faNbRender();
+      setTimeout(()=>showToast('Zákazník má '+dalsi.length+(dalsi.length===1?' další nevyfakturovanou nabídku':' další nevyfakturované nabídky')+' – můžete je přidat do této faktury.'),2600); } }
   showToast('Faktura vytvořena z nabídky — zkontrolujte a uložte.');
 }
 
@@ -6960,9 +7000,12 @@ function faDocHtml(rec, rezim){
     '<tr><td>VS</td><td><b>'+esc(rec.vs||'')+'</b></td></tr>'+
     (rec.ks?'<tr><td>KS</td><td>'+esc(rec.ks)+'</td></tr>':'')+
     '<tr><td>Částka</td><td><b>'+fmtCena(t.celkem)+'</b></td></tr>'+
-    '</table></div>'+(qr?'<div style="text-align:center"><img class="doc-qr" src="'+qr+'"><div class="lbl" style="margin-top:4px">QR platba</div></div>':'')+'</div>';
+    '</table></div>'+(qr?'<div style="text-align:center"><img class="doc-qr" src="'+qr+'"><div class="lbl" style="margin-top:4px">QR platba</div></div>':'')+
+    '<div class="doc-vystavil">'+podpisBox()+'<div style="border-top:1px solid #15233c;margin-top:'+(dodPodpis()?'2px':'46px')+';padding-top:6px;font-size:11px;color:#333">'+esc(d.nazev||'')+'</div><div style="font-size:9px;letter-spacing:1px;color:#8a6a2f;text-transform:uppercase;margin-top:2px">Vystavil</div></div>'+
+    '</div>';
   const H=[];
   H.push('<div class="doc">');
+  H.push('<table class="doc-ram"><tbody><tr><td>');
   H.push('<div class="doc-top"><div class="doc-brand"><img class="doc-logo-img" src="'+brandLogo()+'" alt=""><div><div class="doc-name">'+esc(d.nazev||'')+'</div><div class="doc-sub">'+esc(d.claim||'')+'</div></div></div>');
   H.push('<div class="doc-title"><div class="doc-t1">FAKTURA — DAŇOVÝ DOKLAD</div><div class="doc-t2">'+esc(rec.cislo||'')+'</div></div></div>');
   H.push('<div class="doc-parties"><div class="doc-box"><div class="doc-lbl">DODAVATEL</div><div class="doc-strong">'+esc(d.nazev||'')+'</div>'+esc(d.ulice||'')+'<br>'+esc(d.psc||'')+' '+esc(d.mesto||'')+'<br>IČ: '+esc(d.ico||'')+(d.dic?' · DIČ: '+esc(d.dic):'')+'<br>'+esc(d.tel||'')+(d.email?' · '+esc(d.email):'')+'</div>');
@@ -6973,10 +7016,10 @@ function faDocHtml(rec, rezim){
   H.push('<table class="doc-items"><thead><tr><th>#</th><th>Předmět a rozsah plnění</th><th class="r">Množství</th><th>MJ</th><th class="r">J. cena bez DPH</th><th class="r">Základ daně</th><th class="r">Sazba</th><th class="r">Celkem</th></tr></thead><tbody>'+rows+'</tbody></table>');
   H.push(totalBlock);
   if(pdpNote) H.push(pdpNote);
-  H.push(pay);
   if(rec.pozn) H.push('<div class="doc-note">'+esc(rec.pozn).replace(/\n/g,'<br>')+'</div>');
-  H.push('<div style="margin-top:30px;width:250px;margin-left:auto;text-align:center">'+podpisBox()+'<div style="border-top:1px solid #15233c;margin-top:'+(dodPodpis()?'2px':'46px')+';padding-top:6px;font-size:11px;color:#333">'+esc(d.nazev||'')+'</div><div style="font-size:9px;letter-spacing:1px;color:#8a6a2f;text-transform:uppercase;margin-top:2px">Vystavil</div></div>');
-  H.push('<div class="doc-foot">Daňový doklad dle §29 zákona č. 235/2004 Sb. &nbsp;·&nbsp; '+esc(d.nazev||'')+' &nbsp;·&nbsp; '+esc(d.tel||'')+' &nbsp;·&nbsp; '+esc(d.email||'')+'</div>');
+  H.push('<div class="doc-zaver">'+pay+'</div>');
+  H.push('</td></tr></tbody><tfoot><tr><td><div class="doc-pata-misto"></div></td></tr></tfoot></table>');
+  H.push('<div class="doc-pata"><span>'+(rec.rezim==='neplatce'?'Faktura':'Daňový doklad dle §29 zákona č. 235/2004 Sb.')+' &nbsp;·&nbsp; '+esc(d.nazev||'')+[d.tel,d.email].filter(Boolean).map(x=>' &nbsp;·&nbsp; '+esc(x)).join('')+'</span><span class="yey">Vytvořeno na adrese: <b>YeY.cz</b> – kancelář řemeslníků</span></div>');
   H.push('</div>');
   return H.join('');
 }
@@ -7007,6 +7050,8 @@ document.getElementById('btnFaSave').onclick=()=>faSave(false);
 document.getElementById('btnFaSavePrint').onclick=()=>faSave(true);
 document.getElementById('btnFaDelete').onclick=()=>{ if(confirm('Smazat tuto fakturu?')){ DB.faktury=DB.faktury.filter(x=>x.id!==FA.id); markDirty(); faCloseEditor(); renderFaktury(); } };
 document.getElementById('btnFaEmpty').onclick=faAddEmpty;
+document.getElementById('btnFaNb').onclick=()=>{ const el=document.getElementById('faNbPicker'); const show=el.style.display==='none'; el.style.display=show?'block':'none'; if(show){ document.getElementById('faPicker').style.display='none'; faNbRender(); } };
+document.getElementById('faNbVse').onchange=faNbRender;
 document.getElementById('btnFaPick').onclick=()=>{ const el=document.getElementById('faPicker'); const show=el.style.display==='none'; el.style.display=show?'block':'none'; if(show){ faPickKat=''; document.getElementById('faPickSearch').value=''; faPickRender(); document.getElementById('faPickSearch').focus(); } };
 document.getElementById('faPickSearch').oninput=faPickRender;
 document.getElementById('faRezim').onchange=e=>{ FA.rezim=e.target.value; document.getElementById('faPdpWrap').style.display=(FA.rezim==='pdp')?'':'none'; renderFaItems(); };
@@ -7168,11 +7213,57 @@ function faKontrolaData(){
   oznacDatum('faVyst','faVystWarn', txt ? 'Datum vystavení je dřívější než datum předání v protokolu '+(pr.cislo||'')+' ('+czDate(pr.datumPredani)+'). Protokol musí být vyhotoven nejpozději v den vystavení faktury.' : '');
   return txt;
 }
-document.addEventListener('input', e=>{ const id=e.target && e.target.id; if(id==='prDatum') prKontrolaData(); else if(id==='faVyst') faKontrolaData(); });
-document.addEventListener('change', e=>{ const id=e.target && e.target.id; if(id==='prDatum') prKontrolaData(); else if(id==='faVyst') faKontrolaData(); });
+let FA_VYST_PRED='';
+function faVystZmena(){
+  const nove=val('faVyst');
+  if(nove && nove!==FA_VYST_PRED){
+    const sp=val('faSplat');
+    if(!sp || (FA_VYST_PRED && sp===splatnostZ(FA_VYST_PRED))) setVal('faSplat', splatnostZ(nove));
+    FA_VYST_PRED=nove;
+  }
+}
+document.addEventListener('input', e=>{ const id=e.target && e.target.id; if(id==='prDatum') prKontrolaData(); else if(id==='faVyst'){ faVystZmena(); faKontrolaData(); } });
+document.addEventListener('change', e=>{ const id=e.target && e.target.id; if(id==='prDatum') prKontrolaData(); else if(id==='faVyst'){ faVystZmena(); faKontrolaData(); } });
 
 /* Návaznost dokladů: nabídka → faktura → předávací protokol */
-function navFaktura(nId){ return nId ? DB.faktury.find(f=>f.zNabidky===nId) : null; }
+/** Všechny nabídky, ze kterých faktura vznikla (hlavní + přidané). */
+function faNabidkyIds(f){ return f ? [...new Set([f.zNabidky].concat(f.zNabidekVice||[]).filter(Boolean))] : []; }
+function navFaktura(nId){ return nId ? DB.faktury.find(f=>faNabidkyIds(f).includes(nId)) : null; }
+/** Výběr nabídek do faktury */
+function faNbRender(){
+  const kontakt=val('faKontakt'), vse=document.getElementById('faNbVse').checked, uz=new Set(faNabidkyIds(FA));
+  let list=DB.nabidky.filter(n=>!uz.has(n.id) && n.stav!=='Odmítnuto' && (n.polozky||[]).length);
+  if(kontakt && !vse) list=list.filter(n=>n.kontaktId===kontakt);
+  list.sort((a,b)=>(b.datum||'').localeCompare(a.datum||'')||(b.cislo||'').localeCompare(a.cislo||''));
+  document.getElementById('faNbInfo').textContent = kontakt&&!vse ? 'nabídky vybraného odběratele' : (kontakt?'všechny nabídky':'vyberte odběratele, nebo nabídku – odběratel se doplní');
+  const pridane=faNabidkyIds(FA).map(id=>DB.nabidky.find(n=>n.id===id)).filter(Boolean);
+  let h = pridane.length ? '<div class="small" style="margin-bottom:8px">Ve faktuře: '+pridane.map(n=>'<span class="badge" style="margin-right:4px">'+esc(n.cislo||'')+'</span>').join('')+'</div>' : '';
+  h += list.length ? list.map(n=>{
+      const k=DB.kontakty.find(x=>x.id===n.kontaktId), f=navFaktura(n.id), sum=(n.polozky||[]).reduce((s,p)=>s+rowTotal(p),0);
+      return '<button type="button" class="pick" onclick="faPridejNabidku(\''+n.id+'\')" title="Přidat všechny položky nabídky do faktury">'+
+        '<span><b>'+esc(n.cislo||'—')+'</b> · '+esc(n.predmet||'bez předmětu')+'<span class="small muted" style="display:block">'+esc(k?k.nazev:'—')+' · '+czDate(n.datum)+' · '+(n.polozky||[]).length+' pol.'+(f?' · <b style="color:#b0413e">už ve faktuře '+esc(f.cislo||'')+'</b>':'')+'</span></span>'+
+        '<span class="muted small" style="white-space:nowrap">'+fmtCena(sum)+' ＋</span></button>'; }).join('')
+    : '<div class="muted small" style="padding:6px">Žádná další nabídka'+(kontakt&&!vse?' tohoto odběratele':'')+'.</div>';
+  document.getElementById('faNbList').innerHTML=h;
+}
+function faPridejNabidku(id){
+  const n=DB.nabidky.find(x=>x.id===id); if(!n) return;
+  const f=navFaktura(n.id);
+  if(f && f.id!==FA.id && !confirm('Nabídka '+(n.cislo||'')+' už je vyfakturovaná ve faktuře '+(f.cislo||'')+'. Přidat ji i sem?')) return;
+  const kontakt=val('faKontakt');
+  if(!kontakt){ setVal('faKontakt', n.kontaktId); FA.kontaktId=n.kontaktId; updateIdxNote('faIdxNote','faKontakt'); }
+  else if(n.kontaktId && n.kontaktId!==kontakt && !confirm('Nabídka '+(n.cislo||'')+' je pro jiného odběratele. Přesto ji přidat?')) return;
+  let pridano=0, secteno=0;
+  (n.polozky||[]).forEach(x=>{
+    const p={nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,cena:x.cena,sleva:x.sleva||0,sazba:21,kat:normKatLine(x.kat),...(x.katKod?{katKod:x.katKod}:{})};
+    if(pridejPolozku(FA.polozky, p, false)) pridano++; else secteno++;
+  });
+  if(!FA.zNabidky) FA.zNabidky=n.id; else { FA.zNabidekVice=FA.zNabidekVice||[]; if(!FA.zNabidekVice.includes(n.id)) FA.zNabidekVice.push(n.id); }
+  const akce=val('faAkce').trim();
+  if(n.predmet && !akce.toLowerCase().includes(n.predmet.toLowerCase())) setVal('faAkce', akce ? akce+', '+n.predmet : n.predmet);
+  renderFaItems(); faNbRender();
+  showToast('Přidána nabídka '+(n.cislo||'')+': '+pridano+' položek'+(secteno?', '+secteno+' stejných sečteno':'')+'.');
+}
 function navProtokolFa(fId){ return fId ? DB.protokoly.find(p=>p.zFaktury===fId) : null; }
 function navProtokolNb(nId){ return nId ? DB.protokoly.find(p=>p.zNabidky===nId) : null; }
 function zavriNahled(){ document.getElementById('docModal').classList.remove('show'); }
@@ -7316,6 +7407,7 @@ function nsRender(){
   setVal('fmt_protokol',DB.formaty.protokol); setVal('next_protokol',DB.cislaRady.protokol||1);
   document.getElementById('ns_autoCenik').checked=!!DB.nastaveni.autoCenik;
   document.getElementById('ns_hlidatCeny').checked=!!DB.nastaveni.hlidatCeny;
+  setVal('ns_splatnost', splatnostLhuta());
   renderPodpisPrev();
   renderLogoPrev();
   setVal('ns_claim', d.claim||'');
@@ -7340,6 +7432,7 @@ function nsSave(){
   DB.cislaRady.protokol=parseInt(val('next_protokol'))||1;
   DB.nastaveni.autoCenik=document.getElementById('ns_autoCenik').checked;
   DB.nastaveni.hlidatCeny=document.getElementById('ns_hlidatCeny').checked;
+  DB.nastaveni.splatnost=val('ns_splatnost')||'mesic';
   DB.dodavatel.claim=val('ns_claim').trim();
   markDirty(); updateBrand(); showToast('Nastavení uloženo.');
 }

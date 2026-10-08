@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tahák YeY – jak z aplikace vytěžit maximum</title>
+<meta name="description" content="Tahák pro nové uživatele YeY: rychlý start, kde co najdete, triky ke kalkulačkám, katalogu, nabídkám, fakturám a protokolům a co dělat, když něco nejde.">
+<meta name="theme-color" content="#1D272F">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23F2B705'/><path d='M18 14l14 20 14-20' fill='none' stroke='%231D272F' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/><path d='M32 34v16' stroke='%231D272F' stroke-width='7' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap&subset=latin-ext" rel="stylesheet">
+<style>
+:root{
+  --papir:#F4F5F2; --karta:#FFFFFF; --inkoust:#1D272F; --inkoust-3:#39464F;
+  --ocel:#5D6B76; --text-2:#3A4750; --linka:#D8DCD6;
+  --metr:#F2B705; --metr-tmava:#C99400; --metr-svetla:#FFF4CC; --ok:#2B7A4B; --pozor:#B3261E;
+  --r:14px; --stin:0 1px 2px rgba(29,39,47,.06),0 8px 24px rgba(29,39,47,.08);
+  --cond:'Barlow Condensed','Barlow',system-ui,sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+html,body{margin:0}
+body{font:17px/1.6 'Barlow',system-ui,'Segoe UI',sans-serif;color:var(--inkoust);background:var(--papir);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--cond);line-height:1.08;margin:0;text-wrap:balance}
+p{text-wrap:pretty}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--metr);outline-offset:3px;border-radius:6px}
+.obal{max-width:1120px;margin:0 auto;padding:0 24px}
+.skok{position:absolute;left:12px;top:-60px;background:var(--metr);color:var(--inkoust);padding:.6rem 1rem;border-radius:8px;font-weight:700;z-index:50;text-decoration:none}
+.skok:focus{top:12px}
+svg.ik{width:22px;height:22px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* hlavička jako na úvodní stránce */
+.hlava{background:var(--inkoust);color:#fff;position:sticky;top:0;z-index:30}
+.hlava .obal{display:flex;align-items:center;gap:14px;min-height:68px}
+.znacka{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;margin-right:auto;min-width:0}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--metr);display:grid;place-items:center;flex:0 0 auto;position:relative;overflow:hidden}
+.logo svg{width:24px;height:24px}
+.logo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:repeating-linear-gradient(90deg,var(--inkoust) 0 1.5px,transparent 1.5px 6px);opacity:.45}
+.znacka-text{display:flex;flex-direction:column;line-height:1.05;min-width:0}
+.znacka-text b{font:700 1.6rem/1 var(--cond);color:var(--metr)}
+.znacka-text span{font:600 .98rem/1.15 var(--cond);color:#E6EAED;white-space:nowrap}
+.hlava a.zpet{color:#E6EAED;text-decoration:none;font-weight:600;padding:.5rem .7rem;border-radius:8px;white-space:nowrap}
+.hlava a.zpet:hover{background:rgba(255,255,255,.08);color:#fff}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:0;border-radius:11px;padding:.6rem 1.1rem;font:700 1rem/1.2 'Barlow',system-ui,sans-serif;cursor:pointer;text-decoration:none;min-height:44px;background:var(--metr);color:var(--inkoust);white-space:nowrap}
+.btn:hover{background:#FFC61A}
+
+/* úvodní pruh */
+.metr{background:var(--metr);position:relative}
+.metr::after{content:"";position:absolute;left:0;right:0;bottom:0;height:16px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,var(--inkoust) 0 2px,transparent 2px 100px) 0 100%/100% 16px no-repeat,
+             repeating-linear-gradient(90deg,var(--inkoust) 0 1.5px,transparent 1.5px 50px) 0 100%/100% 10px no-repeat,
+             repeating-linear-gradient(90deg,var(--inkoust) 0 1px,transparent 1px 10px) 0 100%/100% 6px no-repeat;opacity:.5}
+.hero{padding:44px 0 60px}
+.hero h1{font-size:clamp(2.2rem,5vw,3.4rem);font-weight:700}
+.hero p{max-width:44em;margin:.7rem 0 0;font-size:1.08rem;font-weight:500}
+.hledat{margin-top:22px;display:flex;gap:10px;max-width:560px}
+.hledat input{flex:1;min-width:0;border:2px solid var(--inkoust);border-radius:11px;padding:.7rem .9rem;font:500 1rem 'Barlow',sans-serif;background:#fff}
+.hledat-info{font-size:.92rem;margin-top:8px;min-height:1.4em;font-weight:600}
+
+/* rozvržení */
+.rozvrh{display:grid;grid-template-columns:230px minmax(0,1fr);gap:40px;padding:40px 0 64px;align-items:start}
+.rozvrh > *{min-width:0}
+.obsah-nav{position:sticky;top:92px;font-size:.95rem}
+.obsah-nav b{display:block;font:700 1.1rem var(--cond);letter-spacing:.4px;text-transform:uppercase;color:var(--ocel);margin-bottom:8px}
+.obsah-nav a{display:block;text-decoration:none;padding:.32rem .6rem;border-left:3px solid var(--linka);color:var(--text-2)}
+.obsah-nav a:hover{border-left-color:var(--metr);color:var(--inkoust);background:#fff}
+section{margin-bottom:46px}
+section > h2{font-size:2rem;font-weight:700;display:flex;align-items:center;gap:12px;margin-bottom:6px}
+section > h2 .cislo{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--inkoust);color:var(--metr);font-size:1.25rem;flex:0 0 auto}
+.uvodka{color:var(--text-2);margin:0 0 16px;max-width:46em}
+
+/* rychlý start */
+ol.kroky{list-style:none;counter-reset:k;margin:0;padding:0;display:grid;gap:12px}
+ol.kroky li{counter-increment:k;background:var(--karta);border:1px solid var(--linka);border-radius:var(--r);padding:14px 16px 14px 62px;position:relative}
+ol.kroky li::before{content:counter(k);position:absolute;left:16px;top:14px;width:32px;height:32px;border-radius:50%;background:var(--metr);display:grid;place-items:center;font:700 1.1rem var(--cond)}
+ol.kroky b{display:block;font-size:1.05rem}
+.cesta{display:inline-block;background:var(--metr-svetla);border:1px solid #F1DE97;border-radius:6px;padding:0 .4rem;font-weight:600;font-size:.94em;white-space:nowrap}
+kbd{background:#fff;border:1px solid var(--linka);border-bottom-width:2px;border-radius:6px;padding:0 .4rem;font:600 .9em 'Barlow',sans-serif;white-space:nowrap}
+
+/* karty s triky */
+.mrizka{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tip{background:var(--karta);border:1px solid var(--linka);border-radius:var(--r);padding:14px 16px}
+.tip h3{font-size:1.25rem;font-weight:700;margin-bottom:4px}
+.tip p{margin:0;color:var(--text-2);font-size:.98rem}
+.tip p + p{margin-top:6px}
+.tip.dulezite{border:2px solid var(--metr)}
+.f.skryty{display:none!important}
+.stitek{display:inline-block;font:700 .78rem/1.6 var(--cond);letter-spacing:.8px;text-transform:uppercase;color:var(--metr-tmava);margin-bottom:2px}
+
+/* tabulky */
+.tab-obal{background:var(--karta);border:1px solid var(--linka);border-radius:var(--r);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.97rem}
+th{text-align:left;font:700 .85rem var(--cond);letter-spacing:.8px;text-transform:uppercase;color:var(--ocel);padding:10px 14px;border-bottom:2px solid var(--inkoust);white-space:nowrap}
+td{padding:9px 14px;border-bottom:1px solid #ECEEEA;vertical-align:top}
+tr:last-child td{border-bottom:0}
+td code{font:600 .95em ui-monospace,Consolas,monospace;background:var(--papir);padding:0 .3rem;border-radius:4px}
+
+.pata{background:var(--inkoust);color:#C9D1D6;padding:28px 0;font-size:.95rem}
+.pata .obal{display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap;align-items:center}
+.pata a{color:#fff}
+
+@media (max-width:860px){
+  .rozvrh{grid-template-columns:1fr;gap:24px;padding-top:28px}
+  .obsah-nav{position:static;display:flex;flex-wrap:wrap;gap:6px}
+  .obsah-nav b{width:100%}
+  .obsah-nav a{border:1px solid var(--linka);border-radius:8px;background:#fff;padding:.3rem .6rem}
+  .mrizka{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .obal{padding:0 16px}
+  .znacka-text span{display:none}
+  .hlava a.zpet{display:none}
+  section > h2{font-size:1.65rem}
+  ol.kroky li{padding-left:56px}
+}
+@media print{
+  .hlava,.hledat,.hledat-info,.obsah-nav,.pata{display:none!important}
+  body{background:#fff;font-size:12.5px}
+  .metr{background:#fff!important}.metr::after{display:none}
+  .hero{padding:0 0 10px}.rozvrh{display:block;padding:0}
+  .tip,ol.kroky li,.tab-obal{break-inside:avoid;box-shadow:none}
+  section{break-inside:auto;margin-bottom:22px}
+}
+</style>
+</head>
+<body>
+<a class="skok" href="#obsah">Přeskočit na obsah</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-y" viewBox="0 0 24 24"><path d="M5 3.5l7 10 7-10M12 13.5v8" stroke-width="3.6"/></symbol>
+  <symbol id="i-hledat" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+</svg>
+
+<header class="hlava">
+  <div class="obal">
+    <a class="znacka" href="index.html" aria-label="YeY – úvodní stránka">
+      <span class="logo" aria-hidden="true"><svg class="ik" style="stroke:#1D272F"><use href="#i-y"/></svg></span>
+      <span class="znacka-text"><b>YeY</b><span>Kancelář pro řemeslníky</span></span>
+    </a>
+    <a class="zpet" href="index.html">← Úvodní stránka</a>
+    <a class="btn" href="yey.html">Otevřít aplikaci</a>
+  </div>
+</header>
+
+<main id="obsah">
+<div class="metr hero">
+  <div class="obal">
+    <h1>Tahák: jak z YeY vytěžit maximum</h1>
+    <p>Pro ty, kdo si chtějí aplikaci projít pořádně. Nejdřív pět kroků, které stačí na první zakázku, pak kde co najdete a triky, na které se snadno nepřijde.</p>
+    <div class="hledat" role="search">
+      <input type="search" id="hledej" placeholder="Hledat v taháku – např. splatnost, Excel, podpis…" aria-label="Hledat v taháku">
+    </div>
+    <div class="hledat-info" id="hledej-info" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="obal rozvrh">
+  <nav class="obsah-nav" aria-label="Obsah taháku">
+    <b>Obsah</b>
+    <a href="#start">Rychlý start</a>
+    <a href="#kde">Kde co najdu</a>
+    <a href="#kalkulacky">Kalkulačky</a>
+    <a href="#katalog">Katalog a hledání</a>
+    <a href="#nabidky">Nabídky</a>
+    <a href="#faktury">Faktury</a>
+    <a href="#protokoly">Předávací protokoly</a>
+    <a href="#cenik">Ceník a zákazníci</a>
+    <a href="#rady">Číselné řady</a>
+    <a href="#data">Data a zálohy</a>
+    <a href="#problemy">Když něco nejde</a>
+  </nav>
+
+  <div>
+  <!-- ============ RYCHLÝ START ============ -->
+  <section id="start">
+    <h2><span class="cislo">1</span>Rychlý start za 10 minut</h2>
+    <p class="uvodka">Těchto pět kroků stačí, abyste vystavili první nabídku, fakturu i protokol. Všechno ostatní si můžete objevovat postupně.</p>
+    <ol class="kroky">
+      <li class="f"><b>Připojte pracovní složku</b>Na počítači v Chrome nebo Edge klikněte nahoře na <span class="cesta">📁 Pracovní složka</span> a vyberte složku, nejlépe v OneDrivu. Aplikace pak ukládá sama. Na telefonu se data ukládají v telefonu, tak si občas dejte <span class="cesta">Uložit zálohu</span>.</li>
+      <li class="f"><b>Vyplňte svou firmu</b><span class="cesta">Nastavení → Údaje dodavatele</span>: název, IČ, adresa a hlavně číslo účtu – z něj se na faktuře vytvoří QR platba. Nahrajte logo a podpis (ideálně průhledné PNG).</li>
+      <li class="f"><b>Nastavte čísla a splatnost</b><span class="cesta">Nastavení → Číselné řady</span> podle vašeho účetnictví a v <span class="cesta">Nastavení → Chování</span> standardní splatnost faktur (výchozí je 1 měsíc).</li>
+      <li class="f"><b>Založte zákazníka</b><span class="cesta">Kontakty → + Nový kontakt</span>, zadejte IČ a klikněte <span class="cesta">Načíst z ARES</span> – adresa i DIČ se doplní samy.</li>
+      <li class="f"><b>Nabídka → faktura → protokol</b><span class="cesta">Nabídky → + Nová nabídka</span>, přidejte položky z ceníku, katalogu, kalkulačky nebo Excelu a uložte. V přehledu pak stačí kliknout <span class="cesta">🧾 Vystavit fakturu</span> a u faktury <span class="cesta">📋 Předávací protokol</span>. Nic se nepřepisuje.</li>
+    </ol>
+  </section>
+
+  <!-- ============ KDE CO NAJDU ============ -->
+  <section id="kde">
+    <h2><span class="cislo">2</span>Kde co najdu</h2>
+    <p class="uvodka">Rychlá orientace: co chcete udělat a kam kliknout.</p>
+    <div class="tab-obal"><table>
+      <thead><tr><th>Chci…</th><th>Kde</th></tr></thead>
+      <tbody>
+        <tr class="f"><td>spočítat materiál a práci podle rozměrů</td><td><span class="cesta">📐 Kalkulačky</span> nebo v nabídce <span class="cesta">📐 Z kalkulačky</span></td></tr>
+        <tr class="f"><td>najít zboží s cenou</td><td>v nabídce či faktuře <span class="cesta">＋ Z ceníku → Katalog materiálů</span>, v ceníku <span class="cesta">🔎 Katalog materiálů</span></td></tr>
+        <tr class="f"><td>načíst nabídku od subdodavatele z Excelu</td><td>v nabídce <span class="cesta">⬆ Z tabulky</span> – soubor .xlsx nebo vložení ze schránky</td></tr>
+        <tr class="f"><td>poslat poptávku materiálu do stavebnin</td><td>v nabídce či faktuře <span class="cesta">✉ Poptávka materiálu</span></td></tr>
+        <tr class="f"><td>vyfakturovat víc nabídek najednou</td><td>ve faktuře <span class="cesta">＋ Z nabídky</span></td></tr>
+        <tr class="f"><td>označit fakturu jako zaplacenou</td><td><span class="cesta">Faktury → ✓ Zaplaceno</span> u faktury v přehledu</td></tr>
+        <tr class="f"><td>dát zákazníkovi přirážku nebo slevu</td><td><span class="cesta">Kontakty → kontakt → Cenový index (%)</span></td></tr>
+        <tr class="f"><td>hromadně nahrát svůj ceník</td><td><span class="cesta">Ceník → ⬆ Import z Excelu</span></td></tr>
+        <tr class="f"><td>zjistit aktuální ceny položek z katalogu</td><td><span class="cesta">Ceník → ⟳ Aktualizovat z katalogu</span></td></tr>
+        <tr class="f"><td>změnit vzhled, barvy, logo</td><td><span class="cesta">Nastavení → Vzhled a značka</span></td></tr>
+        <tr class="f"><td>přepnout jazyk (ukrajinsky, rusky, anglicky)</td><td>výběr jazyka v horní liště – doklady zůstanou česky</td></tr>
+        <tr class="f"><td>zálohovat nebo přenést data jinam</td><td>horní lišta <span class="cesta">Uložit zálohu</span> / <span class="cesta">Obnovit ze zálohy</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ============ KALKULAČKY ============ -->
+  <section id="kalkulacky">
+    <h2><span class="cislo">3</span>Kalkulačky</h2>
+    <p class="uvodka">16 kalkulaček: zdivo, sádrokarton, omítky, malba, dlažba a obklad, hydroizolace, nivelace, plovoucí podlaha, beton a potěr, zateplení, střecha, zateplení podkroví, zámková dlažba, skladba podlahy, elektroinstalace, bourání a suť.</p>
+    <div class="mrizka">
+      <div class="tip f"><span class="stitek">Rychlost</span><h3>Šablony skladeb</h3><p>Nahoře u kalkulačky vyberte šablonu (třeba Ytong 15 nebo příčka W111) a parametry se nastaví samy. Pak už jen zadáte rozměry.</p></div>
+      <div class="tip f"><span class="stitek">Rozměry</span><h3>Stěny, plocha, nebo rovnou m²</h3><p>Každou stěnu zadejte zvlášť a odečtěte dveře a okna (předvolby i vlastní rozměr). Když znáte jen plochu, napište rovnou m².</p></div>
+      <div class="tip f"><span class="stitek">Pro profíky</span><h3>Režim Podrobně</h3><p>Odkryje spotřeby, spáry, osové vzdálenosti a další parametry. U každého pole je nápověda s běžnými hodnotami.</p></div>
+      <div class="tip f"><span class="stitek">Kontrola</span><h3>Jak počítám</h3><p>Rozepíše postup výpočtu a u každého řádku ukáže, z čeho množství vychází. Hodí se, když zákazník chce vysvětlení.</p></div>
+      <div class="tip f"><span class="stitek">Materiál</span><h3>Celá balení, ne desetiny</h3><p>Množství se převádí na prodejní jednotky – celé pytle, desky, kusy. Každý řádek můžete změnit vlastním výběrem zboží, nechat <b>↻ Vybrat znovu</b>, nebo vypnout (<b>Bez materiálu</b>).</p></div>
+      <div class="tip f"><span class="stitek">Cena</span><h3>Přirážka, práce a doprava</h3><p>Přirážku na materiál zadáte v procentech. Cenu práce za jednotku si kalkulačka pamatuje. Doprava se počítá z hmotnosti nákladu, nosnosti auta a ceny za km nebo paušálem.</p></div>
+      <div class="tip dulezite f"><span class="stitek">Do dokladu</span><h3>Vložit do nabídky</h3><p>Když máte otevřenou nabídku, kalkulace se vloží přímo do ní; jinak vznikne nová nabídka. Stejné položky se sečtou a nové se uloží do ceníku. Tlačítkem <b>Sdílet</b> pošlete výpočet dál.</p></div>
+      <div class="tip f"><span class="stitek">Sádrokarton</span><h3>Sortiment suché výstavby</h3><p>Desky v m², profily podle výšky stěny, šrouby po baleních, volitelně izolace a finální stěrka Q3.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ KATALOG ============ -->
+  <section id="katalog">
+    <h2><span class="cislo">4</span>Katalog a hledání</h2>
+    <p class="uvodka">Přes 130 000 položek stavebního materiálu s fotkou, EAN a orientační cenou bez DPH.</p>
+    <div class="mrizka">
+      <div class="tip f"><span class="stitek">Hledání</span><h3>Na pořadí slov nezáleží</h3><p>Hledá se v názvu, značce, kódu i EAN, s diakritikou i bez. <kbd>ytong 300</kbd> najde totéž co <kbd>300 Ytong</kbd>.</p></div>
+      <div class="tip dulezite f"><span class="stitek">Trik</span><h3>Vynechte, co nechcete</h3><p>Do pole <b>Vynechat slova</b> napište třeba <kbd>drenáž kg</kbd>, nebo rovnou v hledání použijte mínus: <kbd>trubka pvc -drenáž</kbd>. Na uvolněná místa se dostanou správné produkty.</p></div>
+      <div class="tip f"><span class="stitek">Filtry</span><h3>Téma, skupina, řazení</h3><p>Bez hledaného slova stačí vybrat téma. Čipy se skupinami výsledek zúží, řazení přepnete na nejlevnější nebo nejdražší, „jen s cenou“ skryje položky bez ceny.</p></div>
+      <div class="tip f"><span class="stitek">Ceník</span><h3>Co jednou vyberete, máte v ceníku</h3><p>Položka z katalogu se uloží do vašeho ceníku i s fotkou a EAN. Příště ji najdete rychleji a s vaší cenou.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ NABÍDKY ============ -->
+  <section id="nabidky">
+    <h2><span class="cislo">5</span>Nabídky</h2>
+    <div class="mrizka">
+      <div class="tip f"><span class="stitek">Položky</span><h3>Stejné položky se sčítají</h3><p>Přidáte-li stejnou věc dvakrát, množství se přičte k existujícímu řádku. Položky s jinou cenou zůstanou zvlášť.</p></div>
+      <div class="tip f"><span class="stitek">Drobnost</span><h3>Nula v ceně zmizí</h3><p>Klikněte do ceny a výchozí 0 se sama smaže – nenapíšete omylem „15000“ místo „1500“.</p></div>
+      <div class="tip dulezite f"><span class="stitek">Excel</span><h3>Načtení sešitu od subdodavatele</h3><p><b>⬆ Z tabulky → Vybrat soubor .xlsx</b> projde všechny listy a najde tabulky se sloupci Popis, Množství, MJ a Cena. Součty a rekapitulaci vynechá, dopočítá vzorce a porovná výsledek s „Celkem bez DPH“ v sešitu.</p><p>Každou tabulku můžete v náhledu vypnout nebo jí změnit kategorii. Položky jen z rekapitulace (třeba doprava paušálem) se nabídnou zvlášť.</p></div>
+      <div class="tip f"><span class="stitek">Excel</span><h3>Nebo jen přes schránku</h3><p>V Excelu označte řádky, <kbd>Ctrl+C</kbd>, v okně „Z tabulky“ <kbd>Ctrl+V</kbd> a <b>Načíst vložená data</b>. Kategorie se pozná ze záhlaví sekcí (Montáž, Demontáž, Materiál, Režie).</p></div>
+      <div class="tip f"><span class="stitek">Materiál</span><h3>Poptávka do stavebnin</h3><p><b>✉ Poptávka materiálu</b> vyfiltruje materiál z nabídky a připraví e-mail stavebninám, nebo text zkopíruje do schránky.</p></div>
+      <div class="tip f"><span class="stitek">Přehled</span><h3>Stav a přílohy</h3><p>Stav Rozpracováno → Odesláno → Přijato / Odmítnuto. Po vystavení faktury se nabídka sama přepne na Přijato. K nabídce přiložíte objednávku nebo fotky.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ FAKTURY ============ -->
+  <section id="faktury">
+    <h2><span class="cislo">6</span>Faktury</h2>
+    <div class="mrizka">
+      <div class="tip dulezite f"><span class="stitek">DPH</span><h3>Tři režimy</h3><p><b>Přenesená daňová povinnost</b> (§92e) pro stavební práce – faktura uvede „daň odvede zákazník“ a sazbu 0 %. <b>Běžná</b> faktura se sazbami 21 / 12 / 0 % a rozpisem DPH. <b>Neplátce DPH</b>.</p></div>
+      <div class="tip f"><span class="stitek">Platba</span><h3>QR platba sama</h3><p>Z čísla účtu v nastavení se na faktuře vygeneruje QR kód s částkou a variabilním symbolem. Platební údaje, QR a váš podpis jsou v jednom bloku, který se nerozdělí mezi stránky.</p></div>
+      <div class="tip f"><span class="stitek">Splatnost</span><h3>Splatnost se počítá sama</h3><p>Podle nastavené lhůty (1 měsíc, 7–90 dní). Změníte-li datum vystavení, splatnost se posune – pokud jste ji nepřepsali ručně.</p></div>
+      <div class="tip dulezite f"><span class="stitek">Více zakázek</span><h3>Víc nabídek do jedné faktury</h3><p><b>＋ Z nabídky</b> přidá další nabídky zákazníka. Položky zůstanou v blocích podle nabídek, nikdy se mezi nabídkami nesloučí, a faktura uvede „Fakturováno na základě nabídek č.“ s mezisoučty.</p></div>
+      <div class="tip f"><span class="stitek">Úhrady</span><h3>✓ Zaplaceno a po splatnosti</h3><p>Zelené tlačítko v přehledu označí fakturu jako zaplacenou s dnešním datem (opětovným kliknutím se vrátí). Nezaplacená faktura po splatnosti má stav červeně s počtem dní.</p></div>
+      <div class="tip f"><span class="stitek">Tisk</span><h3>Položkově, nebo po kategoriích</h3><p>Při tisku si vyberete, zda zákazník uvidí všechny položky, nebo jen součty za Materiál, Práci, Dopravu… Patička je na každé stránce.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ PROTOKOLY ============ -->
+  <section id="protokoly">
+    <h2><span class="cislo">7</span>Předávací protokoly</h2>
+    <div class="mrizka">
+      <div class="tip f"><span class="stitek">Číslo</span><h3>Stejné číslo jako faktura</h3><p>Protokol k faktuře 260007 dostane číslo P260007. Když fakturu přečíslujete, protokol se přečísluje s ní. Předponu změníte v Nastavení → Číselné řady.</p></div>
+      <div class="tip dulezite f"><span class="stitek">Datum</span><h3>Předání nejpozději v den faktury</h3><p>Je-li datum předání pozdější než vystavení faktury, pole zčervená a aplikace se před uložením zeptá.</p></div>
+      <div class="tip f"><span class="stitek">Objednávka</span><h3>Číslo objednávky z faktury</h3><p>Převezme se samo a na protokolu je věta „Protokol je vyhotoven na základě objednávky č. …“.</p></div>
+      <div class="tip f"><span class="stitek">Převzetí</span><h3>Bez vad, nebo s výhradami</h3><p>Při výhradách se otevře pole pro vady a nedodělky. Doplňte záruku a předané doklady či klíče.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ CENÍK A ZÁKAZNÍCI ============ -->
+  <section id="cenik">
+    <h2><span class="cislo">8</span>Ceník a zákazníci</h2>
+    <div class="mrizka">
+      <div class="tip f"><span class="stitek">Automaticky</span><h3>Ceník roste sám</h3><p>Ručně zadané položky z nabídek a faktur se samy ukládají do ceníku. Vypnout jde v Nastavení → Chování.</p></div>
+      <div class="tip f"><span class="stitek">Hlídání</span><h3>Stejná věc, stejná cena</h3><p>Dostal-li zákazník položku už dříve, aplikace nabídne tehdejší cenu, aby stejná věc nebyla jednou dráž a podruhé levněji.</p></div>
+      <div class="tip dulezite f"><span class="stitek">Marže</span><h3>Cenový index u zákazníka</h3><p>V kontaktu zadejte třeba <kbd>+10</kbd> (přirážka) nebo <kbd>-5</kbd> (sleva). Ceny z ceníku se u něj upraví samy a na dokladech se index nezobrazuje.</p></div>
+      <div class="tip f"><span class="stitek">Import</span><h3>Celý ceník z Excelu</h3><p>Sloupce Kód, Kategorie, Název, MJ, Cena, Poznámka. Data se nejdřív ukážou ke kontrole; vyberete, zda přidat, nebo ceník nahradit. Neznámé kategorie se založí samy.</p></div>
+      <div class="tip f"><span class="stitek">Aktuálnost</span><h3>Aktualizovat z katalogu</h3><p>Dohledá vaše položky v katalogu podle kódu a EAN a nabídne nové ceny – použijete jen ty, které zaškrtnete.</p></div>
+      <div class="tip f"><span class="stitek">Kategorie</span><h3>Pořadí na dokladech</h3><p>V Nastavení → Kategorie položek kategorie přejmenujete, přidáte i seřadíte. Pořadí se promítne do všech dokladů.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ ČÍSELNÉ ŘADY ============ -->
+  <section id="rady">
+    <h2><span class="cislo">9</span>Číselné řady – značky</h2>
+    <p class="uvodka">Tvar čísla zapíšete maskou v Nastavení → Číselné řady. „Další číslo“ je pořadí příštího dokladu.</p>
+    <div class="tab-obal"><table>
+      <thead><tr><th>Značka</th><th>Význam</th><th>Příklad masky</th><th>Výsledek</th></tr></thead>
+      <tbody>
+        <tr class="f"><td><code>{RRRR}</code></td><td>rok čtyřmístně</td><td><code>{RRRR}-{NNN}</code></td><td>2026-001</td></tr>
+        <tr class="f"><td><code>{RR}</code></td><td>rok dvojmístně</td><td><code>{RR}{NNNN}</code></td><td>260001</td></tr>
+        <tr class="f"><td><code>{MM}</code></td><td>měsíc</td><td><code>FV{RRRR}{MM}{NNN}</code></td><td>FV202610001</td></tr>
+        <tr class="f"><td><code>{NNNN}</code></td><td>pořadí, počet N = počet míst</td><td><code>P{RR}{NNNN}</code></td><td>P260001</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ============ DATA ============ -->
+  <section id="data">
+    <h2><span class="cislo">10</span>Data a zálohy</h2>
+    <div class="mrizka">
+      <div class="tip dulezite f"><span class="stitek">Bezpečí</span><h3>Data jsou jen u vás</h3><p>Nic se neukládá na cizí server. Na počítači v pracovní složce (s OneDrivem máte zálohu i přístup z jiného počítače), na telefonu v telefonu.</p></div>
+      <div class="tip f"><span class="stitek">Záloha</span><h3>Jeden soubor se vším</h3><p><b>Uložit zálohu</b> uloží všechna data do jednoho souboru – na telefonu ho pošlete na Disk, OneDrive nebo e-mailem. <b>Obnovit ze zálohy</b> vrátí vše zpět.</p></div>
+      <div class="tip f"><span class="stitek">Přílohy</span><h3>Objednávky a fotky u dokladu</h3><p>Ukládají se do podsložek „Přijaté objednávky“ a „Faktury“ v pracovní složce a otevřete je kliknutím.</p></div>
+      <div class="tip f"><span class="stitek">Licence</span><h3>Jedna licence na IČO</h3><p>Pro celou firmu a všechna zařízení. K registraci stačí IČO a e-mail, klíč vložíte v Nastavení → Licence. Bez licence fungují všechny funkce, doklady jen nesou vodoznak ukázky.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ PROBLÉMY ============ -->
+  <section id="problemy">
+    <h2><span class="cislo">11</span>Když něco nejde</h2>
+    <div class="tab-obal"><table>
+      <thead><tr><th>Co se děje</th><th>Co pomůže</th></tr></thead>
+      <tbody>
+        <tr class="f"><td>Nevidím tlačítko Pracovní složka nebo nejde vybrat</td><td>Složku umí Chrome a Edge na počítači. Na telefonu, v Safari a Firefoxu jsou data v prohlížeči – pravidelně ukládejte zálohu.</td></tr>
+        <tr class="f"><td>Doklady mají nápis „Neregistrovaná ukázka“</td><td>Vložte licenční klíč v Nastavení → Licence.</td></tr>
+        <tr class="f"><td>Datum v protokolu nebo faktuře zčervenalo</td><td>Datum předání je po datu vystavení faktury. Posuňte jedno z nich.</td></tr>
+        <tr class="f"><td>Katalog nic nenašel</td><td>Zkuste kratší slovo, zrušte vybranou skupinu nebo téma, vypněte „jen s cenou“ a zkontrolujte pole Vynechat slova.</td></tr>
+        <tr class="f"><td>Ze sešitu Excelu se nic nenačetlo</td><td>Tabulka potřebuje řádek se záhlavím (Popis, Množství, MJ, Cena). Jinak označte řádky v Excelu a vložte je přes schránku.</td></tr>
+        <tr class="f"><td>Na tisku chybí podpis nebo logo</td><td>Nahrajte je v Nastavení (podpis ideálně jako průhledné PNG) a tiskněte znovu.</td></tr>
+        <tr class="f"><td>Na faktuře není QR kód</td><td>Doplňte číslo účtu nebo IBAN v Nastavení → Údaje dodavatele.</td></tr>
+        <tr class="f"><td>Nadpis „Neuloženo…“ v horní liště</td><td>Připojte pracovní složku nebo uložte zálohu; v telefonu se ukládá do prohlížeče.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+  </div>
+</div>
+</main>
+
+<footer class="pata">
+  <div class="obal">
+    <span>© 2026 YeY – Kancelář pro řemeslníky · Ceny materiálu jsou orientační.</span>
+    <span><a href="index.html">Úvodní stránka</a> · <a href="yey.html">Otevřít aplikaci</a></span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var inp=document.getElementById('hledej'), info=document.getElementById('hledej-info');
+  var norm=function(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); };
+  var polozky=[].slice.call(document.querySelectorAll('.f'));
+  var sekce=[].slice.call(document.querySelectorAll('main section'));
+  polozky.forEach(function(el){ el.dataset.t=norm(el.textContent); });
+  function filtruj(){
+    var slova=norm(inp.value).split(/\s+/).filter(Boolean), n=0;
+    polozky.forEach(function(el){ var ok=slova.every(function(w){ return el.dataset.t.indexOf(w)>=0; }); el.classList.toggle('skryty',!ok); if(ok) n++; });
+    sekce.forEach(function(s){ var vidit=!slova.length || s.querySelector('.f:not(.skryty)'); s.style.display=vidit?'':'none'; });
+    info.textContent = slova.length ? (n ? 'Nalezeno: '+n : 'Nic nenalezeno – zkuste jiné slovo.') : '';
+  }
+  inp.addEventListener('input', filtruj);
+})();
+</script>
+</body>
+</html>

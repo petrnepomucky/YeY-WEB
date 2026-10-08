@@ -795,7 +795,7 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
       <div class="card" style="padding:18px">
         <div class="grid">
           <div class="field"><label class="req">Odběratel (objednatel)</label><select id="prKontakt"></select></div>
-          <div class="field"><label>Číslo protokolu</label><input id="prCislo"></div>
+          <div class="field"><label>Číslo protokolu</label><input id="prCislo"><div id="prCisloTip" class="small" style="margin-top:3px"></div></div>
           <div class="field"><label>Datum předání</label><input id="prDatum" type="date"><div id="prDatumWarn" class="date-warn" style="display:none"></div></div>
           <div class="field"><label>Odkaz (faktura / objednávka)</label><input id="prOdkaz"></div>
           <div class="field"><label>Objednávka č.</label><input id="prObj" placeholder="převezme se z faktury"></div>
@@ -944,6 +944,11 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
           <tr><td><b>Protokol</b></td><td><input id="fmt_protokol"></td><td><input id="next_protokol" inputmode="numeric"></td><td><span class="prev" id="prev_protokol"></span></td></tr>
         </tbody>
       </table>
+      <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;cursor:pointer"><input type="checkbox" id="ns_prCisloFa" style="margin-top:3px">
+        <span><b>Předávací protokol k faktuře má stejné číslo jako faktura</b> — protokol vytvořený z faktury dostane číslo faktury s předponou. Vlastní řadu protokolu výše pak používají jen protokoly bez faktury.</span></label>
+      <div style="display:flex;gap:10px;align-items:center;margin:8px 0 0 28px;flex-wrap:wrap"><label for="ns_prPrefix" class="small">Předpona čísla protokolu</label>
+        <input id="ns_prPrefix" style="width:80px;border:1px solid var(--line);border-radius:7px;padding:6px 8px" placeholder="P">
+        <span class="small muted">Náhled: <b id="prev_prFa"></b></span></div>
     </div>
   </section>
 </main>
@@ -995,7 +1000,7 @@ table.items thead th{background:#EEF0EC;border-bottom:1px solid var(--line)}
   <div class="modal" style="max-width:760px">
     <div class="modal-head"><h3>Nahrát položky z tabulky</h3><button class="x" data-close>×</button></div>
     <div class="modal-body">
-      <p class="small muted" style="margin-top:0">Vlož tabulku z Excelu, nebo vyber soubor. Kategorie se pozná ze záhlaví sekcí (Montáž, Demontáž, Materiál, Režie), sloupce se berou jako Popis, MJ, Množství (výměra) a Cena za MJ. Data se nejdřív zobrazí — přidají se po potvrzení.</p>
+      <p class="small muted" style="margin-top:0">Vlož tabulku z Excelu, nebo vyber soubor (ze souboru se projdou všechny listy a najdou se tabulky se záhlavím Popis / Množství / MJ / Cena). Kategorie se pozná ze záhlaví sekcí (Montáž, Demontáž, Materiál, Režie), sloupce se berou jako Popis, MJ, Množství (výměra) a Cena za MJ. Data se nejdřív zobrazí — přidají se po potvrzení.</p>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0">
         <button class="btn gold" id="nbTablePick" type="button">📂 Vybrat soubor .xlsx</button>
         <input type="file" id="nbTableFile" accept=".xlsx,.xls" style="display:none">
@@ -6964,6 +6969,7 @@ function faSave(doPrint){
   else DB.faktury[DB.faktury.findIndex(x=>x.id===FA.id)]=rec;
   faNabidkyIds(rec).forEach(id=>{ const nb=DB.nabidky.find(x=>x.id===id);
     if(nb && (!nb.stav || nb.stav==='Rozpracováno' || nb.stav==='Odesláno')) nb.stav='Přijato'; });
+  prSladCisla(rec);
   markDirty(); renderFaktury(); renderNabidky();
   if(doPrint) printFaktura(rec);
   faCloseEditor(); showToast('Faktura uložena.'); autoAddToCenik(rec.polozky);
@@ -7117,6 +7123,23 @@ document.getElementById('faKontakt').onchange=e=>{ FA.kontaktId=e.target.value; 
    PŘEDÁVACÍ PROTOKOLY
    ============================================================ */
 let PR=null, prPickKat='';
+function prCisloFaZapnuto(){ const v=(DB.nastaveni||{}).prCisloFa; return v==null ? true : !!v; }
+function prPrefix(){ const v=(DB.nastaveni||{}).prPrefix; return v==null ? 'P' : String(v); }
+function prCisloZFaktury(f){ return prPrefix()+String((f&&f.cislo)||''); }
+/** Po uložení faktury: navázané protokoly dostanou číslo faktury (pokud je to zapnuté). */
+function prSladCisla(f){
+  if(!prCisloFaZapnuto() || !f || !f.cislo) return;
+  const ids=faNabidkyIds(f), zmeny=[];
+  DB.protokoly.forEach(p=>{
+    const k = p.zFaktury===f.id || (!p.zFaktury && p.zNabidky && ids.includes(p.zNabidky));
+    if(!k) return;
+    if(!p.zFaktury) p.zFaktury=f.id;
+    const c=prCisloZFaktury(f);
+    if(p.cislo!==c){ zmeny.push((p.cislo||'—')+' → '+c); p.cislo=c; }
+    p.cisloZFa=true;
+  });
+  if(zmeny.length){ renderProtokoly(); setTimeout(()=>showToast('Předávací protokol přečíslován podle faktury: '+zmeny.join(', ')),2600); }
+}
 function nextProtokolCislo(){ return formatCislo(DB.formaty.protokol, DB.cislaRady.protokol||1); }
 function setPrPickKat(k){ prPickKat=k; prPickRender(); }
 function prStavBadge(s){ return s==='vyhrady' ? '<span class="badge" style="background:#f6efe4;color:#8a6a2f">S výhradami</span>' : '<span class="badge" style="background:#eaf1ea;color:#3a6b45">Bez vad</span>'; }
@@ -7143,7 +7166,7 @@ function prOpenEditor(rec, forceNew){
   document.getElementById('prEditorTitle').textContent=isNew?'Nový protokol':('Protokol '+(PR.cislo||''));
   fillContactSelect('prKontakt',PR.kontaktId);
   if(PR.objednavka==null){ const _f=prFaktura(PR); PR.objednavka=(_f&&_f.objednavka)||''; }
-  setVal('prCislo',PR.cislo); setVal('prDatum',PR.datumPredani); setVal('prOdkaz',PR.odkaz); setVal('prObj',PR.objednavka||'');
+  setVal('prCislo',PR.cislo); setTimeout(prCisloKontrola,0); setVal('prDatum',PR.datumPredani); setVal('prOdkaz',PR.odkaz); setVal('prObj',PR.objednavka||'');
   setVal('prMisto',PR.misto); setVal('prPredmet',PR.predmet); setVal('prStav',PR.stavDila||'bez');
   setVal('prZaruka',PR.zaruka||''); setVal('prVady',PR.vady||''); setVal('prPredano',PR.predano||''); setVal('prPozn',PR.pozn||'');
   document.getElementById('prVadyWrap').style.display=(PR.stavDila==='vyhrady')?'':'none';
@@ -7197,7 +7220,7 @@ function prSave(doPrint){
   if(_chD && !confirm('Pozor: '+_chD+'\n\nPřesto uložit?')) return;
   const isNew=!DB.protokoly.some(x=>x.id===PR.id);
   const rec=JSON.parse(JSON.stringify(PR));
-  if(isNew){ DB.protokoly.push(rec); DB.cislaRady.protokol=(DB.cislaRady.protokol||1)+1; }
+  if(isNew){ DB.protokoly.push(rec); if(rec.cislo===nextProtokolCislo()) DB.cislaRady.protokol=(DB.cislaRady.protokol||1)+1; }
   else DB.protokoly[DB.protokoly.findIndex(x=>x.id===PR.id)]=rec;
   markDirty(); renderProtokoly(); renderFaktury(); renderNabidky();
   if(doPrint) printProtokol(rec);
@@ -7216,7 +7239,8 @@ function protokolFromFaktura(id){
   const k=DB.kontakty.find(x=>x.id===f.kontaktId)||{};
   const misto=[k.ulice||'',[k.psc,k.mesto].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const _dp=(f.datumVystaveni && f.datumVystaveni<today()) ? f.datumVystaveni : today();
-  const rec={ id:uid(), cislo:nextProtokolCislo(), kontaktId:f.kontaktId, datumPredani:_dp, misto,
+  const _cFa=prCisloFaZapnuto() && f.cislo;
+  const rec={ id:uid(), cislo:_cFa?prCisloZFaktury(f):nextProtokolCislo(), cisloZFa:!!_cFa, kontaktId:f.kontaktId, datumPredani:_dp, misto,
     odkaz:'Faktura č. '+(f.cislo||''), objednavka:f.objednavka||'', predmet:f.akce||'', stavDila:'bez', vady:'', zaruka:'24 měsíců', predano:'', pozn:'',
     zFaktury:f.id, zNabidky:f.zNabidky||'',
     polozky:(f.polozky||[]).map(x=>({nazev:x.nazev,mj:x.mj,mnozstvi:x.mnozstvi,kat:x.kat})) };
@@ -7256,6 +7280,16 @@ function oznacDatum(inpId, warnId, txt){
   if(i){ i.classList.toggle('date-bad', !!txt); i.title=txt||''; }
   if(w){ w.style.display=txt?'':'none'; w.textContent=txt?'⚠ '+txt:''; }
 }
+function prCisloKontrola(){
+  const el=document.getElementById('prCisloTip'), inp=document.getElementById('prCislo'); if(!el||!PR) return;
+  const f=prFaktura(PR);
+  if(!prCisloFaZapnuto() || !f || !f.cislo){ el.textContent=''; inp.classList.remove('date-bad'); return; }
+  const c=prCisloZFaktury(f), ok=val('prCislo').trim()===c;
+  inp.classList.toggle('date-bad', !ok);
+  el.innerHTML = ok ? '<span class="muted">Stejná řada jako faktura '+esc(f.cislo)+'.</span>'
+    : '<span style="color:#c5221f;font-weight:600">⚠ Neodpovídá faktuře '+esc(f.cislo)+' (má být '+esc(c)+').</span> <a href="#" onclick="setVal(\'prCislo\',\''+esc(c).replace(/'/g,'')+'\');prCisloKontrola();return false">Opravit</a>';
+}
+document.addEventListener('input', e=>{ if(e.target && e.target.id==='prCislo') prCisloKontrola(); });
 function prKontrolaData(){
   if(!PR) return '';
   const txt=datumKolize(val('prDatum'), prFaktura(PR));
@@ -7487,6 +7521,7 @@ function nsRender(){
   setVal('fmt_faktura',DB.formaty.faktura); setVal('next_faktura',DB.cislaRady.faktura||1);
   setVal('fmt_nabidka',DB.formaty.nabidka); setVal('next_nabidka',DB.cislaRady.nabidka||1);
   setVal('fmt_protokol',DB.formaty.protokol); setVal('next_protokol',DB.cislaRady.protokol||1);
+  document.getElementById('ns_prCisloFa').checked=prCisloFaZapnuto(); setVal('ns_prPrefix', prPrefix());
   document.getElementById('ns_autoCenik').checked=!!DB.nastaveni.autoCenik;
   document.getElementById('ns_hlidatCeny').checked=!!DB.nastaveni.hlidatCeny;
   setVal('ns_splatnost', splatnostLhuta());
@@ -7503,6 +7538,7 @@ function nsPreview(){
   document.getElementById('prev_faktura').textContent=formatCislo(val('fmt_faktura'),parseInt(val('next_faktura'))||1);
   document.getElementById('prev_nabidka').textContent=formatCislo(val('fmt_nabidka'),parseInt(val('next_nabidka'))||1);
   document.getElementById('prev_protokol').textContent=formatCislo(val('fmt_protokol'),parseInt(val('next_protokol'))||1);
+  { const el=document.getElementById('prev_prFa'); if(el) el.textContent=document.getElementById('ns_prCisloFa').checked ? (val('ns_prPrefix')||'')+formatCislo(val('fmt_faktura'),parseInt(val('next_faktura'))||1) : '—'; }
 }
 function nsSave(){
   NS_DOD.forEach(k=>{ if(LIC.active && LIC_LOCK.indexOf(k)>=0){ DB.dodavatel[k]=(LIC.payload[k]||''); } else { DB.dodavatel[k]=val('ns_'+k).trim(); } });
@@ -7512,6 +7548,8 @@ function nsSave(){
   DB.cislaRady.faktura=parseInt(val('next_faktura'))||1;
   DB.cislaRady.nabidka=parseInt(val('next_nabidka'))||1;
   DB.cislaRady.protokol=parseInt(val('next_protokol'))||1;
+  DB.nastaveni.prCisloFa=document.getElementById('ns_prCisloFa').checked;
+  DB.nastaveni.prPrefix=val('ns_prPrefix');
   DB.nastaveni.autoCenik=document.getElementById('ns_autoCenik').checked;
   DB.nastaveni.hlidatCeny=document.getElementById('ns_hlidatCeny').checked;
   DB.nastaveni.splatnost=val('ns_splatnost')||'mesic';
@@ -7531,6 +7569,7 @@ function renderPodpisPrev(){ const el=document.getElementById('ns_podpisPrev'); 
 document.getElementById('ns_podpisPick').onclick=()=>document.getElementById('ns_podpisFile').click();
 document.getElementById('ns_podpisFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ DB.dodavatel=DB.dodavatel||{}; DB.dodavatel.podpis=r.result; markDirty(); renderPodpisPrev(); showToast('Podpis nahrán.'); }; r.readAsDataURL(f); e.target.value=''; };
 document.getElementById('ns_podpisClear').onclick=()=>{ DB.dodavatel=DB.dodavatel||{}; DB.dodavatel.podpis=''; markDirty(); renderPodpisPrev(); showToast('Podpis odebrán z dokladů.'); };
+['ns_prPrefix','ns_prCisloFa'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',nsPreview); el.addEventListener('change',nsPreview); } });
 ['fmt_faktura','next_faktura','fmt_nabidka','next_nabidka','fmt_protokol','next_protokol'].forEach(id=>{ const el=document.getElementById(id); if(el) el.oninput=nsPreview; });
 
 /* ============================================================
@@ -7621,8 +7660,214 @@ function nbParseTable(rows){
   });
   return items;
 }
-function nbTableOpen(){ nbTableItems=[]; document.getElementById('nbTablePaste').value=''; document.getElementById('nbTablePreview').innerHTML=''; document.getElementById('nbTableSum').textContent=''; document.getElementById('nbTableAdd').style.display='none'; setMsg('nbTableMsg',''); document.getElementById('nbTableModal').classList.add('show'); }
-async function nbTableFile(file){ setMsg('nbTableMsg','Načítám…'); try{ await loadXLSX(); const buf=await file.arrayBuffer(); const wb=XLSX.read(buf,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true}); setMsg('nbTableMsg',''); nbTableItems=nbParseTable(rows); nbTablePreview(nbTableItems); }catch(e){ setMsg('nbTableMsg','Nepodařilo se načíst Excel (offline?). Použijte vložení ze schránky.'); } }
+function nbTableOpen(){ nbTableItems=[]; NB_XLS=null; document.getElementById('nbTablePaste').value=''; document.getElementById('nbTablePreview').innerHTML=''; document.getElementById('nbTableSum').textContent=''; document.getElementById('nbTableAdd').style.display='none'; setMsg('nbTableMsg',''); document.getElementById('nbTableModal').classList.add('show'); }
+async function nbTableFile(file){ setMsg('nbTableMsg','Načítám…'); NB_XLS=null; try{ await loadXLSX(); const buf=await file.arrayBuffer(); const wb=XLSX.read(buf,{type:'array'});
+    // 1) chytré čtení všech listů; 2) když nenajde žádnou tabulku se záhlavím, použije se původní způsob (první list)
+    let X=null; try{ X=xlsAnalyzuj(XLSX.read(buf,{type:'array', sheetStubs:true})); }catch(e){ X=null; }
+    setMsg('nbTableMsg','');
+    if(X && X.tabulky.length){ NB_XLS=X; nbXlsVykresli(); return; }
+    const ws=wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true}); nbTableItems=nbParseTable(rows); nbTablePreview(nbTableItems);
+    if(X && X.odmitnute.length) document.getElementById('nbTableSum').insertAdjacentHTML('beforeend','<div class="small muted" style="font-weight:400">Tabulky se záhlavím nebyly použitelné: '+X.odmitnute.map(o=>esc(o.nazev)+' – '+esc(o.duvod)).join('; ')+'. Načteno původním způsobem.</div>');
+  }catch(e){ setMsg('nbTableMsg','Nepodařilo se načíst Excel (offline?). Použijte vložení ze schránky.'); } }
+/* ============================================================
+   CHYTRÉ NAČTENÍ SEŠITU (jen výběr souboru – vkládání ze schránky zůstává beze změny)
+   Projde všechny listy, najde tabulky se záhlavím (Popis/Položka, Množství, MJ, Cena),
+   ověří, že mají potřebné sloupce, odliší je od rekapitulace a součtů
+   a porovná výsledek s celkovou částkou v sešitu.
+   ============================================================ */
+let NB_XLS=null;   // {tabulky:[], odmitnute:[], extra:[], celkemSesit, predmet}
+function xlsHodnoty(wb, jmeno){
+  const ws=wb.Sheets[jmeno]; if(!ws || !ws['!ref']) return {grid:[], radku:0, sloupcu:0};
+  const R=XLSX.utils.decode_range(ws['!ref']);
+  const cache={};
+  const cellVal=(sh, addr, hloubka)=>{
+    const key=sh+'!'+addr; if(key in cache) return cache[key];
+    const w=wb.Sheets[sh]; const c=w && w[addr]; let v=null;
+    if(c){
+      if(c.t!=='z' && c.v!==undefined && c.v!==null && c.v!=='') v=c.v;
+      else if(c.f && hloubka<25){ cache[key]=null; v=xlsVzorec(c.f, sh, hloubka+1); }
+    }
+    cache[key]=v; return v;
+  };
+  const xlsVzorec=(f, sh, hl)=>{
+    // malý bezpečný vyhodnocovač: + - * / ( ), čísla, odkazy (i na jiný list), SUM, ROUND, MIN, MAX
+    const s=String(f).replace(/^=/,''); let i=0;
+    const ws_=()=>{ while(s[i]===' ') i++; };
+    const ref=()=>{ const rest=s.slice(i);
+      let m=/^(?:'([^']+)'|([A-Za-z_À-ſ][\w.À-ſ]*))!\$?([A-Z]{1,3})\$?(\d+)/.exec(rest);
+      if(m){ i+=m[0].length; return {list:m[1]||m[2], col:m[3], row:+m[4]}; }
+      m=/^\$?([A-Z]{1,3})\$?(\d+)(?![\d(])/.exec(rest);
+      if(m){ i+=m[0].length; return {list:sh, col:m[1], row:+m[2]}; }
+      return null; };
+    const num=v=>{ if(typeof v==='number') return v; const p=parseCena(v); return p==null?0:p; };
+    const rozsah=(a,b)=>{ const out=[]; const c1=XLSX.utils.decode_col(a.col), c2=XLSX.utils.decode_col(b.col);
+      for(let r=Math.min(a.row,b.row);r<=Math.max(a.row,b.row);r++) for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++) out.push(num(cellVal(a.list, XLSX.utils.encode_col(c)+r, hl)));
+      return out; };
+    const args=()=>{ const out=[]; ws_(); if(s[i]===')'){ i++; return out; }
+      for(;;){ ws_(); const st=i; const a=ref(); ws_();
+        if(a && s[i]===':'){ i++; ws_(); const b=ref(); if(!b) throw 0; out.push(...rozsah(a,b)); }
+        else { i=st; out.push(expr()); }
+        ws_(); if(s[i]===','||s[i]===';'){ i++; continue; } if(s[i]===')'){ i++; break; } throw 0; }
+      return out; };
+    const factor=()=>{ ws_();
+      if(s[i]==='-'){ i++; return -factor(); } if(s[i]==='+'){ i++; return factor(); }
+      if(s[i]==='('){ i++; const v=expr(); ws_(); if(s[i]!==')') throw 0; i++; return v; }
+      const fm=/^([A-Z]+)\(/.exec(s.slice(i));
+      if(fm){ i+=fm[0].length; const a=args(); const n=fm[1];
+        if(n==='SUM') return a.reduce((x,y)=>x+y,0);
+        if(n==='ROUND'||n==='ROUNDUP'||n==='ROUNDDOWN'){ const d=Math.pow(10,a[1]||0); const fn=n==='ROUND'?Math.round:n==='ROUNDUP'?Math.ceil:Math.floor; return fn(a[0]*d)/d; }
+        if(n==='MIN') return Math.min(...a); if(n==='MAX') return Math.max(...a);
+        if(n==='AVERAGE') return a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+        throw 0; }
+      const nm=/^\d+(?:[.,]\d+)?%?/.exec(s.slice(i));
+      if(nm){ i+=nm[0].length; let v=parseFloat(nm[0].replace(',','.')); if(nm[0].endsWith('%')) v/=100; return v; }
+      const r=ref(); if(r) return num(cellVal(r.list, r.col+r.row, hl));
+      throw 0; };
+    const term=()=>{ let v=factor(); for(;;){ ws_(); if(s[i]==='*'){ i++; v*=factor(); } else if(s[i]==='/'){ i++; const d=factor(); v=d?v/d:0; } else return v; } };
+    const expr=()=>{ let v=term(); for(;;){ ws_(); if(s[i]==='+'){ i++; v+=term(); } else if(s[i]==='-'){ i++; v-=term(); } else return v; } };
+    try{ const v=expr(); ws_(); return (i>=s.length && isFinite(v)) ? Math.round(v*1e6)/1e6 : null; }catch(e){ return null; }
+  };
+  const grid=[];
+  for(let r=R.s.r;r<=R.e.r;r++){ const row=[]; for(let c=R.s.c;c<=R.e.c;c++){ const v=cellVal(jmeno, XLSX.utils.encode_cell({r,c}), 0); row.push(v==null?'':v); } grid.push(row); }
+  return {grid, radku:grid.length, sloupcu:(grid[0]||[]).length, r0:R.s.r, c0:R.s.c};
+}
+function xlsSloupecTyp(t){
+  const n=norm(t).replace(/\s+/g,' ').trim(); if(!n || n.length>40) return null;
+  if(/^(c|c\.|cis|cislo|por\.?|poradi|#|p\.c\.|pc)$/.test(n)) return 'cislo';
+  if(/^(kod|kat\.? ?c(islo)?|obj\.? ?c(islo)?|ean)$/.test(n)) return 'kod';
+  if(/celkem|castka|suma|cena celk|cena za polozku|mezisoucet/.test(n)) return 'celkem';
+  if(/^(mj|m\.j\.|m\. j\.|jedn(otka)?\.?|j\.)$/.test(n)) return 'mj';
+  if(/cena|sazba|kc\/|jedn\.? ?c|j\.? ?cena/.test(n)) return 'cena';
+  if(/mnozstvi|^mn\.?$|pocet|hodin|^hod\.?$|vymera|^ks$/.test(n)) return 'mnozstvi';
+  if(/popis|polozk|nazev|cinnost|^text$|predmet|specifikace|^prace$|^material$|druh prac|oznaceni/.test(n)) return 'popis';
+  return null;
+}
+function xlsKat(t){ const n=norm(t); if(!n) return null;
+  if(n.includes('material')) return 'material'; if(n.includes('doprav')) return 'doprava';
+  if(n.includes('rezie')||n.includes('vedlejsi')) return 'rezie';
+  if(n.includes('demontaz')||n.includes('montaz')||n.includes('prace')||n.includes('cinnost')||n.includes('hodin')) return 'prace';
+  return null; }
+const XLS_SOUCET=/(^|\s)(celkem|soucet|mezisoucet|sum[ae]?|rekapitulace|dph|zaokrouhl)/;
+function xlsAnalyzuj(wb){
+  const out={tabulky:[], odmitnute:[], extra:[], celkem:{}, predmet:''};
+  const skryte=((wb.Workbook||{}).Sheets||[]);
+  wb.SheetNames.forEach((jmeno, si)=>{
+    if(skryte[si] && skryte[si].Hidden) return;
+    const {grid}=xlsHodnoty(wb, jmeno);
+    const txt=v=>typeof v==='string' ? v.trim() : '';
+    const cislo=v=>{ if(typeof v==='number') return v; if(typeof v==='string' && /\d/.test(v) && !/[a-zA-ZÀ-ſ]{2,}/.test(v.replace(/kč/gi,''))) return parseCena(v); return null; };
+    let blokRekap=false;
+    for(let r=0;r<grid.length;r++){
+      const row=grid[r];
+      const texty=row.map(txt);
+      // předmět zakázky
+      if(!out.predmet){ const pi=texty.findIndex(t=>/^předmět\s*(zakázky|díla|nabídky)?\s*:/i.test(t)); if(pi>=0) out.predmet=texty[pi].replace(/^předmět[^:]*:\s*/i,'').trim(); }
+      // celková částka v sešitu (bez DPH)
+      const lbl=texty.find(t=>t)||'';
+      const nl=norm(lbl);
+      if(/celkem bez dph|cena bez dph|zaklad celkem|celkova cena bez/.test(nl)){ const nums=row.map(cislo).filter(v=>v!=null); if(nums.length) out.celkem[jmeno]={castka:nums[nums.length-1], popis:lbl}; }
+      // nadpis bloku rekapitulace
+      const neprazdne=row.filter(v=>v!=='' && v!=null);
+      if(neprazdne.length===1 && typeof neprazdne[0]==='string'){ blokRekap=/rekapitulace|souhrn|shrnuti|celkova cena/.test(norm(neprazdne[0])); }
+      // vedlejší položky v rekapitulaci (např. Doprava – paušál)
+      if(blokRekap && neprazdne.length===2){
+        const l=texty.find(t=>t), n=row.map(cislo).filter(v=>v!=null);
+        if(l && n.length===1 && !XLS_SOUCET.test(norm(l))) out.extra.push({list:jmeno, radek:r+1, nazev:l, castka:n[0]});
+        continue;
+      }
+      // hledání záhlaví tabulky
+      const typy={}; texty.forEach((t,c)=>{ const ty=xlsSloupecTyp(t); if(ty && typy[ty]==null) typy[ty]=c; });
+      const druhu=['mnozstvi','mj','cena','celkem'].filter(k=>typy[k]!=null).length;
+      if(typy.popis==null || druhu<2) continue;
+      // název tabulky = nejbližší samostatný text nad záhlavím
+      let nazev='';
+      for(let k=r-1;k>=Math.max(0,r-3);k--){ const ne=grid[k].filter(v=>v!==''&&v!=null); if(ne.length===1 && typeof ne[0]==='string'){ nazev=ne[0].trim(); break; } if(ne.length) break; }
+      const chybi=[]; if(typy.cena==null && !(typy.celkem!=null && typy.mnozstvi!=null)) chybi.push('Cena za MJ');
+      if(typy.mnozstvi==null && typy.celkem==null) chybi.push('Množství');
+      const sl={popis:typy.popis, mnozstvi:typy.mnozstvi, mj:typy.mj, cena:typy.cena, celkem:typy.celkem, kod:typy.kod};
+      const kat=xlsKat(nazev)||xlsKat(texty[typy.popis])||null;
+      const polozky=[], pozn=[]; let prazdne=0, konec=r;
+      for(let k=r+1;k<grid.length;k++){
+        const rw=grid[k], ne=rw.filter(v=>v!==''&&v!=null);
+        if(!ne.length){ if(++prazdne>=2) break; continue; }
+        prazdne=0;
+        // další záhlaví nebo samostatný nadpis = konec tabulky
+        const ty2=rw.map(v=>xlsSloupecTyp(txt(v))).filter(Boolean);
+        if(ty2.includes('popis') && ty2.length>=3) break;
+        if(ne.length===1 && typeof ne[0]==='string' && txt(rw[sl.popis])==='' ) break;
+        konec=k;
+        const popis=txt(rw[sl.popis]) || (typeof rw[sl.popis]==='number'?String(rw[sl.popis]):'');
+        if(!popis) continue;
+        if(XLS_SOUCET.test(norm(popis))){ if(/celkem|soucet/.test(norm(popis))) break; continue; }
+        let mn = sl.mnozstvi!=null ? cislo(rw[sl.mnozstvi]) : null;
+        let cena = sl.cena!=null ? cislo(rw[sl.cena]) : null;
+        const celk = sl.celkem!=null ? cislo(rw[sl.celkem]) : null;
+        if(mn==null && sl.mnozstvi==null) mn=1;
+        if(cena==null && celk!=null && mn) cena=Math.round(celk/mn*100)/100;
+        if(mn==null && celk!=null && cena) mn=Math.round(celk/cena*1000)/1000;
+        if(mn==null || cena==null){ pozn.push('Řádek '+(k+1)+' („'+popis.slice(0,40)+'“) – chybí '+(mn==null?'množství':'cena')+', vynechán.'); continue; }
+        if(!mn) continue;
+        let mj = sl.mj!=null ? txt(rw[sl.mj]) : '';
+        const p={nazev:popis, mj:mj||'ks', mnozstvi:mn, cena, sleva:0, kat: kat || (/^(h|hod|hodin|hodiny)\.?$/.test(norm(mj)) ? 'prace' : 'material')};
+        if(sl.kod!=null && txt(rw[sl.kod])) p.kod=txt(rw[sl.kod]);
+        polozky.push(p);
+      }
+      const t={list:jmeno, radek:r+1, nazev: nazev || ('Tabulka na řádku '+(r+1)), kat, sloupce:sl, hlavicka:texty, polozky, pozn, chybi, vybrano: !chybi.length && polozky.length>0};
+      if(chybi.length || !polozky.length) out.odmitnute.push({list:jmeno, nazev:t.nazev, duvod: chybi.length ? 'chybí sloupec '+chybi.join(' a ') : 'žádné řádky s množstvím a cenou'});
+      else out.tabulky.push(t);
+      r=konec;
+    }
+  });
+  // vedlejší položky z rekapitulace, které nejsou součtem některé tabulky
+  out.extra=out.extra.filter(x=>{ const k=xlsKat(x.nazev); return !out.tabulky.some(t=>(t.kat && k && t.kat===k && k!=='doprava') || norm(t.nazev).includes(norm(x.nazev))); })
+    .map(x=>({...x, vybrano:true, polozka:{nazev:x.nazev, mj:'ks', mnozstvi:1, cena:x.castka, sleva:0, kat:xlsKat(x.nazev)||'rezie'}}));
+  return out;
+}
+function nbXlsVybrane(){
+  if(!NB_XLS) return [];
+  const it=[]; NB_XLS.tabulky.forEach(t=>{ if(t.vybrano) t.polozky.forEach(p=>it.push({...p, kat:normKatLine(p.kat)})); });
+  NB_XLS.extra.forEach(x=>{ if(x.vybrano) it.push({...x.polozka, kat:normKatLine(x.polozka.kat)}); });
+  return it;
+}
+function nbXlsPrepni(typ, i, on){ if(!NB_XLS) return; (typ==='t'?NB_XLS.tabulky:NB_XLS.extra)[i].vybrano=on; nbXlsVykresli(); }
+function nbXlsKat(i, k){ const t=NB_XLS.tabulky[i]; t.kat=k; t.polozky.forEach(p=>p.kat=k); nbXlsVykresli(); }
+function nbXlsVykresli(){
+  const box=document.getElementById('nbTablePreview'), sum=document.getElementById('nbTableSum'), X=NB_XLS;
+  nbTableItems=nbXlsVybrane();
+  const celk=nbTableItems.reduce((a,p)=>a+rowTotal(p),0);
+  const L=c=>c==null?'—':XLSX.utils.encode_col(c);
+  let h='';
+  const listu=[...new Set(X.tabulky.map(t=>t.list).concat(X.odmitnute.map(t=>t.list)))];
+  X.tabulky.forEach((t,i)=>{
+    const s=t.polozky.reduce((a,p)=>a+rowTotal(p),0);
+    h+='<div style="border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:8px 10px;background:'+(t.vybrano?'#fff':'#f6f6f4')+'">'+
+      '<label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:700;color:var(--navy)"><input type="checkbox" '+(t.vybrano?'checked':'')+' onchange="nbXlsPrepni(\'t\','+i+',this.checked)"> '+esc(t.nazev)+
+      ' <span class="small muted" style="font-weight:400">· '+(listu.length>1?'list „'+esc(t.list)+'“ · ':'')+t.polozky.length+' pol. · '+fmtCena(s)+'</span></label>'+
+      '<div class="small muted" style="margin:4px 0 4px 24px">Sloupce: Popis '+L(t.sloupce.popis)+' · Množství '+L(t.sloupce.mnozstvi)+' · MJ '+L(t.sloupce.mj)+' · Cena/MJ '+L(t.sloupce.cena)+(t.sloupce.cena==null?' (dopočtena z Celkem)':'')+
+      ' &nbsp;·&nbsp; Kategorie <select onchange="nbXlsKat('+i+',this.value)" style="font-size:12px;padding:1px 4px">'+LINE_KAT_ORDER.map(k=>'<option value="'+k+'"'+(normKatLine(t.kat||'prace')===k?' selected':'')+'>'+LINE_KAT_LABEL[k]+'</option>').join('')+'</select>'+
+      (t.sloupce.mj==null?' · <b style="color:#b0413e">MJ chybí – použije se „ks“</b>':'')+'</div>'+
+      (t.vybrano?'<table style="width:100%;border-collapse:collapse;font-size:12px;margin-left:4px">'+t.polozky.map(p=>'<tr><td style="padding:3px 6px;border-bottom:1px solid #eef0f3">'+esc(p.nazev)+'</td><td style="padding:3px 6px;text-align:center">'+esc(p.mj)+'</td><td style="padding:3px 6px;text-align:right">'+fmtNum(p.mnozstvi)+'</td><td style="padding:3px 6px;text-align:right">'+fmtCena(p.cena)+'</td></tr>').join('')+'</table>':'')+
+      (t.pozn.length?'<div class="small" style="color:#b0413e;margin:4px 0 0 24px">'+t.pozn.map(esc).join('<br>')+'</div>':'')+
+    '</div>';
+  });
+  X.extra.forEach((x,i)=>{
+    h+='<label style="display:flex;gap:8px;align-items:center;border:1px dashed var(--line);border-radius:8px;margin:8px 0;padding:8px 10px;cursor:pointer"><input type="checkbox" '+(x.vybrano?'checked':'')+' onchange="nbXlsPrepni(\'x\','+i+',this.checked)">'+
+      '<span><b>'+esc(x.nazev)+'</b> – '+fmtCena(x.castka)+' <span class="small muted">(z rekapitulace, není v žádné tabulce – přidá se jako 1 ks)</span></span></label>';
+  });
+  if(X.odmitnute.length) h+='<div class="small muted" style="margin-top:8px"><b>Nepoužito:</b> '+X.odmitnute.map(o=>esc(o.nazev)+(listu.length>1?' (list „'+esc(o.list)+'“)':'')+' – '+esc(o.duvod)).join('; ')+'.</div>';
+  let kontrola='';
+  Object.keys(X.celkem).forEach(list=>{
+    const c=X.celkem[list];
+    const vse=X.tabulky.filter(t=>t.list===list).reduce((a,t)=>a+t.polozky.reduce((b,p)=>b+rowTotal(p),0),0)+X.extra.filter(x=>x.list===list).reduce((a,x)=>a+x.castka,0);
+    const ok=Math.abs(vse-c.castka)<0.6, kde=listu.length>1?' (list „'+esc(list)+'“)':'';
+    kontrola+='<div style="font-weight:600;margin-top:4px;color:'+(ok?'#2e7d32':'#b0413e')+'">'+(ok?'✓ Souhlasí s částkou „'+esc(c.popis)+'“'+kde+' v sešitu – '+fmtCena(c.castka)+'.':'⚠ V sešitu je „'+esc(c.popis)+'“'+kde+' '+fmtCena(c.castka)+', z tabulek načteno '+fmtCena(vse)+' – zkontrolujte.')+'</div>';
+  });
+  sum.innerHTML='Nalezeno <b>'+X.tabulky.length+'</b> '+(X.tabulky.length===1?'tabulka':X.tabulky.length<5?'tabulky':'tabulek')+(listu.length>1?' na '+listu.length+' listech':'')+' · vybráno <b>'+nbTableItems.length+'</b> položek za <b>'+fmtCena(celk)+'</b>.'+kontrola+
+    (X.predmet?'<div class="small muted" style="font-weight:400;margin-top:4px">Předmět ze sešitu: „'+esc(X.predmet)+'“'+(NB && !val('nbPredmet') ? ' – doplní se do nabídky.':'')+'</div>':'');
+  box.innerHTML=h;
+  document.getElementById('nbTableAdd').style.display=nbTableItems.length?'':'none';
+}
+
 function nbTablePasteParse(){ const t=document.getElementById('nbTablePaste').value; if(!t.trim()){ setMsg('nbTableMsg','Vložte tabulku.'); return; } const rows=t.replace(/\r/g,'').split('\n').map(l=>l.split('\t')); nbTableItems=nbParseTable(rows); nbTablePreview(nbTableItems); }
 function nbTablePreview(items){
   const box=document.getElementById('nbTablePreview'), sum=document.getElementById('nbTableSum');
@@ -7635,11 +7880,11 @@ function nbTablePreview(items){
   sum.innerHTML='Nalezeno <b>'+items.length+'</b> položek.';
   box.innerHTML=html; document.getElementById('nbTableAdd').style.display='';
 }
-function nbTableAdd(){ if(!nbTableItems.length) return; nbTableItems.forEach(it=>pridejPolozku(NB.polozky, it)); document.getElementById('nbTableModal').classList.remove('show'); renderNbItems(); markDirty(); showToast(nbTableItems.length+' položek přidáno do nabídky.'); }
+function nbTableAdd(){ if(!nbTableItems.length) return; if(NB_XLS && NB_XLS.predmet && !val('nbPredmet').trim()) setVal('nbPredmet', NB_XLS.predmet); nbTableItems.forEach(it=>pridejPolozku(NB.polozky, it)); document.getElementById('nbTableModal').classList.remove('show'); renderNbItems(); markDirty(); showToast(nbTableItems.length+' položek přidáno do nabídky.'); }
 document.getElementById('btnNbTable').onclick=nbTableOpen;
 document.getElementById('nbTablePick').onclick=()=>document.getElementById('nbTableFile').click();
 document.getElementById('nbTableFile').onchange=e=>{ const f=e.target.files[0]; if(f) nbTableFile(f); e.target.value=''; };
-document.getElementById('nbTablePasteBtn').onclick=nbTablePasteParse;
+document.getElementById('nbTablePasteBtn').onclick=()=>{ NB_XLS=null; nbTablePasteParse(); };
 document.getElementById('nbTableAdd').onclick=nbTableAdd;
 
 /* ============================================================
